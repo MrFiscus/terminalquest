@@ -87,6 +87,25 @@ function pickSides(count: number, rng: () => number): WallSide[] {
   return out;
 }
 
+export function addDoorToRoom(room: Room, target: string): Room | null {
+  if (room.doors.some((door) => door.target === target)) return null;
+  const used = new Set(room.doors.map((door) => `${door.x},${door.y}`));
+  const sides: WallSide[] = ["right", "top", "bottom", "left"];
+
+  for (const side of sides) {
+    for (const slot of doorSlotsForSide(side, room.width, room.height)) {
+      const key = `${slot.x},${slot.y}`;
+      if (used.has(key)) continue;
+      return {
+        ...room,
+        doors: [...room.doors, { ...slot, kind: "door", target }],
+      };
+    }
+  }
+
+  return null;
+}
+
 /** Generate a single room from a spec deterministically (seeded by path). */
 export function generateRoom(spec: RoomSpec): Room {
   const width = spec.width ?? 11;

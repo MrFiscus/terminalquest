@@ -8,6 +8,8 @@ import {
   getRoom,
   pathfind,
 } from "@/game/dungeon";
+import { askDungeonMaster } from "@/game/aiDungeonMasterService";
+import { type GeneratedLevel, levelToStatePatch } from "@/game/aiLevelService";
 import type {
   CommandResult,
   GameState,
@@ -30,7 +32,7 @@ function initialState(): GameState {
     playerAnim: "idle",
     playerFacing: "down",
     history: [
-      { id: 1, kind: "system", text: "Terminal Quest v1.0 — type `help` to begin." },
+      { id: 1, kind: "system", text: "Terminal Quest v1.0 - type `help` to begin." },
       { id: 2, kind: "system", text: `You stand in ${startRoom.name}. ${startRoom.description}` },
     ],
     commandHistory: [],
@@ -39,6 +41,9 @@ function initialState(): GameState {
     transitioning: false,
     vfx: [],
     popup: null,
+    goal: `Find ${TARGET_FILE} and move it into your inventory.`,
+    requiredCommands: ["ls", "cd", "find", "mv"],
+    winCondition: `mv ${TARGET_FILE} ~/inventory`,
   };
 }
 
@@ -151,9 +156,9 @@ export function useGameState() {
         if (effect.type === "win") {
           const room = getRoom(s.rooms, s.cwd);
           if (!room) return s;
-          const file = room.files.find((f) => f.name === TARGET_FILE);
+          const file = room.files.find((f) => f.name === s.targetFile);
           if (!file) return s;
-          const newRoom = { ...room, files: room.files.filter((f) => f.name !== TARGET_FILE) };
+          const newRoom = { ...room, files: room.files.filter((f) => f.name !== s.targetFile) };
           return {
             ...s,
             rooms: { ...s.rooms, [room.path]: newRoom },
@@ -164,7 +169,7 @@ export function useGameState() {
               {
                 id: nextId(),
                 kind: "victory",
-                text: "✦ You seize victory.jpg. The dungeon trembles. You have escaped! ✦",
+                text: `You seize ${s.targetFile}. The dungeon trembles. You have escaped!`,
               },
             ],
           };
@@ -189,10 +194,22 @@ export function useGameState() {
         commandHistory: [...cur.commandHistory, raw],
       }));
 
-      const result = runCommand(raw, s);
+      const result = await runCommand(raw, s);
 
       if (result.clear) {
         setState((cur) => ({ ...cur, history: [] }));
+        return;
+      }
+
+      if (result.unknown) {
+        const room = getRoom(s.rooms, s.cwd);
+        const message = await askDungeonMaster(result.unknown, {
+          goal: s.goal,
+          requiredCommands: s.requiredCommands,
+          winCondition: s.winCondition,
+          currentRoom: room?.name ?? s.cwd.split("/").filter(Boolean).pop() ?? "home",
+        });
+        appendLines([{ kind: "dm", text: `Dungeon Master: ${message}` }]);
         return;
       }
 
@@ -200,7 +217,6 @@ export function useGameState() {
         setState((cur) => ({ ...cur, ...result.patch }));
       }
 
-      // VFX: add then expire
       if (result.vfx) {
         const id = nextId();
         const dur = result.vfx.durationMs ?? 1000;
@@ -216,7 +232,6 @@ export function useGameState() {
         }, dur);
       }
 
-      // Popup (cat)
       if (result.popup) {
         const id = nextId();
         setState((cur) => ({ ...cur, popup: { id, ...result.popup! } }));
@@ -232,7 +247,6 @@ export function useGameState() {
         }
         if (result.effect) {
           if (result.effect.type === "enterRoom") {
-            // 200ms fade-out, swap room, fade-in
             setState((cur) => ({ ...cur, transitioning: true }));
             await new Promise((r) => setTimeout(r, 200));
             applyEffect(result.effect);
@@ -259,9 +273,32 @@ export function useGameState() {
     setState(initialState());
   }, []);
 
+  const loadLevel = useCallback((level: GeneratedLevel, label: string) => {
+    const patch = levelToStatePatch(level);
+    idRef.current = 100;
+    setState((s) => ({
+      ...s,
+      ...patch,
+      animating: false,
+      transitioning: false,
+      playerAnim: "idle",
+      playerFacing: "down",
+      vfx: [],
+      popup: null,
+      commandHistory: [],
+      history: [
+        { id: 1, kind: "system", text: `Claude dungeon loaded: ${label}` },
+        { id: 2, kind: "system", text: `Goal: ${level.goal}` },
+        { id: 3, kind: "system", text: `Required: ${level.required.join(", ")}` },
+        { id: 4, kind: "system", text: `Win: mv ${level.targetFile} ~/inventory` },
+        { id: 5, kind: "system", text: level.hint ? `Hint: ${level.hint}` : "Type `ls` to look around." },
+      ],
+    }));
+  }, []);
+
   useEffect(() => {
     // no-op
   }, []);
 
-  return { state, submit, reset, dismissPopup };
+  return { state, submit, reset, dismissPopup, loadLevel };
 }
