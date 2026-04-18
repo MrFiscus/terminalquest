@@ -2,6 +2,7 @@ import { GameWorld } from "@/components/GameWorld";
 import { InventoryBar } from "@/components/InventoryBar";
 import { Terminal } from "@/components/Terminal";
 import { VictoryOverlay } from "@/components/VictoryOverlay";
+import { DifficultyMenu } from "@/components/DifficultyMenu";
 import { useGameState } from "@/hooks/useGameState";
 import { generateLevel, type Difficulty } from "@/game/aiLevelService";
 import { useState } from "react";
@@ -9,6 +10,7 @@ import { useState } from "react";
 const Index = () => {
   const { state, submit, reset, dismissPopup, loadLevel } = useGameState();
   const [generating, setGenerating] = useState<Difficulty | null>(null);
+  const [hasEntered, setHasEntered] = useState(false);
 
   const loadAIDungeon = async (difficulty: Difficulty) => {
     if (generating || state.animating) return;
@@ -24,6 +26,17 @@ const Index = () => {
       setGenerating(null);
     }
   };
+
+  if (!hasEntered) {
+    return (
+      <DifficultyMenu
+        busy={Boolean(generating)}
+        onConfirm={() => {
+          setHasEntered(true);
+        }}
+      />
+    );
+  }
 
   return (
     <main className="relative grid h-screen w-screen grid-cols-[40vw_4px_60vw] overflow-hidden bg-background">
