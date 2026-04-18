@@ -288,7 +288,10 @@ export default function Landing() {
   }, [submitted]);
 
   return (
-    <div style={{ position: "fixed", inset: 0, overflowY: "auto", overflowX: "hidden", backgroundImage: `url(${slateTexture})`, backgroundRepeat: "repeat", backgroundSize: "512px 512px" }}>
+    <div style={{ position: "fixed", inset: 0, overflowY: "auto", overflowX: "hidden", backgroundColor: "hsl(230 18% 5%)", backgroundImage: `radial-gradient(ellipse at 50% 30%, hsl(230 14% 14%) 0%, hsl(230 18% 7%) 55%, hsl(230 22% 3%) 100%), url(${slateTexture})`, backgroundRepeat: "no-repeat, no-repeat", backgroundSize: "100% 100%, cover", backgroundPosition: "center, center", backgroundAttachment: "fixed, fixed", backgroundBlendMode: "multiply, normal" }}>
+      {/* Global vignette + grain overlay (fixed — no seams) */}
+      <div style={{ position: "fixed", inset: 0, pointerEvents: "none", zIndex: 0, background: "radial-gradient(ellipse at center, transparent 38%, hsl(0 0% 0% / 0.85) 100%)" }} />
+      <div style={{ position: "fixed", inset: 0, pointerEvents: "none", zIndex: 0, opacity: 0.35, mixBlendMode: "overlay", backgroundImage: "radial-gradient(hsl(0 0% 100% / 0.06) 1px, transparent 1.4px), radial-gradient(hsl(0 0% 0% / 0.4) 1px, transparent 1.4px)", backgroundSize: "5px 5px, 7px 7px", backgroundPosition: "0 0, 2px 3px" }} />
       <style>{`
         .lp-eng {
           font-family: 'Cinzel','MedievalSharp',serif; font-weight:700; color:hsl(0 0% 18%);
