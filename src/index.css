@@ -938,3 +938,51 @@
   from { background-position: 0% 50%; }
   to { background-position: 200% 50%; }
 }
+
+/* Weathered cast-silver title with cool arcane glow */
+@keyframes lp-silver-shimmer {
+  from { background-position: 0% 50%; }
+  to   { background-position: 200% 50%; }
+}
+.lp-silver-cast {
+  position: relative;
+  display: inline-block;
+  background-image:
+    /* micro-scratches */
+    repeating-linear-gradient(115deg,
+      rgba(255,255,255,0.05) 0 1px, transparent 1px 3px),
+    repeating-linear-gradient(60deg,
+      rgba(0,0,0,0.18) 0 1px, transparent 1px 5px),
+    /* oxidation pits */
+    radial-gradient(circle at 20% 30%, rgba(0,0,0,0.35) 0 2px, transparent 3px),
+    radial-gradient(circle at 70% 65%, rgba(0,0,0,0.3) 0 2px, transparent 3px),
+    radial-gradient(circle at 45% 80%, rgba(255,255,255,0.18) 0 1px, transparent 2px),
+    /* main cool silver gradient: gunmetal → burnished silver → gunmetal */
+    linear-gradient(180deg,
+      #d8e0e8 0%,
+      #f4f7fa 18%,
+      #aab4be 42%,
+      #5e6770 60%,
+      #2f3640 78%,
+      #8a949e 92%,
+      #c8d0d8 100%),
+    /* horizontal sheen sweep */
+    linear-gradient(110deg,
+      #4a525c 0%, #c8d2dc 35%, #ffffff 50%, #c8d2dc 65%, #4a525c 100%);
+  background-size: 100% 100%, 100% 100%, 100% 100%, 100% 100%, 100% 100%, 100% 100%, 200% 100%;
+  background-blend-mode: overlay, overlay, multiply, multiply, screen, normal, overlay;
+  -webkit-background-clip: text;
+          background-clip: text;
+  -webkit-text-fill-color: transparent;
+  color: transparent;
+  animation: lp-silver-shimmer 4.5s linear infinite;
+  /* heavy bevel + cool silver-blue arcane glow */
+  filter:
+    drop-shadow(0 1px 0 rgba(255,255,255,0.35))
+    drop-shadow(0 -1px 0 rgba(0,0,0,0.6))
+    drop-shadow(2px 3px 0 rgba(0,0,0,0.85))
+    drop-shadow(4px 6px 2px rgba(0,0,0,0.7))
+    drop-shadow(0 0 14px rgba(150,200,255,0.55))
+    drop-shadow(0 0 32px rgba(110,170,235,0.45))
+    drop-shadow(0 0 70px rgba(80,140,220,0.3));
+}
