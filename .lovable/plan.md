@@ -1,43 +1,61 @@
 
-## Why the lines appear
 
-The Landing page sets its background to a tiled 512×512 JPG (`slate-texture.jpg`):
+## Goal
+Make the landing page feel more alive, immersive, and inviting — drawing visitors deeper without overwhelming the dungeon aesthetic.
 
-```tsx
-backgroundImage: `url(${slateTexture})`,
-backgroundRepeat: "repeat",
-backgroundSize: "512px 512px"
-```
+## Proposed enhancements
 
-At a 1336px viewport the texture repeats roughly every 512px both horizontally and vertically, and because the JPG isn't seamless (and JPG compression amplifies edge artifacts), you get visible vertical/horizontal seams forming a grid across the hero. The radial overlays on top don't hide them because they're additive, not blurring.
+### 1. Stronger hero hook
+- **Animated tagline rotator** under the title: cycle through 3-4 punchy lines like *"Learn Linux. Slay dragons."*, *"Your terminal is your sword."*, *"AI Dungeon Master included."* — each fades in/out every 3.5s.
+- **Visible CTA in hero** (currently the CTA is buried at the bottom): add a stone "▶ ENTER THE DUNGEON" button right under the tagline so first-paint shows a clear next action.
+- **Scroll cue**: a small bouncing "▼ scroll to peek inside" indicator at the bottom of the hero.
 
-## Fix plan (background)
+### 2. Live, interactive terminal demo
+The current `TerminalDemo` plays once and stops. Make it:
+- **Loop continuously** so late scrollers still see motion.
+- **Add typewriter sound-style cursor jitter** (subtle scale pulse on each new char).
+- **Allow the visitor to type** into the demo terminal — accept `ls`, `cd`, `help` and respond with canned dungeon output. Turns the demo into a 10-second taste of the real game.
 
-Replace the raw tiled JPG with a layered, seam-hiding background:
+### 3. Stat ribbon (social proof / hook)
+A thin engraved-stone bar between hero and dual-monitor section showing rotating counters:
+`⚔ 47 COMMANDS · 🗝 12 DUNGEONS · 🤖 AI MENTOR · 🆓 FREE TO PLAY`
+Numbers count up on scroll-into-view.
 
-1. **Cover, don't tile** the slate as the base layer: `background-size: cover` and `background-attachment: fixed` on the outer wrapper. One image stretched once = no repeating seam.
-2. **Layer a procedural noise/grain** on top using CSS `radial-gradient` dot patterns + a soft `linear-gradient` vignette so the texture still feels stony without depending on the JPG's repeat.
-3. **Add a global dark vignette overlay** (`radial-gradient(ellipse at center, transparent 40%, #000 100%)`) fixed to the viewport so even at long scroll the edges stay dark and uniform.
-4. **Soft blur mask** (`backdrop-filter: blur(0.5px)` on a thin overlay) to dissolve any residual JPG block artifacts.
+### 4. "Featured commands" carousel
+New section before "How We Play": a horizontally-scrolling row of 6-8 stone tablets, each showing one Linux command (`ls`, `cat`, `grep`, `mkdir`, `chmod`, `find`) with a one-line dungeon flavor: *"grep — divine the secret runes hidden in any scroll"*. Tablets gently float and tilt on hover.
 
-Net effect: uniform dark slate with grain, no repeating grid lines.
+### 5. Testimonial / quote scroll
+A parchment scroll component (reuse `scriptorium-bg`) with rotating fictional player quotes:
+> *"I learned more sysadmin in 2 hours than my whole CS class." — apprentice_dev*
 
-## Animations to add
+Adds personality and warmth without needing real testimonials.
 
-Subtle, on-theme motion — nothing flashy:
+### 6. Animated dungeon path preview
+Replace the static dual-monitor layout's right side with a **mini-loop**: player walks left→right across the room every ~6s, opens a door, screen briefly flashes "ROOM CLEARED ✓", resets. Already have walking GIFs — just needs a state loop.
 
-1. **Hero entrance**: title `TERMINAL QUEST` fades + scales in (`fade-in` + `scale-in`, 600ms). Subtitle and CTA stagger in 200ms after.
-2. **Ember particles**: 6–8 absolutely-positioned amber dots in the hero that drift upward with a CSS `@keyframes ember-rise` (translateY -120px + opacity 0) on a 6–10s loop with random delays. Pure CSS, no library.
-3. **Torch glow pulse**: the existing radial amber glow at the top of the hero gets a slow `breathe` animation (opacity 0.6→1, 4s ease-in-out infinite) so the scene feels alive without flicker.
-4. **Section reveal on scroll**: use IntersectionObserver in a tiny `useReveal` hook to add an `is-visible` class that triggers `fade-in` + slight `translateY(20px)→0` on each `<StoneSection>` as it enters the viewport.
-5. **Hover micro-interactions**:
-   - Stone CTA button gets a slow amber glow sweep (`background-position` animation on a gradient overlay) on hover.
-   - Floppy buttons tilt 2° on hover (`transform: rotate(-2deg) translateY(-2px)`).
-6. **Pixel dungeon idle**: torch tile already flickers; add a very slow `breathe` to the chest emoji and a faint pulsing glow ring under the player sprite.
+### 7. Footer "campfire"
+Currently no real footer. Add a small final block:
+- Pixel campfire ASCII art with the existing ember particle effect concentrated above it
+- Links: GitHub · Discord · About · How it works
+- Tiny copyright line in engraved-stone style
+
+### 8. Polish details
+- **Cursor trail of embers** when moving the mouse over the hero (CSS-only, throttled, max 6 particles).
+- **Audio toggle** in the top nav: a 🔊/🔇 icon that plays a low ambient torch-crackle loop (muted by default, respects user choice via localStorage).
+- **First-time visitor "?" hint bubble** pointing to the CTA after 4s of inactivity.
+
+## Recommended priority (if not all)
+**High impact / low risk:** 1 (hero CTA + tagline rotator), 2 (interactive terminal), 4 (commands carousel), 6 (dungeon walk loop)
+**Nice to have:** 3 (stat ribbon), 5 (testimonial), 7 (campfire footer)
+**Optional flair:** 8 (cursor trail, audio)
 
 ## Files to edit
+- `src/pages/Landing.tsx` — all new sections, hero CTA, interactive terminal state, walk-loop state
+- `src/index.css` — add float/tilt keyframes for tablets, count-up reveal animation, scroll-cue bounce, cursor-trail particle styles
+- *(optional)* `public/audio/torch-loop.mp3` if we add the audio toggle
 
-- `src/pages/Landing.tsx` — swap background style, add `useReveal` hook, ember particles, entrance/scroll animations, hover polish.
-- `src/index.css` — add `@keyframes ember-rise`, `.reveal` / `.reveal.is-visible` classes, button glow-sweep keyframes (kept landing-scoped via class prefix `lp-`).
+No new dependencies needed.
 
-No new dependencies. All animations are CSS + one small IntersectionObserver hook.
+## Question for you
+Which subset would you like? Reply with numbers (e.g. *"1, 2, 4, 6"*) or *"all"* and I'll build it in default mode.
+
