@@ -91,10 +91,13 @@ export function GameWorld({ state, onDismissPopup }: GameWorldProps) {
               />
             )}
             {torch && (
-              <span
-                className="absolute inset-0 torch-tex torch-flicker"
-                aria-hidden
-              />
+              <>
+                <span className="ground-shadow" aria-hidden />
+                <span
+                  className="absolute inset-0 torch-tex torch-flicker"
+                  aria-hidden
+                />
+              </>
             )}
           </div>,
         );
@@ -225,16 +228,35 @@ export function GameWorld({ state, onDismissPopup }: GameWorldProps) {
               className="pointer-events-none absolute label-float"
               style={{
                 left: d.x * tileW + tileW / 2,
-                top: d.y * tileH - 14,
+                top: d.y * tileH - 16,
                 opacity: brightnessFor(edist(state.player.x, state.player.y, d.x, d.y)),
                 zIndex: 9,
               }}
             >
-              <span className="font-pixel text-[7px] text-parchment whitespace-nowrap rounded bg-stone-slab-edge/85 px-1.5 py-0.5 border border-stone-light/30 shadow-[0_2px_4px_hsl(0_0%_0%/0.6)]">
+              <span className="label-chip breathe text-[7px]">
                 {d.target === ".." ? "../" : `${d.target}/`}
               </span>
             </div>
           ))}
+
+          {/* Torch labels */}
+          {room.tiles
+            .filter((t) => t.kind === "torch")
+            .map((t) => (
+              <div
+                key={`torch-label-${t.x}-${t.y}`}
+                className="pointer-events-none absolute label-float"
+                style={{
+                  left: t.x * tileW + tileW / 2,
+                  top: t.y * tileH - 16,
+                  transform: "translateX(-50%)",
+                  opacity: brightnessFor(edist(state.player.x, state.player.y, t.x, t.y)),
+                  zIndex: 9,
+                }}
+              >
+                <span className="label-chip breathe text-[7px]">torch</span>
+              </div>
+            ))}
 
           {/* Files (items) */}
           {room.files.map((f) => {
@@ -253,13 +275,14 @@ export function GameWorld({ state, onDismissPopup }: GameWorldProps) {
                 }}
                 title={f.name}
               >
+                <span className="ground-shadow" aria-hidden />
                 <img
                   src={scrollItem}
                   alt={f.name}
-                  className="h-[80%] w-[80%] object-contain drop-shadow-[0_0_8px_hsl(var(--gold)/0.55)]"
+                  className="h-[80%] w-[80%] object-contain drop-shadow-[0_3px_3px_hsl(0_0%_0%/0.7)] drop-shadow-[0_0_8px_hsl(var(--gold)/0.55)]"
                   style={{ imageRendering: "pixelated" }}
                 />
-                <span className="absolute -bottom-1 left-1/2 -translate-x-1/2 font-pixel text-[7px] text-parchment whitespace-nowrap rounded bg-stone-slab-edge/80 px-1 py-0.5 border border-stone-light/30">
+                <span className="absolute -bottom-1 left-1/2 -translate-x-1/2 label-chip breathe text-[7px]">
                   {f.name}
                 </span>
               </div>
@@ -333,7 +356,9 @@ export function GameWorld({ state, onDismissPopup }: GameWorldProps) {
               zIndex: 10,
             }}
           >
+            <span className="ground-shadow" aria-hidden />
             <PlayerSprite anim={state.playerAnim} facing={state.playerFacing} size={Math.min(TILE, 48)} />
+
           </motion.div>
           {/* Mini-map (pwd flash) */}
           {showMinimap && (
