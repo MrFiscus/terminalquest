@@ -20,10 +20,21 @@ function dist(ax: number, ay: number, bx: number, by: number) {
   return Math.max(Math.abs(ax - bx), Math.abs(ay - by));
 }
 
+function edist(ax: number, ay: number, bx: number, by: number) {
+  return Math.hypot(ax - bx, ay - by);
+}
+
+// Smooth radial falloff used for opacity of items/doors/labels.
+// Returns 1 at the source and ~0 beyond `radius`.
+function smoothLight(d: number, radius: number) {
+  if (d >= radius) return 0;
+  const t = 1 - d / radius;
+  return Math.max(0, Math.min(1, t * t));
+}
+
 function brightnessFor(d: number): number {
-  if (d <= 2) return 1;
-  if (d === 3) return 0.5;
-  return 0.1;
+  // Smooth fade — used for proximity-based UI opacity (labels, items).
+  return Math.max(0.18, smoothLight(d, 4.5));
 }
 
 function vfxKindFor(vfx: VfxPulse[], x: number, y: number) {
@@ -215,7 +226,7 @@ export function GameWorld({ state, onDismissPopup }: GameWorldProps) {
               style={{
                 left: d.x * tileW + tileW / 2,
                 top: d.y * tileH - 14,
-                opacity: brightnessFor(dist(state.player.x, state.player.y, d.x, d.y)),
+                opacity: brightnessFor(edist(state.player.x, state.player.y, d.x, d.y)),
                 zIndex: 9,
               }}
             >
@@ -227,7 +238,7 @@ export function GameWorld({ state, onDismissPopup }: GameWorldProps) {
 
           {/* Files (items) */}
           {room.files.map((f) => {
-            const b = brightnessFor(dist(state.player.x, state.player.y, f.x, f.y));
+            const b = brightnessFor(edist(state.player.x, state.player.y, f.x, f.y));
             return (
               <div
                 key={f.name}
@@ -255,33 +266,60 @@ export function GameWorld({ state, onDismissPopup }: GameWorldProps) {
             );
           })}
 
-          {/* Torchlight darkness overlay */}
-          <div
-            className="pointer-events-none absolute inset-0 grid light-flicker"
-            style={{
-              gridTemplateColumns: `repeat(${room.width}, ${tileW}px)`,
-              gridTemplateRows: `repeat(${room.height}, ${tileH}px)`,
-              zIndex: 6,
-            }}
-            aria-hidden
-          >
-            {Array.from({ length: room.width * room.height }).map((_, i) => {
-              const x = i % room.width;
-              const y = Math.floor(i / room.width);
-              const d = dist(state.player.x, state.player.y, x, y);
-              const b = brightnessFor(d);
-              const dark = 1 - b;
-              return (
+          {/* Smooth radial darkness overlay — single layer with light sources */}
+          {(() => {
+            const playerCx = (state.player.x + 0.5) * tileW;
+            const playerCy = (state.player.y + 0.5) * tileH;
+            const playerR = TILE * 4.2;
+
+            const torches = room.tiles.filter((t) => t.kind === "torch");
+            // Each light source punches a soft transparent hole in the dark veil.
+            const lightHoles = [
+              `radial-gradient(circle at ${playerCx}px ${playerCy}px, transparent 0px, transparent ${playerR * 0.35}px, hsl(0 0% 4% / 0.55) ${playerR * 0.75}px, hsl(0 0% 3% / 0.96) ${playerR}px)`,
+              ...torches.map((t) => {
+                const cx = (t.x + 0.5) * tileW;
+                const cy = (t.y + 0.5) * tileH;
+                const r = TILE * 3.2;
+                return `radial-gradient(circle at ${cx}px ${cy}px, transparent 0px, transparent ${r * 0.3}px, hsl(0 0% 4% / 0.5) ${r * 0.7}px, hsl(0 0% 3% / 0.96) ${r}px)`;
+              }),
+            ];
+
+            const warmGlow = [
+              `radial-gradient(circle at ${playerCx}px ${playerCy}px, hsl(33 100% 55% / 0.18) 0px, hsl(33 100% 55% / 0.08) ${playerR * 0.5}px, transparent ${playerR}px)`,
+              ...torches.map((t) => {
+                const cx = (t.x + 0.5) * tileW;
+                const cy = (t.y + 0.5) * tileH;
+                const r = TILE * 3.2;
+                return `radial-gradient(circle at ${cx}px ${cy}px, hsl(33 100% 55% / 0.28) 0px, hsl(33 100% 55% / 0.1) ${r * 0.5}px, transparent ${r}px)`;
+              }),
+            ];
+
+            return (
+              <>
+                {/* Deep charcoal void — covers everything outside light circles. */}
                 <div
-                  key={i}
+                  className="pointer-events-none absolute inset-0 light-flicker"
                   style={{
-                    background: `hsl(var(--background) / ${dark})`,
-                    transition: "background 200ms linear",
+                    background: lightHoles.join(", "),
+                    backgroundBlendMode: "multiply",
+                    transition: "background 240ms ease-out",
+                    zIndex: 6,
                   }}
+                  aria-hidden
                 />
-              );
-            })}
-          </div>
+                {/* Warm torch tint — soft orange wash over lit areas. */}
+                <div
+                  className="pointer-events-none absolute inset-0 light-flicker mix-blend-screen"
+                  style={{
+                    background: warmGlow.join(", "),
+                    transition: "background 240ms ease-out",
+                    zIndex: 11,
+                  }}
+                  aria-hidden
+                />
+              </>
+            );
+          })()}
 
           {/* Player sprite (framer-motion tile movement) */}
           <motion.div
@@ -297,22 +335,6 @@ export function GameWorld({ state, onDismissPopup }: GameWorldProps) {
           >
             <PlayerSprite anim={state.playerAnim} facing={state.playerFacing} size={Math.min(TILE, 48)} />
           </motion.div>
-
-          {/* Soft torch vignette */}
-          <div
-            className="pointer-events-none absolute inset-0 light-flicker"
-            style={{
-              background: `radial-gradient(circle at ${
-                (state.player.x + 0.5) * tileW
-              }px ${(state.player.y + 0.5) * tileH}px, hsl(var(--torch-glow) / 0.18) 0px, transparent ${
-                TILE * 2.5
-              }px)`,
-              transition: "background 200ms linear",
-              zIndex: 11,
-            }}
-            aria-hidden
-          />
-
           {/* Mini-map (pwd flash) */}
           {showMinimap && (
             <div
