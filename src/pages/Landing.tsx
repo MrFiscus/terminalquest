@@ -211,6 +211,7 @@ function FloppyButton({ label }: { label: string }) {
   const [pressed, setPressed] = useState(false);
   return (
     <button type="button" onMouseDown={() => setPressed(true)} onMouseUp={() => setPressed(false)} onMouseLeave={() => setPressed(false)}
+      className="lp-floppy-tilt"
       style={{ position: "relative", width: 68, height: 70, cursor: "pointer", border: "none", background: "none", padding: 0 }}
     >
       {/* Body */}
