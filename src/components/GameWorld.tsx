@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
 import { getRoom } from "@/game/dungeon";
@@ -11,7 +11,8 @@ interface GameWorldProps {
   onDismissPopup: () => void;
 }
 
-const TILE = 44;
+const MIN_TILE = 24;
+const MAX_TILE = 96;
 
 function dist(ax: number, ay: number, bx: number, by: number) {
   return Math.max(Math.abs(ax - bx), Math.abs(ay - by));
@@ -32,6 +33,30 @@ function vfxKindFor(vfx: VfxPulse[], x: number, y: number) {
 
 export function GameWorld({ state, onDismissPopup }: GameWorldProps) {
   const room = getRoom(state.rooms, state.cwd);
+  const stageRef = useRef<HTMLDivElement>(null);
+  const [TILE, setTile] = useState(44);
+
+  // Measure available stage area and pick the largest square tile that fits.
+  useEffect(() => {
+    const el = stageRef.current;
+    if (!el || !room) return;
+    const compute = () => {
+      const r = el.getBoundingClientRect();
+      // Small inset so the pit shadow has breathing room on all sides
+      const padding = 16;
+      const w = Math.max(0, r.width - padding * 2);
+      const h = Math.max(0, r.height - padding * 2);
+      const t = Math.max(
+        MIN_TILE,
+        Math.min(MAX_TILE, Math.floor(Math.min(w / room.width, h / room.height))),
+      );
+      setTile(t);
+    };
+    compute();
+    const ro = new ResizeObserver(compute);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, [room]);
 
   const grid = useMemo(() => {
     if (!room) return null;
@@ -71,7 +96,7 @@ export function GameWorld({ state, onDismissPopup }: GameWorldProps) {
       }
     }
     return cells;
-  }, [room]);
+  }, [room, TILE]);
 
   if (!room) {
     return <div className="flex h-full items-center justify-center text-muted-foreground">The void.</div>;
@@ -109,7 +134,10 @@ export function GameWorld({ state, onDismissPopup }: GameWorldProps) {
       </div>
 
       {/* Stage */}
-      <div className="relative flex flex-1 items-center justify-center overflow-hidden p-4">
+      <div
+        ref={stageRef}
+        className="relative flex flex-1 items-center justify-center overflow-hidden p-4"
+      >
         <div
           key={room.path}
           className="relative pixelate-in"
