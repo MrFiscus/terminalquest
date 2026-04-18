@@ -254,7 +254,7 @@ export function GameWorld({ state, onDismissPopup, headerRight }: GameWorldProps
               style={{
                 left: d.x * tileW + tileW / 2,
                 top: d.y * tileH - 16,
-                opacity: brightnessFor(edist(state.player.x, state.player.y, d.x, d.y)),
+                opacity: 1,
                 zIndex: 30,
               }}
             >
