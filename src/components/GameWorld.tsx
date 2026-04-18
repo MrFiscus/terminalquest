@@ -145,8 +145,8 @@ export function GameWorld({ state, onDismissPopup }: GameWorldProps) {
           <div
             className="grid"
             style={{
-              gridTemplateColumns: `repeat(${room.width}, ${tileW}px ${tileH}px)`,
-              gridTemplateRows: `repeat(${room.height}, ${tileW}px ${tileH}px)`,
+              gridTemplateColumns: `repeat(${room.width}, ${tileW}px)`,
+              gridTemplateRows: `repeat(${room.height}, ${tileH}px)`,
             }}
           >
             {grid}
@@ -156,8 +156,8 @@ export function GameWorld({ state, onDismissPopup }: GameWorldProps) {
           <div
             className="pointer-events-none absolute inset-0 grid"
             style={{
-              gridTemplateColumns: `repeat(${room.width}, ${tileW}px ${tileH}px)`,
-              gridTemplateRows: `repeat(${room.height}, ${tileW}px ${tileH}px)`,
+              gridTemplateColumns: `repeat(${room.width}, ${tileW}px)`,
+              gridTemplateRows: `repeat(${room.height}, ${tileH}px)`,
               zIndex: 8,
             }}
             aria-hidden
@@ -254,8 +254,8 @@ export function GameWorld({ state, onDismissPopup }: GameWorldProps) {
           <div
             className="pointer-events-none absolute inset-0 grid light-flicker"
             style={{
-              gridTemplateColumns: `repeat(${room.width}, ${tileW}px ${tileH}px)`,
-              gridTemplateRows: `repeat(${room.height}, ${tileW}px ${tileH}px)`,
+              gridTemplateColumns: `repeat(${room.width}, ${tileW}px)`,
+              gridTemplateRows: `repeat(${room.height}, ${tileH}px)`,
               zIndex: 6,
             }}
             aria-hidden
