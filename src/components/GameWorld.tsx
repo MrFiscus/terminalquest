@@ -36,6 +36,9 @@ export function GameWorld({ state }: GameWorldProps) {
                 <span className="font-pixel text-[8px] text-parchment/90">
                   {door.target === ".." ? "◄" : "►"}
                 </span>
+                <span className="absolute -top-3 left-1/2 -translate-x-1/2 font-pixel text-[7px] text-parchment/80 whitespace-nowrap">
+                  {door.target === ".." ? ".." : `${door.target}/`}
+                </span>
               </div>
             )}
             {torch && (
