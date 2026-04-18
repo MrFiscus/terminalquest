@@ -50,14 +50,15 @@ export function GameWorld({ state, onDismissPopup }: GameWorldProps) {
   const [tileW, setTileW] = useState(44);
   const [tileH, setTileH] = useState(44);
 
-  // Measure stage and stretch tiles to fully fill it (no padding, no gaps).
+  // Measure stage and fit a SQUARE dungeon centered within available space.
   useEffect(() => {
     const el = stageRef.current;
     if (!el || !room) return;
     const compute = () => {
       const r = el.getBoundingClientRect();
-      setTileW(Math.max(1, r.width / room.width));
-      setTileH(Math.max(1, r.height / room.height));
+      const side = Math.max(1, Math.min(r.width, r.height));
+      setTileW(side / room.width);
+      setTileH(side / room.height);
     };
     compute();
     const ro = new ResizeObserver(compute);
@@ -144,10 +145,10 @@ export function GameWorld({ state, onDismissPopup }: GameWorldProps) {
         <span className="font-pixel carved-gold text-[10px]">TERMINAL · QUEST</span>
       </div>
 
-      {/* Stage — fills the entire right panel, no padding, no gaps */}
+      {/* Stage — fills the right panel; dungeon stays a centered square */}
       <div
         ref={stageRef}
-        className="relative flex-1 overflow-hidden"
+        className="relative flex-1 overflow-hidden grid place-items-center"
       >
         <div
           key={room.path}

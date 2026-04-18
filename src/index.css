@@ -146,6 +146,8 @@
 
   html, body, #root {
     height: 100%;
+    width: 100%;
+    overflow: hidden;
   }
 
   body {
@@ -550,7 +552,8 @@
 
   /* Carved stone pillar divider — recessed gap between terminal and dungeon */
   .pillar-divider {
-    width: 14px;
+    width: 4px;
+    background-color: #1a1a1a;
     background:
       /* Carved chiseled grain */
       repeating-linear-gradient(

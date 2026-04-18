@@ -26,7 +26,7 @@ const Index = () => {
   };
 
   return (
-    <main className="relative grid h-screen w-screen grid-cols-[40fr_14px_60fr] overflow-hidden bg-background">
+    <main className="relative grid h-screen w-screen grid-cols-[40vw_4px_60vw] overflow-hidden bg-background">
       <h1 className="sr-only">Terminal Quest - Linux Dungeon RPG</h1>
 
       <section aria-label="Terminal" className="h-full min-h-0">
