@@ -1,46 +1,43 @@
 
-## Terminal Quest — Build Plan
+## Why the lines appear
 
-A split-screen Linux-terminal dungeon RPG. First screen is the playable game.
+The Landing page sets its background to a tiled 512×512 JPG (`slate-texture.jpg`):
 
-### Layout
-- Full-viewport split: **left** Terminal panel, **right** GameWorld panel with an **inventory bar** pinned to its bottom.
-- Dark 16-bit fantasy palette (deep slate, torch amber, moss green, parchment text). Pixel-style fonts (monospace for terminal, blocky display for HUD). All colors as HSL tokens in `index.css` + Tailwind config.
+```tsx
+backgroundImage: `url(${slateTexture})`,
+backgroundRepeat: "repeat",
+backgroundSize: "512px 512px"
+```
 
-### Default dungeon (3 rooms, linear)
-- `/home/user` — Entry Hall. Files: `readme.txt`, `torch`. Door: `hallway/`.
-- `/home/user/hallway` — Stone Hallway. Files: `note.txt`. Doors: `..`, `treasury/`.
-- `/home/user/hallway/treasury` — Treasury. Files: **`victory.jpg`**, `dust`. Door: `..`.
-- `cat readme.txt` reveals the goal: move `victory.jpg` into `~/inventory`.
+At a 1336px viewport the texture repeats roughly every 512px both horizontally and vertically, and because the JPG isn't seamless (and JPG compression amplifies edge artifacts), you get visible vertical/horizontal seams forming a grid across the hero. The radial overlays on top don't hide them because they're additive, not blurring.
 
-### Terminal (left panel)
-- Scrollable history with prompt `user@dungeon:<cwd>$`.
-- Supported commands: `ls`, `cd`, `pwd`, `cat`, `file`, `find`, `mkdir`, `rm`, `mv … ~/inventory`, `help`, `clear`.
-- ↑/↓ cycle command history; Enter submits; auto-scroll to latest.
-- Unknown commands route through a stubbed `dmRespond(input, ctx)` returning an in-character Dungeon Master line (ready to swap for AI later).
-- `mv <file> ~/inventory` is the win trigger when `<file>` matches the target.
+## Fix plan (background)
 
-### GameWorld (right panel)
-- Tile-based render of **only the current room** (deterministic grid, e.g. 11×7). Everything outside is black.
-- Renders: floor/wall tiles, doors (one per child folder + a back-door for `..`), item glyphs for files, player marker.
-- Movement animation: when `cd <dir>` runs, player walks tile-by-tile to that door, then room swaps. When `mv <file> ~/inventory` runs, player walks to the item, item fades into the inventory bar. If no walkable path, fall back to instant.
-- CSS-only pixel styling, no new art assets.
+Replace the raw tiled JPG with a layered, seam-hiding background:
 
-### Inventory bar
-- Dungeon-themed strip labeled `~/inventory`, fixed slots with stone/iron frame styling, items shown as glyph + name tooltip.
-- Picking up `victory.jpg` triggers a victory overlay ("You have escaped the dungeon").
+1. **Cover, don't tile** the slate as the base layer: `background-size: cover` and `background-attachment: fixed` on the outer wrapper. One image stretched once = no repeating seam.
+2. **Layer a procedural noise/grain** on top using CSS `radial-gradient` dot patterns + a soft `linear-gradient` vignette so the texture still feels stony without depending on the JPG's repeat.
+3. **Add a global dark vignette overlay** (`radial-gradient(ellipse at center, transparent 40%, #000 100%)`) fixed to the viewport so even at long scroll the edges stay dark and uniform.
+4. **Soft blur mask** (`backdrop-filter: blur(0.5px)` on a thin overlay) to dissolve any residual JPG block artifacts.
 
-### Architecture
-- `src/game/types.ts` — `Room`, `FileItem`, `Tile`, `Direction`, `GameState`, `CommandResult`.
-- `src/game/dungeon.ts` — default 3-room map + tile layouts + helpers (`resolvePath`, `getRoom`, `pathfind`).
-- `src/game/commands.ts` — pure command parser/executor returning state patches + output lines.
-- `src/game/dmStub.ts` — stub DM responder for unknown commands.
-- `src/hooks/useGameState.ts` — single source of truth: cwd, rooms, inventory, player tile, history, animation queue.
-- `src/components/Terminal.tsx` — input, history, output rendering, arrow-key recall.
-- `src/components/GameWorld.tsx` — current-room tile renderer + animated player.
-- `src/components/InventoryBar.tsx` — themed slots.
-- `src/components/VictoryOverlay.tsx` — win screen with "play again".
-- `src/pages/Index.tsx` — split layout wiring it all together.
+Net effect: uniform dark slate with grain, no repeating grid lines.
 
-### Non-goals
-No auth, no database, no landing page, no marketing copy, no new art generation.
+## Animations to add
+
+Subtle, on-theme motion — nothing flashy:
+
+1. **Hero entrance**: title `TERMINAL QUEST` fades + scales in (`fade-in` + `scale-in`, 600ms). Subtitle and CTA stagger in 200ms after.
+2. **Ember particles**: 6–8 absolutely-positioned amber dots in the hero that drift upward with a CSS `@keyframes ember-rise` (translateY -120px + opacity 0) on a 6–10s loop with random delays. Pure CSS, no library.
+3. **Torch glow pulse**: the existing radial amber glow at the top of the hero gets a slow `breathe` animation (opacity 0.6→1, 4s ease-in-out infinite) so the scene feels alive without flicker.
+4. **Section reveal on scroll**: use IntersectionObserver in a tiny `useReveal` hook to add an `is-visible` class that triggers `fade-in` + slight `translateY(20px)→0` on each `<StoneSection>` as it enters the viewport.
+5. **Hover micro-interactions**:
+   - Stone CTA button gets a slow amber glow sweep (`background-position` animation on a gradient overlay) on hover.
+   - Floppy buttons tilt 2° on hover (`transform: rotate(-2deg) translateY(-2px)`).
+6. **Pixel dungeon idle**: torch tile already flickers; add a very slow `breathe` to the chest emoji and a faint pulsing glow ring under the player sprite.
+
+## Files to edit
+
+- `src/pages/Landing.tsx` — swap background style, add `useReveal` hook, ember particles, entrance/scroll animations, hover polish.
+- `src/index.css` — add `@keyframes ember-rise`, `.reveal` / `.reveal.is-visible` classes, button glow-sweep keyframes (kept landing-scoped via class prefix `lp-`).
+
+No new dependencies. All animations are CSS + one small IntersectionObserver hook.
