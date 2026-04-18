@@ -45,7 +45,7 @@ function vfxKindFor(vfx: VfxPulse[], x: number, y: number) {
   return null;
 }
 
-export function GameWorld({ state, onDismissPopup }: GameWorldProps) {
+export function GameWorld({ state, onDismissPopup, headerRight }: GameWorldProps) {
   const room = getRoom(state.rooms, state.cwd);
   const stageRef = useRef<HTMLDivElement>(null);
   const [tileW, setTileW] = useState(44);
