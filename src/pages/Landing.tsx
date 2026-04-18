@@ -106,33 +106,97 @@ const DEMO = [
   { k: "dm",   t: "  ✦ Hint: try  cd crypt  to search for materials" },
 ];
 
+type DemoLine = { k: string; t: string };
+
+const CANNED: Record<string, DemoLine[]> = {
+  ls: [
+    { k: "dir",  t: "  crypt/    torchroom/    ruins/" },
+    { k: "file", t: "  chest.lock    bridge_plans.txt    key.txt" },
+  ],
+  help: [
+    { k: "out", t: "  Available: ls, cd, cat, help, clear" },
+    { k: "dm",  t: "  ✦ The Dungeon Master nods approvingly." },
+  ],
+  cd: [
+    { k: "sys", t: "  You step into the crypt. Torches flicker." },
+    { k: "dm",  t: "  ✦ Hint: try  ls  to see what awaits." },
+  ],
+  cat: [
+    { k: "out", t: "  Blueprint: Rope Bridge — lumber required." },
+  ],
+  clear: [],
+  __unknown: [
+    { k: "out", t: "  command not found — try `help`" },
+  ],
+};
+
 function TerminalDemo() {
   const [n, setN] = useState(0);
+  const [extra, setExtra] = useState<DemoLine[]>([]);
+  const [input, setInput] = useState("");
+  const [loopKey, setLoopKey] = useState(0);
+  const inputRef = useRef<HTMLInputElement>(null);
+
   useEffect(() => {
-    if (n >= DEMO.length) return;
+    if (n >= DEMO.length) {
+      // If user hasn't typed anything yet, auto-loop the canned demo
+      if (extra.length > 0) return;
+      const t = setTimeout(() => { setN(0); setLoopKey(k => k + 1); }, 6000);
+      return () => clearTimeout(t);
+    }
     const t = setTimeout(() => setN(c => c + 1), DEMO[n].k === "in" ? 700 : 170);
     return () => clearTimeout(t);
-  }, [n]);
+  }, [n, loopKey, extra.length]);
 
   const col = (k: string) => k === "sys" ? "hsl(140 55% 52%)" : k === "in" ? "hsl(38 100% 55%)" : k === "dir" ? "#60a5fa" : k === "dm" ? "#9ca3af" : k === "sep" ? "hsl(0 0% 22%)" : "#c9cdd4";
 
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!input.trim()) return;
+    const cmd = input.trim().toLowerCase().split(/\s+/)[0];
+    const echo: DemoLine = { k: "in", t: `user@dungeon:~/entrance$ ${input}` };
+    if (cmd === "clear") { setExtra([]); setInput(""); return; }
+    const resp = CANNED[cmd] ?? CANNED.__unknown;
+    setExtra(prev => [...prev, echo, ...resp]);
+    setInput("");
+  };
+
+  const ready = n >= DEMO.length;
+
   return (
-    <div className="scriptorium-bg scriptorium-scroll" style={{ height: "100%", fontFamily: "'JetBrains Mono','Courier New',monospace", fontSize: 11, lineHeight: 1.7, padding: "12px 14px", overflowY: "auto", position: "relative" }}>
+    <div
+      onClick={() => inputRef.current?.focus()}
+      className="scriptorium-bg scriptorium-scroll"
+      style={{ height: "100%", fontFamily: "'JetBrains Mono','Courier New',monospace", fontSize: 11, lineHeight: 1.7, padding: "12px 14px", overflowY: "auto", position: "relative", cursor: "text" }}
+    >
       <div style={{ position: "absolute", inset: 0, pointerEvents: "none", zIndex: 10, background: "repeating-linear-gradient(to bottom,transparent 0,transparent 2px,hsl(0 0% 0%/0.13) 3px)" }} />
       <div style={{ position: "absolute", inset: 0, pointerEvents: "none", zIndex: 11, background: "radial-gradient(ellipse at 50% 50%,transparent 40%,hsl(0 0% 0%/0.6) 100%)" }} />
       {DEMO.slice(0, n).map((line, i) => (
-        <div key={i} style={{ color: col(line.k), fontStyle: line.k === "dm" ? "italic" : "normal", fontWeight: line.k === "dir" ? "bold" : "normal", whiteSpace: "pre", position: "relative", zIndex: 1 }}>
+        <div key={`d-${loopKey}-${i}`} style={{ color: col(line.k), fontStyle: line.k === "dm" ? "italic" : "normal", fontWeight: line.k === "dir" ? "bold" : "normal", whiteSpace: "pre", position: "relative", zIndex: 1 }}>
           {line.t}
         </div>
       ))}
-      {n >= DEMO.length && (
-        <div style={{ display: "flex", alignItems: "center", gap: 4, position: "relative", zIndex: 1 }}>
+      {extra.map((line, i) => (
+        <div key={`e-${i}`} style={{ color: col(line.k), fontStyle: line.k === "dm" ? "italic" : "normal", fontWeight: line.k === "dir" ? "bold" : "normal", whiteSpace: "pre", position: "relative", zIndex: 1 }}>
+          {line.t}
+        </div>
+      ))}
+      {ready && (
+        <form onSubmit={handleSubmit} style={{ display: "flex", alignItems: "center", gap: 4, position: "relative", zIndex: 1 }}>
           <span style={{ color: "#4ade80", fontWeight: "bold" }}>user@dungeon</span>
           <span style={{ color: "#f3f4f6" }}>:</span>
           <span style={{ color: "#60a5fa", fontWeight: "bold" }}>~/entrance</span>
-          <span style={{ color: "#f3f4f6" }}>$ </span>
-          <span style={{ display: "inline-block", width: 7, height: 14, background: "hsl(38 100% 55%)", animation: "cursor-blink 1s step-end infinite", boxShadow: "0 0 8px hsl(38 100% 55%/0.8)" }} />
-        </div>
+          <span style={{ color: "#f3f4f6" }}>$&nbsp;</span>
+          <input
+            ref={inputRef}
+            value={input}
+            onChange={e => setInput(e.target.value)}
+            placeholder="try: ls, cd crypt, help"
+            spellCheck={false}
+            autoComplete="off"
+            style={{ flex: 1, background: "transparent", border: "none", outline: "none", color: "hsl(38 100% 55%)", fontFamily: "inherit", fontSize: 11, padding: 0, caretColor: "hsl(38 100% 55%)" }}
+          />
+        </form>
       )}
     </div>
   );
