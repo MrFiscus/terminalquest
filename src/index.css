@@ -493,23 +493,45 @@
   .floor-tex {
     background-color: hsl(230 8% 14%);
     background-image:
-      linear-gradient(hsl(230 6% 16% / 0.6), hsl(230 6% 16% / 0.6)),
+      linear-gradient(hsl(230 6% 16% / 0.78), hsl(230 6% 16% / 0.78)),
       url("/src/assets/flagstone-floor.png");
     background-size: 100% 100%, 128px 128px;
     background-repeat: no-repeat, repeat;
     image-rendering: pixelated;
-    filter: grayscale(0.7) brightness(0.55) contrast(0.55);
+    filter: grayscale(0.7) brightness(0.55) contrast(0.4) opacity(0.6);
   }
   .floor-tex-alt {
     background-color: hsl(230 8% 12%);
     background-image:
-      linear-gradient(hsl(230 6% 14% / 0.65), hsl(230 6% 14% / 0.65)),
+      linear-gradient(hsl(230 6% 14% / 0.8), hsl(230 6% 14% / 0.8)),
       url("/src/assets/flagstone-floor.png");
     background-size: 100% 100%, 128px 128px;
     background-repeat: no-repeat, repeat;
     background-position: 0 0, 64px 64px;
     image-rendering: pixelated;
-    filter: grayscale(0.7) brightness(0.5) contrast(0.55);
+    filter: grayscale(0.7) brightness(0.5) contrast(0.4) opacity(0.6);
+  }
+  /* Top-row wall: cast shadow downward onto the floor below */
+  .wall-cast-shadow {
+    position: relative;
+  }
+  .wall-cast-shadow::after {
+    content: "";
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: 100%;
+    height: 60%;
+    pointer-events: none;
+    background: linear-gradient(
+      to bottom,
+      hsl(0 0% 0% / 0.7) 0%,
+      hsl(0 0% 0% / 0.4) 35%,
+      hsl(0 0% 0% / 0.15) 70%,
+      transparent 100%
+    );
+    filter: blur(1px);
+    z-index: 5;
   }
   .wall-tex {
     background-color: hsl(var(--wall));
