@@ -258,7 +258,7 @@ export function GameWorld({ state, onDismissPopup, headerRight }: GameWorldProps
                 zIndex: 30,
               }}
             >
-              <span className="label-chip breathe text-[7px]">
+              <span className="label-chip breathe text-[10px] font-bold whitespace-nowrap" style={{ transform: "translateX(-50%)", display: "inline-block" }}>
                 {d.target === ".." ? "../" : `${d.target}/`}
               </span>
             </div>
