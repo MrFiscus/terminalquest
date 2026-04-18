@@ -155,14 +155,38 @@ function MonitorFrame({ title, accent = "hsl(38 100% 50%)", children }: { title:
   );
 }
 
+// ── Scroll reveal hook ───────────────────────────────────────────────────────
+function useReveal<T extends HTMLElement>() {
+  const ref = useRef<T | null>(null);
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    const io = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((e) => {
+          if (e.isIntersecting) {
+            e.target.classList.add("is-visible");
+            io.unobserve(e.target);
+          }
+        });
+      },
+      { threshold: 0.12, rootMargin: "0px 0px -40px 0px" }
+    );
+    io.observe(el);
+    return () => io.disconnect();
+  }, []);
+  return ref;
+}
+
 // ── Shared section wrapper ────────────────────────────────────────────────────
 function StoneSection({ children, tint = "transparent", style = {} }: {
   children: React.ReactNode;
   tint?: string;
   style?: React.CSSProperties;
 }) {
+  const ref = useReveal<HTMLElement>();
   return (
-    <section style={{ position: "relative", ...style }}>
+    <section ref={ref} className="reveal" style={{ position: "relative", ...style }}>
       <div style={{ position: "absolute", inset: 0, background: tint, pointerEvents: "none" }} />
       <div style={{ position: "relative", zIndex: 1 }}>{children}</div>
     </section>
