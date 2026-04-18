@@ -106,33 +106,97 @@ const DEMO = [
   { k: "dm",   t: "  ✦ Hint: try  cd crypt  to search for materials" },
 ];
 
+type DemoLine = { k: string; t: string };
+
+const CANNED: Record<string, DemoLine[]> = {
+  ls: [
+    { k: "dir",  t: "  crypt/    torchroom/    ruins/" },
+    { k: "file", t: "  chest.lock    bridge_plans.txt    key.txt" },
+  ],
+  help: [
+    { k: "out", t: "  Available: ls, cd, cat, help, clear" },
+    { k: "dm",  t: "  ✦ The Dungeon Master nods approvingly." },
+  ],
+  cd: [
+    { k: "sys", t: "  You step into the crypt. Torches flicker." },
+    { k: "dm",  t: "  ✦ Hint: try  ls  to see what awaits." },
+  ],
+  cat: [
+    { k: "out", t: "  Blueprint: Rope Bridge — lumber required." },
+  ],
+  clear: [],
+  __unknown: [
+    { k: "out", t: "  command not found — try `help`" },
+  ],
+};
+
 function TerminalDemo() {
   const [n, setN] = useState(0);
+  const [extra, setExtra] = useState<DemoLine[]>([]);
+  const [input, setInput] = useState("");
+  const [loopKey, setLoopKey] = useState(0);
+  const inputRef = useRef<HTMLInputElement>(null);
+
   useEffect(() => {
-    if (n >= DEMO.length) return;
+    if (n >= DEMO.length) {
+      // If user hasn't typed anything yet, auto-loop the canned demo
+      if (extra.length > 0) return;
+      const t = setTimeout(() => { setN(0); setLoopKey(k => k + 1); }, 6000);
+      return () => clearTimeout(t);
+    }
     const t = setTimeout(() => setN(c => c + 1), DEMO[n].k === "in" ? 700 : 170);
     return () => clearTimeout(t);
-  }, [n]);
+  }, [n, loopKey, extra.length]);
 
   const col = (k: string) => k === "sys" ? "hsl(140 55% 52%)" : k === "in" ? "hsl(38 100% 55%)" : k === "dir" ? "#60a5fa" : k === "dm" ? "#9ca3af" : k === "sep" ? "hsl(0 0% 22%)" : "#c9cdd4";
 
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!input.trim()) return;
+    const cmd = input.trim().toLowerCase().split(/\s+/)[0];
+    const echo: DemoLine = { k: "in", t: `user@dungeon:~/entrance$ ${input}` };
+    if (cmd === "clear") { setExtra([]); setInput(""); return; }
+    const resp = CANNED[cmd] ?? CANNED.__unknown;
+    setExtra(prev => [...prev, echo, ...resp]);
+    setInput("");
+  };
+
+  const ready = n >= DEMO.length;
+
   return (
-    <div className="scriptorium-bg scriptorium-scroll" style={{ height: "100%", fontFamily: "'JetBrains Mono','Courier New',monospace", fontSize: 11, lineHeight: 1.7, padding: "12px 14px", overflowY: "auto", position: "relative" }}>
+    <div
+      onClick={() => inputRef.current?.focus()}
+      className="scriptorium-bg scriptorium-scroll"
+      style={{ height: "100%", fontFamily: "'JetBrains Mono','Courier New',monospace", fontSize: 11, lineHeight: 1.7, padding: "12px 14px", overflowY: "auto", position: "relative", cursor: "text" }}
+    >
       <div style={{ position: "absolute", inset: 0, pointerEvents: "none", zIndex: 10, background: "repeating-linear-gradient(to bottom,transparent 0,transparent 2px,hsl(0 0% 0%/0.13) 3px)" }} />
       <div style={{ position: "absolute", inset: 0, pointerEvents: "none", zIndex: 11, background: "radial-gradient(ellipse at 50% 50%,transparent 40%,hsl(0 0% 0%/0.6) 100%)" }} />
       {DEMO.slice(0, n).map((line, i) => (
-        <div key={i} style={{ color: col(line.k), fontStyle: line.k === "dm" ? "italic" : "normal", fontWeight: line.k === "dir" ? "bold" : "normal", whiteSpace: "pre", position: "relative", zIndex: 1 }}>
+        <div key={`d-${loopKey}-${i}`} style={{ color: col(line.k), fontStyle: line.k === "dm" ? "italic" : "normal", fontWeight: line.k === "dir" ? "bold" : "normal", whiteSpace: "pre", position: "relative", zIndex: 1 }}>
           {line.t}
         </div>
       ))}
-      {n >= DEMO.length && (
-        <div style={{ display: "flex", alignItems: "center", gap: 4, position: "relative", zIndex: 1 }}>
+      {extra.map((line, i) => (
+        <div key={`e-${i}`} style={{ color: col(line.k), fontStyle: line.k === "dm" ? "italic" : "normal", fontWeight: line.k === "dir" ? "bold" : "normal", whiteSpace: "pre", position: "relative", zIndex: 1 }}>
+          {line.t}
+        </div>
+      ))}
+      {ready && (
+        <form onSubmit={handleSubmit} style={{ display: "flex", alignItems: "center", gap: 4, position: "relative", zIndex: 1 }}>
           <span style={{ color: "#4ade80", fontWeight: "bold" }}>user@dungeon</span>
           <span style={{ color: "#f3f4f6" }}>:</span>
           <span style={{ color: "#60a5fa", fontWeight: "bold" }}>~/entrance</span>
-          <span style={{ color: "#f3f4f6" }}>$ </span>
-          <span style={{ display: "inline-block", width: 7, height: 14, background: "hsl(38 100% 55%)", animation: "cursor-blink 1s step-end infinite", boxShadow: "0 0 8px hsl(38 100% 55%/0.8)" }} />
-        </div>
+          <span style={{ color: "#f3f4f6" }}>$&nbsp;</span>
+          <input
+            ref={inputRef}
+            value={input}
+            onChange={e => setInput(e.target.value)}
+            placeholder="try: ls, cd crypt, help"
+            spellCheck={false}
+            autoComplete="off"
+            style={{ flex: 1, background: "transparent", border: "none", outline: "none", color: "hsl(38 100% 55%)", fontFamily: "inherit", fontSize: 11, padding: 0, caretColor: "hsl(38 100% 55%)" }}
+          />
+        </form>
       )}
     </div>
   );
@@ -275,6 +339,183 @@ function RobotAvatar() {
   );
 }
 
+// ── Hero tagline rotator ──────────────────────────────────────────────────────
+const TAGLINES = [
+  "LEARN LINUX. SLAY DRAGONS.",
+  "YOUR TERMINAL IS YOUR SWORD.",
+  "AI DUNGEON MASTER INCLUDED.",
+  "EVERY COMMAND IS A SPELL.",
+];
+
+// ── Animated count-up ─────────────────────────────────────────────────────────
+function useCountUp(target: number, durationMs = 1400) {
+  const ref = useRef<HTMLSpanElement | null>(null);
+  const [val, setVal] = useState(0);
+  const started = useRef(false);
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    const io = new IntersectionObserver((entries) => {
+      entries.forEach((e) => {
+        if (e.isIntersecting && !started.current) {
+          started.current = true;
+          const start = performance.now();
+          const tick = (t: number) => {
+            const p = Math.min(1, (t - start) / durationMs);
+            const eased = 1 - Math.pow(1 - p, 3);
+            setVal(Math.round(target * eased));
+            if (p < 1) requestAnimationFrame(tick);
+          };
+          requestAnimationFrame(tick);
+          io.unobserve(e.target);
+        }
+      });
+    }, { threshold: 0.4 });
+    io.observe(el);
+    return () => io.disconnect();
+  }, [target, durationMs]);
+  return { ref, val };
+}
+
+// ── Stat ribbon ───────────────────────────────────────────────────────────────
+function StatRibbon() {
+  const a = useCountUp(47);
+  const b = useCountUp(12);
+  return (
+    <StoneSection tint="hsl(0 0%0%/0.32)">
+      <div style={{ position: "relative", padding: "18px 24px", borderTop: "1px solid hsl(0 0%100%/0.05)", borderBottom: "1px solid hsl(0 0%100%/0.05)", background: "linear-gradient(180deg, hsl(0 0%0%/0.35), hsl(0 0%0%/0.5))" }}>
+        <div className="lp-breathe" style={{ position: "absolute", inset: 0, pointerEvents: "none", background: "radial-gradient(ellipse 60% 80% at 50% 50%, hsl(33 100%50%/0.08) 0%, transparent 70%)" }} />
+        <div className="lp-eng" style={{ position: "relative", zIndex: 1, display: "flex", flexWrap: "wrap", justifyContent: "center", alignItems: "center", gap: "clamp(14px, 4vw, 48px)", fontSize: "clamp(10px, 1.3vw, 13px)", letterSpacing: "0.22em", color: "hsl(0 0% 30%)", fontWeight: 700 }}>
+          <span><span ref={a.ref} style={{ color: "hsl(38 80% 58%)", textShadow: "0 0 8px hsl(33 100% 45% / 0.4)" }}>⚔ {a.val}</span> COMMANDS</span>
+          <span style={{ color: "hsl(0 0% 18%)" }}>·</span>
+          <span><span ref={b.ref} style={{ color: "hsl(140 55% 50%)", textShadow: "0 0 8px hsl(140 55% 35% / 0.4)" }}>🗝 {b.val}</span> DUNGEONS</span>
+          <span style={{ color: "hsl(0 0% 18%)" }}>·</span>
+          <span style={{ color: "hsl(280 50% 60%)", textShadow: "0 0 8px hsl(280 50% 40% / 0.4)" }}>🤖 AI MENTOR</span>
+          <span style={{ color: "hsl(0 0% 18%)" }}>·</span>
+          <span style={{ color: "hsl(38 80% 58%)" }}>🆓 FREE TO PLAY</span>
+        </div>
+      </div>
+    </StoneSection>
+  );
+}
+
+// ── Featured commands carousel ────────────────────────────────────────────────
+const FEATURED_CMDS: { cmd: string; flavor: string }[] = [
+  { cmd: "ls",    flavor: "survey the chamber for items and doorways" },
+  { cmd: "cd",    flavor: "step through a portal into another room" },
+  { cmd: "cat",   flavor: "read aloud from any ancient scroll" },
+  { cmd: "grep",  flavor: "divine the secret runes hidden in any file" },
+  { cmd: "mkdir", flavor: "conjure a new chamber from raw stone" },
+  { cmd: "chmod", flavor: "rewrite the laws that bind an artifact" },
+  { cmd: "find",  flavor: "send forth a familiar to seek what is lost" },
+  { cmd: "rm",    flavor: "banish a cursed object back to the void" },
+];
+function CommandsCarousel() {
+  return (
+    <StoneSection tint="radial-gradient(ellipse at 50% 0%,hsl(33 60%18%/0.15) 0%,transparent 60%),hsl(0 0%0%/0.22)">
+      <div style={{ position: "relative", padding: "48px 0 56px", maxWidth: 1200, margin: "0 auto" }}>
+        <div className="lp-breathe" style={{ position: "absolute", inset: 0, pointerEvents: "none", background: "radial-gradient(ellipse 70% 50% at 50% 50%,hsl(38 100%50%/0.08) 0%,transparent 60%)" }} />
+        {Array.from({ length: 6 }).map((_, i) => {
+          const left = 8 + (i * 17) % 84;
+          return (
+            <span key={i} className="lp-ember" style={{
+              left: `${left}%`, bottom: `${10 + (i * 9) % 35}%`,
+              animationDuration: `${7 + (i % 3) * 1.2}s`,
+              animationDelay: `${(i * 1.1) % 6}s`,
+              ["--ember-drift" as never]: `${(i % 2 === 0 ? 1 : -1) * (5 + (i % 3) * 4)}px`,
+            }} />
+          );
+        })}
+        <div style={{ padding: "0 32px" }}>
+          <SectionTitle>✦ SPELLS YOU WILL LEARN ✦</SectionTitle>
+        </div>
+        <div style={{
+          position: "relative", zIndex: 1,
+          display: "flex", gap: 18, padding: "8px 32px 16px",
+          overflowX: "auto", scrollSnapType: "x mandatory",
+        }}>
+          {FEATURED_CMDS.map((c, i) => (
+            <div
+              key={c.cmd}
+              className="lp-tablet"
+              style={{
+                flex: "0 0 auto", width: 200, minHeight: 130,
+                scrollSnapAlign: "start",
+                background: "linear-gradient(180deg, hsl(228 10% 22%), hsl(228 12% 14%))",
+                backgroundImage: `url(${slateTexture})`,
+                backgroundSize: "300px 300px",
+                backgroundBlendMode: "multiply",
+                border: "2px solid hsl(0 0% 3%)",
+                borderRadius: 4,
+                boxShadow:
+                  "inset 1px 1px 0 hsl(0 0%100%/0.1), inset -1px -1px 0 hsl(0 0%0%/0.85)," +
+                  "inset 0 0 24px hsl(0 0%0%/0.55)," +
+                  "0 6px 18px hsl(0 0%0%/0.6), 0 0 14px hsl(33 100%45%/0.08)",
+                padding: "16px 16px 14px",
+                display: "flex", flexDirection: "column", gap: 8,
+                position: "relative", overflow: "hidden",
+                animationDelay: `${(i % 4) * 0.6}s`,
+              }}
+            >
+              <div style={{ position: "absolute", inset: 0, background: "hsl(0 0%0%/0.5)", pointerEvents: "none" }} />
+              <div style={{ position: "relative", zIndex: 1, fontFamily: "'JetBrains Mono', monospace", fontSize: 18, fontWeight: 700, color: "hsl(38 90% 60%)", textShadow: "0 0 10px hsl(33 100% 45% / 0.55), 0 1px 0 hsl(0 0% 0% / 0.9)", letterSpacing: "0.04em" }}>
+                $ {c.cmd}
+              </div>
+              <div style={{ position: "relative", zIndex: 1, height: 1, background: "linear-gradient(90deg, transparent, hsl(33 60% 30% / 0.5), transparent)" }} />
+              <div style={{ position: "relative", zIndex: 1, fontFamily: "'Cinzel', serif", fontSize: 11, lineHeight: 1.5, color: "hsl(42 30% 65%)", fontStyle: "italic" }}>
+                {c.flavor}
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </StoneSection>
+  );
+}
+
+// ── Testimonial scroll ────────────────────────────────────────────────────────
+const QUOTES = [
+  { t: "I learned more sysadmin in 2 hours than in my whole CS class.", a: "apprentice_dev" },
+  { t: "Finally, a way to grind grep without crying.", a: "tux_warlock" },
+  { t: "My terminal phobia is officially cured.", a: "rookie_root" },
+  { t: "The Dungeon Master roasted my typo. 10/10.", a: "shellshock42" },
+];
+function TestimonialScroll() {
+  return (
+    <StoneSection tint="radial-gradient(ellipse at 50% 50%,hsl(42 30%20%/0.10) 0%,transparent 65%),hsl(0 0%0%/0.24)">
+      <div style={{ position: "relative", padding: "56px 32px 60px", maxWidth: 720, margin: "0 auto" }}>
+        <div className="lp-breathe" style={{ position: "absolute", inset: 0, pointerEvents: "none", background: "radial-gradient(ellipse 60% 50% at 50% 50%,hsl(42 60%30%/0.10) 0%,transparent 60%)" }} />
+        <SectionTitle>✦ VOICES FROM THE CRYPT ✦</SectionTitle>
+        <div className="scriptorium-bg scriptorium-frame iron-rivets" style={{ position: "relative", padding: "32px 36px", minHeight: 140, display: "flex", alignItems: "center", justifyContent: "center", overflow: "hidden" }}>
+          <div style={{ position: "absolute", inset: 0, pointerEvents: "none", background: "repeating-linear-gradient(to bottom, transparent 0, transparent 2px, hsl(0 0% 0% / 0.13) 3px)" }} />
+          <div style={{ position: "relative", width: "100%", height: 80 }}>
+            {QUOTES.map((q, i) => (
+              <div
+                key={i}
+                className="lp-quote"
+                style={{
+                  position: "absolute", inset: 0,
+                  display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 12,
+                  textAlign: "center", opacity: 0,
+                  animationDelay: `${i * 7}s`,
+                  animationDuration: `${QUOTES.length * 7}s`,
+                }}
+              >
+                <div style={{ fontFamily: "'VT323', monospace", fontSize: 22, lineHeight: 1.4, color: "hsl(42 35% 75%)", fontStyle: "italic", textShadow: "0 1px 0 hsl(0 0% 0% / 0.85)" }}>
+                  "{q.t}"
+                </div>
+                <div className="lp-eng" style={{ fontSize: 10, letterSpacing: "0.22em", color: "hsl(38 60% 50%)", fontWeight: 600 }}>
+                  — {q.a}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    </StoneSection>
+  );
+}
+
 // ═════════════════════════════════════════════════════════════════════════════
 export default function Landing() {
   const cmdFull = "user@dungeon:~/entrance$ cd crypt";
@@ -353,15 +594,57 @@ export default function Landing() {
         </div>
 
         {/* Hero content */}
-        <div style={{ position: "relative", zIndex: 5, display: "flex", flexDirection: "column", alignItems: "center", padding: "80px 32px 88px", textAlign: "center" }}>
+        <div style={{ position: "relative", zIndex: 5, display: "flex", flexDirection: "column", alignItems: "center", padding: "72px 32px 70px", textAlign: "center" }}>
           <h1 className="lp-eng lp-hero-in" style={{ fontSize: "clamp(44px,7.5vw,100px)", lineHeight: 1.05, margin: 0, animationDelay: "0ms" }}>
             TERMINAL QUEST
           </h1>
           <p className="lp-eng lp-hero-in" style={{ fontSize: "clamp(12px,1.8vw,18px)", letterSpacing: "0.32em", marginTop: 22, color: "hsl(0 0%26%)", fontWeight: 600, animationDelay: "220ms" }}>
             ☩ DON'T JUST PLAY THE GAME. WRITE THE REALITY. ☩
           </p>
+
+          {/* Tagline rotator */}
+          <div className="lp-hero-in" style={{ height: 28, marginTop: 18, position: "relative", width: "100%", maxWidth: 560, animationDelay: "420ms" }}>
+            {TAGLINES.map((t, i) => (
+              <span
+                key={i}
+                className="lp-tagline lp-eng"
+                style={{
+                  position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center",
+                  fontSize: "clamp(11px,1.4vw,15px)", letterSpacing: "0.2em",
+                  color: "hsl(38 70% 52%)", fontWeight: 600,
+                  textShadow: "0 0 10px hsl(33 100% 45% / 0.35), 0 1px 0 hsl(0 0% 0% / 0.8)",
+                  animationDelay: `${i * 4}s`,
+                  animationDuration: `${TAGLINES.length * 4}s`,
+                  opacity: 0,
+                }}
+              >
+                {t}
+              </span>
+            ))}
+          </div>
+
+          {/* Hero CTA */}
+          <Link
+            to="/play"
+            className="lp-stone-btn lp-stone-btn-sweep lp-hero-in"
+            style={{ marginTop: 32, padding: "16px 40px", fontSize: "clamp(11px,1.5vw,15px)", animationDelay: "640ms" }}
+          >
+            <span className="lp-eng-glow">▶&nbsp;&nbsp;ENTER THE DUNGEON</span>
+          </Link>
+
+          {/* Scroll cue */}
+          <div className="lp-scroll-cue lp-eng" style={{ marginTop: 56, fontSize: 9, letterSpacing: "0.3em", color: "hsl(0 0% 26%)", fontWeight: 600, display: "flex", flexDirection: "column", alignItems: "center", gap: 4 }}>
+            <span>SCROLL TO PEEK INSIDE</span>
+            <span style={{ fontSize: 14, lineHeight: 1 }}>▼</span>
+          </div>
         </div>
       </section>
+
+      {/* ══ STAT RIBBON ══════════════════════════════════════════════════════ */}
+      <StatRibbon />
+
+      {/* ══ FEATURED COMMANDS ════════════════════════════════════════════════ */}
+      <CommandsCarousel />
 
       {/* ══ 2. DUAL MONITORS ══════════════════════════════════════════════════ */}
       <StoneSection tint="hsl(0 0%0%/0.28)">
@@ -573,6 +856,9 @@ export default function Landing() {
         </div>
       </StoneSection>
 
+      {/* ══ TESTIMONIAL SCROLL ═══════════════════════════════════════════════ */}
+      <TestimonialScroll />
+
       {/* ══ 5. CTA ════════════════════════════════════════════════════════════ */}
       <StoneSection tint="radial-gradient(ellipse 70% 55% at 50% 42%,hsl(33 60%20%/0.18) 0%,transparent 55%)">
         <div style={{ position: "relative", padding: "64px 32px 76px", display: "flex", flexDirection: "column", alignItems: "center", gap: 18 }}>
@@ -602,11 +888,52 @@ export default function Landing() {
         </div>
       </StoneSection>
 
-      {/* ══ FOOTER ════════════════════════════════════════════════════════════ */}
-      <StoneSection tint="hsl(0 0%0%/0.38)" style={{ borderTop: "1px solid hsl(0 0%100%/0.06)" }}>
-        <div style={{ padding: "16px 32px", display: "flex", alignItems: "center", justifyContent: "center" }}>
-          <span className="lp-eng" style={{ fontSize: 9, letterSpacing: "0.28em", color: "hsl(0 0%20%)", fontWeight: 600 }}>
-            TERMINAL QUEST — LEARN LINUX. CONQUER THE DUNGEON.
+      {/* ══ CAMPFIRE FOOTER ═════════════════════════════════════════════════ */}
+      <StoneSection tint="hsl(0 0%0%/0.55)" style={{ borderTop: "1px solid hsl(0 0%100%/0.06)" }}>
+        <div style={{ position: "relative", padding: "48px 32px 28px", display: "flex", flexDirection: "column", alignItems: "center", gap: 18, overflow: "hidden" }}>
+          {/* Concentrated embers above the campfire */}
+          <div className="lp-breathe" style={{ position: "absolute", inset: 0, pointerEvents: "none", background: "radial-gradient(ellipse 30% 60% at 50% 70%, hsl(33 100% 45% / 0.22) 0%, transparent 60%)" }} />
+          {Array.from({ length: 10 }).map((_, i) => {
+            const left = 38 + (i * 3) % 24;
+            return (
+              <span key={i} className="lp-ember" style={{
+                left: `${left}%`, bottom: `${24 + (i * 5) % 30}%`,
+                animationDuration: `${4 + (i % 3) * 1.2}s`,
+                animationDelay: `${(i * 0.4) % 4}s`,
+                ["--ember-drift" as never]: `${(i % 2 === 0 ? 1 : -1) * (3 + (i % 3) * 3)}px`,
+              }} />
+            );
+          })}
+
+          {/* ASCII campfire */}
+          <pre className="lp-campfire" style={{
+            position: "relative", zIndex: 1, margin: 0,
+            fontFamily: "'JetBrains Mono', monospace", fontSize: 12, lineHeight: 1.1,
+            color: "hsl(33 100% 55%)", textAlign: "center",
+            textShadow: "0 0 8px hsl(33 100% 45% / 0.7), 0 0 16px hsl(0 80% 45% / 0.4)",
+          }}>{`   (  .  )
+  ( /  \\ )
+   )(  ,(
+  /,~)( ~\\
+ ((  /\`\\  ))
+  \\\\(   )//
+   \`-=-=-'`}</pre>
+
+          {/* Footer links */}
+          <div className="lp-eng" style={{ position: "relative", zIndex: 1, display: "flex", flexWrap: "wrap", justifyContent: "center", gap: "clamp(14px, 3vw, 28px)", fontSize: 10, letterSpacing: "0.22em", color: "hsl(0 0% 30%)", fontWeight: 600, marginTop: 4 }}>
+            {["GITHUB", "DISCORD", "ABOUT", "HOW IT WORKS"].map((label) => (
+              <a key={label} href="#" style={{ color: "inherit", textDecoration: "none", transition: "color 200ms" }}
+                onMouseEnter={(e) => { e.currentTarget.style.color = "hsl(38 80% 58%)"; }}
+                onMouseLeave={(e) => { e.currentTarget.style.color = "hsl(0 0% 30%)"; }}>
+                {label}
+              </a>
+            ))}
+          </div>
+
+          <div style={{ position: "relative", zIndex: 1, height: 1, width: "60%", maxWidth: 320, background: "linear-gradient(90deg, transparent, hsl(0 0% 100% / 0.08), transparent)" }} />
+
+          <span className="lp-eng" style={{ position: "relative", zIndex: 1, fontSize: 9, letterSpacing: "0.28em", color: "hsl(0 0% 22%)", fontWeight: 600 }}>
+            TERMINAL QUEST · LEARN LINUX · CONQUER THE DUNGEON
           </span>
         </div>
       </StoneSection>
