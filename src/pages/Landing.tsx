@@ -6,6 +6,7 @@ import tileFloor from "@/assets/tile-floor.png";
 import tileFloorAlt from "@/assets/tile-floor-alt.png";
 import tileTorch from "@/assets/tile-torch.png";
 import archwayDoor from "@/assets/archway-door.png";
+import terminalQuestTitle from "@/assets/terminal-quest-title.png";
 
 const gif = (name: string) => new URL(`../../gifs/${name}`, import.meta.url).href;
 
@@ -596,23 +597,23 @@ export default function Landing() {
         {/* Hero content */}
         <div style={{ position: "relative", zIndex: 5, display: "flex", flexDirection: "column", alignItems: "center", padding: "72px 32px 70px", textAlign: "center" }}>
           <h1
-            className="lp-hero-in bg-clip-text text-transparent bg-[length:200%_100%] animate-[shimmer_3s_linear_infinite] drop-shadow-[4px_4px_0_rgba(0,0,0,0.95)] [filter:drop-shadow(4px_4px_0_#000)_drop-shadow(0_6px_10px_rgba(0,0,0,0.8))]"
+            className="lp-hero-in"
             style={{
-              backgroundImage:
-                "linear-gradient(110deg,#64748b 0%,#cbd5e1 30%,#f8fafc 50%,#cbd5e1 70%,#475569 100%)",
-              WebkitBackgroundClip: "text",
-              backgroundClip: "text",
-              WebkitTextFillColor: "transparent",
-              fontFamily: "'Cinzel', 'Pirata One', serif",
-              fontWeight: 900,
-              letterSpacing: "0.04em",
-              fontSize: "clamp(56px,9vw,128px)",
-              lineHeight: 1,
               margin: 0,
               animationDelay: "0ms",
+              width: "min(92vw, 1100px)",
+              filter:
+                "drop-shadow(0 0 18px rgba(150,200,255,0.45)) drop-shadow(0 0 40px rgba(120,170,230,0.35)) drop-shadow(0 0 80px rgba(90,140,210,0.25)) drop-shadow(0 6px 8px rgba(0,0,0,0.85))",
             }}
+            aria-label="TERMINAL QUEST"
           >
-            TERMINAL QUEST
+            <img
+              src={terminalQuestTitle}
+              alt="TERMINAL QUEST"
+              width={2064}
+              height={512}
+              style={{ width: "100%", height: "auto", display: "block" }}
+            />
           </h1>
           <p className="lp-eng lp-hero-in" style={{ fontSize: "clamp(12px,1.8vw,18px)", letterSpacing: "0.32em", marginTop: 22, color: "hsl(0 0%26%)", fontWeight: 600, animationDelay: "220ms" }}>
             ☩ DON'T JUST PLAY THE GAME. WRITE THE REALITY. ☩
