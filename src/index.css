@@ -198,6 +198,31 @@
   .label-float {
     animation: label-float 2.4s infinite alternate ease-in-out;
   }
+  .breathe {
+    animation: breathe 3.2s ease-in-out infinite;
+    transform-origin: center;
+  }
+  .label-chip {
+    @apply font-pixel rounded-md whitespace-nowrap;
+    color: hsl(51 100% 65%);
+    background: hsl(230 22% 6% / 0.78);
+    border: 1px solid hsl(33 100% 50% / 0.85);
+    padding: 3px 6px;
+    box-shadow: 0 2px 6px hsl(0 0% 0% / 0.7), 0 0 8px hsl(33 100% 50% / 0.25);
+    text-shadow: 0 1px 0 hsl(0 0% 0% / 0.9);
+  }
+  .ground-shadow {
+    position: absolute;
+    left: 50%;
+    bottom: 6%;
+    transform: translateX(-50%);
+    width: 70%;
+    height: 22%;
+    border-radius: 50%;
+    background: radial-gradient(ellipse at center, hsl(0 0% 0% / 0.55) 0%, hsl(0 0% 0% / 0.3) 45%, transparent 75%);
+    filter: blur(2px);
+    pointer-events: none;
+  }
   .light-flicker {
     animation: light-flicker 1.2s infinite ease-in-out;
   }
