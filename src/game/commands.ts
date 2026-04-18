@@ -108,7 +108,7 @@ export function runCommand(raw: string, state: GameState): CommandResult {
     case "cat": {
       const name = args[0];
       if (!name) return { lines: [err("cat: missing file")] };
-      const f = findFile(room, name);
+      const f = findFile(room, name) ?? state.inventory.find((it) => it.name === name);
       if (!f) return { lines: [err(`cat: ${name}: no such file`)] };
       const body = f.contents ?? "(empty file)";
       return {
