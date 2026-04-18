@@ -34,23 +34,17 @@ function vfxKindFor(vfx: VfxPulse[], x: number, y: number) {
 export function GameWorld({ state, onDismissPopup }: GameWorldProps) {
   const room = getRoom(state.rooms, state.cwd);
   const stageRef = useRef<HTMLDivElement>(null);
-  const [TILE, setTile] = useState(44);
+  const [tileW, setTileW] = useState(44);
+  const [tileH, setTileH] = useState(44);
 
-  // Measure available stage area and pick the largest square tile that fits.
+  // Measure stage and stretch tiles to fully fill it (no padding, no gaps).
   useEffect(() => {
     const el = stageRef.current;
     if (!el || !room) return;
     const compute = () => {
       const r = el.getBoundingClientRect();
-      // Small inset so the pit shadow has breathing room on all sides
-      const padding = 16;
-      const w = Math.max(0, r.width - padding * 2);
-      const h = Math.max(0, r.height - padding * 2);
-      const t = Math.max(
-        MIN_TILE,
-        Math.min(MAX_TILE, Math.floor(Math.min(w / room.width, h / room.height))),
-      );
-      setTile(t);
+      setTileW(Math.max(1, r.width / room.width));
+      setTileH(Math.max(1, r.height / room.height));
     };
     compute();
     const ro = new ResizeObserver(compute);
@@ -74,7 +68,7 @@ export function GameWorld({ state, onDismissPopup }: GameWorldProps) {
               isEdge && !door ? "wall-tex" : (x + y) % 2 === 0 ? "floor-tex-alt" : "floor-tex",
               isEdge && !door && "shadow-[inset_0_-2px_0_hsl(var(--wall-edge))]",
             )}
-            style={{ width: TILE, height: TILE }}
+            style={{ width: tileW, height: tileH }}
           >
             {door && (
               <div className="absolute inset-1 flex items-center justify-center bg-door border-2 border-door-frame">
@@ -96,14 +90,16 @@ export function GameWorld({ state, onDismissPopup }: GameWorldProps) {
       }
     }
     return cells;
-  }, [room, TILE]);
+  }, [room, tileW, tileH]);
 
   if (!room) {
     return <div className="flex h-full items-center justify-center text-muted-foreground">The void.</div>;
   }
 
-  const boardW = room.width * TILE;
-  const boardH = room.height * TILE;
+  // Sprite size scales with the smaller axis so the player remains square.
+  const TILE = Math.min(tileW, tileH);
+  const boardW = room.width * tileW;
+  const boardH = room.height * tileH;
 
   // Mini-map flash on pwd
   const showMinimap = state.vfx.some((v) => v.kind === "pwd");
@@ -133,10 +129,10 @@ export function GameWorld({ state, onDismissPopup }: GameWorldProps) {
         <span className="font-pixel text-[9px] text-parchment/60">TERMINAL · QUEST</span>
       </div>
 
-      {/* Stage */}
+      {/* Stage — fills the entire right panel, no padding, no gaps */}
       <div
         ref={stageRef}
-        className="relative flex flex-1 items-center justify-center overflow-hidden p-4"
+        className="relative flex-1 overflow-hidden"
       >
         <div
           key={room.path}
@@ -151,8 +147,8 @@ export function GameWorld({ state, onDismissPopup }: GameWorldProps) {
           <div
             className="grid"
             style={{
-              gridTemplateColumns: `repeat(${room.width}, ${TILE}px)`,
-              gridTemplateRows: `repeat(${room.height}, ${TILE}px)`,
+              gridTemplateColumns: `repeat(${room.width}, ${tileW}px)`,
+              gridTemplateRows: `repeat(${room.height}, ${tileH}px)`,
             }}
           >
             {grid}
@@ -162,8 +158,8 @@ export function GameWorld({ state, onDismissPopup }: GameWorldProps) {
           <div
             className="pointer-events-none absolute inset-0 grid"
             style={{
-              gridTemplateColumns: `repeat(${room.width}, ${TILE}px)`,
-              gridTemplateRows: `repeat(${room.height}, ${TILE}px)`,
+              gridTemplateColumns: `repeat(${room.width}, ${tileW}px)`,
+              gridTemplateRows: `repeat(${room.height}, ${tileH}px)`,
               zIndex: 8,
             }}
             aria-hidden
@@ -217,8 +213,8 @@ export function GameWorld({ state, onDismissPopup }: GameWorldProps) {
               key={`label-${d.x}-${d.y}`}
               className="pointer-events-none absolute label-float"
               style={{
-                left: d.x * TILE + TILE / 2,
-                top: d.y * TILE - 14,
+                left: d.x * tileW + tileW / 2,
+                top: d.y * tileH - 14,
                 opacity: brightnessFor(dist(state.player.x, state.player.y, d.x, d.y)),
                 zIndex: 9,
               }}
@@ -237,10 +233,10 @@ export function GameWorld({ state, onDismissPopup }: GameWorldProps) {
                 key={f.name}
                 className="pointer-events-none absolute flex items-center justify-center item-float transition-opacity duration-200"
                 style={{
-                  left: f.x * TILE,
-                  top: f.y * TILE,
-                  width: TILE,
-                  height: TILE,
+                  left: f.x * tileW,
+                  top: f.y * tileH,
+                  width: tileW,
+                  height: tileH,
                   opacity: b,
                   zIndex: 7,
                 }}
@@ -260,8 +256,8 @@ export function GameWorld({ state, onDismissPopup }: GameWorldProps) {
           <div
             className="pointer-events-none absolute inset-0 grid light-flicker"
             style={{
-              gridTemplateColumns: `repeat(${room.width}, ${TILE}px)`,
-              gridTemplateRows: `repeat(${room.height}, ${TILE}px)`,
+              gridTemplateColumns: `repeat(${room.width}, ${tileW}px)`,
+              gridTemplateRows: `repeat(${room.height}, ${tileH}px)`,
               zIndex: 6,
             }}
             aria-hidden
@@ -288,15 +284,15 @@ export function GameWorld({ state, onDismissPopup }: GameWorldProps) {
           <motion.div
             className="pointer-events-none absolute flex items-center justify-center"
             initial={false}
-            animate={{ left: state.player.x * TILE, top: state.player.y * TILE }}
+            animate={{ left: state.player.x * tileW, top: state.player.y * tileH }}
             transition={{ type: "tween", ease: "linear", duration: 0.1 }}
             style={{
-              width: TILE,
-              height: TILE,
+              width: tileW,
+              height: tileH,
               zIndex: 10,
             }}
           >
-            <PlayerSprite anim={state.playerAnim} facing={state.playerFacing} size={32} />
+            <PlayerSprite anim={state.playerAnim} facing={state.playerFacing} size={Math.min(TILE, 48)} />
           </motion.div>
 
           {/* Soft torch vignette */}
@@ -304,8 +300,8 @@ export function GameWorld({ state, onDismissPopup }: GameWorldProps) {
             className="pointer-events-none absolute inset-0 light-flicker"
             style={{
               background: `radial-gradient(circle at ${
-                (state.player.x + 0.5) * TILE
-              }px ${(state.player.y + 0.5) * TILE}px, hsl(var(--torch-glow) / 0.18) 0px, transparent ${
+                (state.player.x + 0.5) * tileW
+              }px ${(state.player.y + 0.5) * tileH}px, hsl(var(--torch-glow) / 0.18) 0px, transparent ${
                 TILE * 2.5
               }px)`,
               transition: "background 200ms linear",
