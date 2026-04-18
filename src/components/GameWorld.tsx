@@ -85,6 +85,20 @@ export function GameWorld({ state, onDismissPopup }: GameWorldProps) {
 
   return (
     <div className="relative flex h-full flex-col bg-background stone-tex">
+      {/* cd-teleport fade overlay */}
+      <AnimatePresence>
+        {state.transitioning && (
+          <motion.div
+            key="fade"
+            className="pointer-events-none absolute inset-0 bg-black"
+            style={{ zIndex: 50 }}
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.2 }}
+          />
+        )}
+      </AnimatePresence>
       {/* Header */}
       <div className="flex items-center justify-between px-4 py-2 bg-stone-dark border-b border-border">
         <div className="flex flex-col">
