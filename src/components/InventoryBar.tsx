@@ -17,8 +17,8 @@ export function InventoryBar({ items, slots = 5, activeIndex = 0 }: InventoryBar
 
   return (
     <div
-      className="border-t-4 border-stone-slab-edge bg-stone-slab-edge px-4 py-3"
-      style={{ boxShadow: "inset 0 2px 0 hsl(var(--stone-light) / 0.25), inset 0 -2px 8px hsl(0 0% 0% / 0.6)" }}
+      className="border-t-4 border-stone-slab-edge carved-stone-tex px-4 py-3 relative z-10"
+      style={{ boxShadow: "inset 0 2px 0 hsl(var(--stone-light) / 0.35), inset 0 -2px 8px hsl(0 0% 0% / 0.6)" }}
     >
       <div className="mb-2 flex items-center justify-between">
         <span className="font-pixel text-[10px] text-primary">~/inventory</span>
