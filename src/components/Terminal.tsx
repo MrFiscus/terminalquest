@@ -11,9 +11,9 @@ interface TerminalProps {
 const lineClass: Record<TerminalLine["kind"], string> = {
   input: "text-[hsl(var(--terminal-prompt))]",
   output: "text-[hsl(var(--terminal-text))]",
-  error: "text-[hsl(0_70%_60%)]",
-  dm: "text-[hsl(280_55%_72%)] italic",
-  system: "text-[hsl(0_0%_55%)]",
+  error: "text-[hsl(0_0%_63%)] italic",            // muted silver, italic
+  dm: "text-[hsl(0_0%_63%)] italic",               // Dungeon Master = silver italic
+  system: "text-[hsl(0_0%_63%)] italic",
   victory: "text-[hsl(140_60%_60%)] font-semibold",
 };
 
@@ -81,7 +81,7 @@ export function Terminal({ state, onSubmit }: TerminalProps) {
       onClick={() => inputRef.current?.focus()}
     >
       {/* Title bar */}
-      <div className="flex items-center justify-between px-3 py-1.5 border-b-2 scriptorium-divider bg-[hsl(0_0%_6%)]">
+      <div className="flex items-center justify-between px-3 py-1.5 border-b border-[hsl(var(--terminal-frame))] bg-[hsl(0_0%_6%)]">
         <div className="flex items-center gap-1.5">
           <div className="h-2.5 w-2.5 rounded-full bg-[hsl(0_0%_18%)] shadow-[inset_0_0_2px_hsl(0_0%_0%/0.9)]" />
           <div className="h-2.5 w-2.5 rounded-full bg-[hsl(0_0%_18%)] shadow-[inset_0_0_2px_hsl(0_0%_0%/0.9)]" />
