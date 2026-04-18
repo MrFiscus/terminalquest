@@ -234,7 +234,7 @@ export function GameWorld({ state, onDismissPopup }: GameWorldProps) {
                 left: d.x * tileW + tileW / 2,
                 top: d.y * tileH - 16,
                 opacity: brightnessFor(edist(state.player.x, state.player.y, d.x, d.y)),
-                zIndex: 51,
+                zIndex: 30,
               }}
             >
               <span className="label-chip breathe text-[7px]">
@@ -255,7 +255,7 @@ export function GameWorld({ state, onDismissPopup }: GameWorldProps) {
                   top: t.y * tileH - 16,
                   transform: "translateX(-50%)",
                   opacity: brightnessFor(edist(state.player.x, state.player.y, t.x, t.y)),
-                  zIndex: 51,
+                  zIndex: 30,
                 }}
               >
                 <span className="label-chip breathe text-[7px]">torch</span>
@@ -275,7 +275,7 @@ export function GameWorld({ state, onDismissPopup }: GameWorldProps) {
                   width: tileW,
                   height: tileH,
                   opacity: b,
-                  zIndex: 50,
+                  zIndex: 20,
                 }}
                 title={f.name}
               >
