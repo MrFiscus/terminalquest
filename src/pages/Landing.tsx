@@ -888,11 +888,52 @@ export default function Landing() {
         </div>
       </StoneSection>
 
-      {/* ══ FOOTER ════════════════════════════════════════════════════════════ */}
-      <StoneSection tint="hsl(0 0%0%/0.38)" style={{ borderTop: "1px solid hsl(0 0%100%/0.06)" }}>
-        <div style={{ padding: "16px 32px", display: "flex", alignItems: "center", justifyContent: "center" }}>
-          <span className="lp-eng" style={{ fontSize: 9, letterSpacing: "0.28em", color: "hsl(0 0%20%)", fontWeight: 600 }}>
-            TERMINAL QUEST — LEARN LINUX. CONQUER THE DUNGEON.
+      {/* ══ CAMPFIRE FOOTER ═════════════════════════════════════════════════ */}
+      <StoneSection tint="hsl(0 0%0%/0.55)" style={{ borderTop: "1px solid hsl(0 0%100%/0.06)" }}>
+        <div style={{ position: "relative", padding: "48px 32px 28px", display: "flex", flexDirection: "column", alignItems: "center", gap: 18, overflow: "hidden" }}>
+          {/* Concentrated embers above the campfire */}
+          <div className="lp-breathe" style={{ position: "absolute", inset: 0, pointerEvents: "none", background: "radial-gradient(ellipse 30% 60% at 50% 70%, hsl(33 100% 45% / 0.22) 0%, transparent 60%)" }} />
+          {Array.from({ length: 10 }).map((_, i) => {
+            const left = 38 + (i * 3) % 24;
+            return (
+              <span key={i} className="lp-ember" style={{
+                left: `${left}%`, bottom: `${24 + (i * 5) % 30}%`,
+                animationDuration: `${4 + (i % 3) * 1.2}s`,
+                animationDelay: `${(i * 0.4) % 4}s`,
+                ["--ember-drift" as never]: `${(i % 2 === 0 ? 1 : -1) * (3 + (i % 3) * 3)}px`,
+              }} />
+            );
+          })}
+
+          {/* ASCII campfire */}
+          <pre className="lp-campfire" style={{
+            position: "relative", zIndex: 1, margin: 0,
+            fontFamily: "'JetBrains Mono', monospace", fontSize: 12, lineHeight: 1.1,
+            color: "hsl(33 100% 55%)", textAlign: "center",
+            textShadow: "0 0 8px hsl(33 100% 45% / 0.7), 0 0 16px hsl(0 80% 45% / 0.4)",
+          }}>{`   (  .  )
+  ( /  \\ )
+   )(  ,(
+  /,~)( ~\\
+ ((  /\`\\  ))
+  \\\\(   )//
+   \`-=-=-'`}</pre>
+
+          {/* Footer links */}
+          <div className="lp-eng" style={{ position: "relative", zIndex: 1, display: "flex", flexWrap: "wrap", justifyContent: "center", gap: "clamp(14px, 3vw, 28px)", fontSize: 10, letterSpacing: "0.22em", color: "hsl(0 0% 30%)", fontWeight: 600, marginTop: 4 }}>
+            {["GITHUB", "DISCORD", "ABOUT", "HOW IT WORKS"].map((label) => (
+              <a key={label} href="#" style={{ color: "inherit", textDecoration: "none", transition: "color 200ms" }}
+                onMouseEnter={(e) => { e.currentTarget.style.color = "hsl(38 80% 58%)"; }}
+                onMouseLeave={(e) => { e.currentTarget.style.color = "hsl(0 0% 30%)"; }}>
+                {label}
+              </a>
+            ))}
+          </div>
+
+          <div style={{ position: "relative", zIndex: 1, height: 1, width: "60%", maxWidth: 320, background: "linear-gradient(90deg, transparent, hsl(0 0% 100% / 0.08), transparent)" }} />
+
+          <span className="lp-eng" style={{ position: "relative", zIndex: 1, fontSize: 9, letterSpacing: "0.28em", color: "hsl(0 0% 22%)", fontWeight: 600 }}>
+            TERMINAL QUEST · LEARN LINUX · CONQUER THE DUNGEON
           </span>
         </div>
       </StoneSection>
