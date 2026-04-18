@@ -292,7 +292,7 @@ export function GameWorld({ state, onDismissPopup }: GameWorldProps) {
             );
           })}
 
-          {/* Torchlit radial lighting: warm light around player + torches, deep charcoal beyond ~3 tiles */}
+          {/* Torchlit radial lighting — transparent center, deep charcoal at edges (no mask-composite). */}
           {(() => {
             const playerCx = (state.player.x + 0.5) * tileW;
             const playerCy = (state.player.y + 0.5) * tileH;
@@ -300,7 +300,7 @@ export function GameWorld({ state, onDismissPopup }: GameWorldProps) {
 
             const torches = room.tiles.filter((t) => t.kind === "torch");
 
-            // Warm radial torchlight tint (rgba(255,150,50,0.15))
+            // Warm radial torchlight tint
             const warmGlow = [
               `radial-gradient(circle at ${playerCx}px ${playerCy}px, rgba(255,150,50,0.18) 0px, rgba(255,150,50,0.10) ${playerR * 0.55}px, rgba(255,150,50,0) ${playerR}px)`,
               ...torches.map((t) => {
@@ -311,30 +311,26 @@ export function GameWorld({ state, onDismissPopup }: GameWorldProps) {
               }),
             ];
 
-            // Darkness mask: holes of clarity around each light source, deep charcoal #0a0a0a everywhere else.
-            // Use mask-image with white = visible darkness, black = cleared (lit).
-            const lightMaskHoles = [
-              `radial-gradient(circle at ${playerCx}px ${playerCy}px, black 0px, black ${TILE * 2.2}px, rgba(0,0,0,0.35) ${TILE * 3}px, transparent ${TILE * 3.6}px)`,
-              ...torches.map((t) => {
-                const cx = (t.x + 0.5) * tileW;
-                const cy = (t.y + 0.5) * tileH;
-                return `radial-gradient(circle at ${cx}px ${cy}px, black 0px, black ${TILE * 1.8}px, rgba(0,0,0,0.4) ${TILE * 2.6}px, transparent ${TILE * 3.2}px)`;
-              }),
-            ].join(", ");
+            // Darkness: stack radial gradients that go FROM transparent (center, lit) TO charcoal (edges).
+            // Using "transparent" centers means lit areas remain visible — no mask-composite needed.
+            const playerDark = `radial-gradient(circle at ${playerCx}px ${playerCy}px, rgba(0,0,0,0) 0px, rgba(0,0,0,0) ${TILE * 2.4}px, rgba(10,10,10,0.55) ${TILE * 3.4}px, rgba(10,10,10,0.85) ${TILE * 5}px)`;
+            const torchDarks = torches.map((t) => {
+              const cx = (t.x + 0.5) * tileW;
+              const cy = (t.y + 0.5) * tileH;
+              return `radial-gradient(circle at ${cx}px ${cy}px, rgba(0,0,0,0) 0px, rgba(0,0,0,0) ${TILE * 2}px, rgba(10,10,10,0.4) ${TILE * 3}px, rgba(10,10,10,0) ${TILE * 4.5}px)`;
+            });
+            // Layer order: torch holes on TOP (so they punch through), player hole on BOTTOM as base darkness.
+            const darkness = [...torchDarks, playerDark].join(", ");
 
             return (
               <>
-                {/* Deep charcoal darkness with light holes */}
+                {/* Darkness with light holes — transparent at light sources, charcoal at edges */}
                 <div
                   className="pointer-events-none absolute inset-0 light-flicker"
                   style={{
-                    background: "#0a0a0a",
-                    WebkitMaskImage: lightMaskHoles,
-                    maskImage: lightMaskHoles,
-                    WebkitMaskComposite: "source-out",
-                    maskComposite: "subtract",
-                    transition: "all 240ms ease-out",
-                    zIndex: 10,
+                    background: darkness,
+                    transition: "background 240ms ease-out",
+                    zIndex: 40,
                   }}
                   aria-hidden
                 />
@@ -344,7 +340,7 @@ export function GameWorld({ state, onDismissPopup }: GameWorldProps) {
                   style={{
                     background: warmGlow.join(", "),
                     transition: "background 240ms ease-out",
-                    zIndex: 11,
+                    zIndex: 41,
                   }}
                   aria-hidden
                 />
