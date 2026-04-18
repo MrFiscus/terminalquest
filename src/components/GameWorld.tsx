@@ -135,7 +135,7 @@ export function GameWorld({ state, onDismissPopup }: GameWorldProps) {
         )}
       </AnimatePresence>
       {/* Header */}
-      <div className="flex items-center justify-between px-4 py-2 carved-stone-tex border-b-2 border-stone-slab-edge relative z-10">
+      <div className="flex items-center justify-between px-4 py-2 carved-stone-tex border-b border-[hsl(var(--terminal-frame))] relative z-10">
         <div className="flex flex-col">
           <span className="font-pixel text-[10px] text-primary drop-shadow-[0_1px_0_hsl(0_0%_0%/0.8)]">{room.name}</span>
           <span className="font-pixel text-[8px] text-primary/90 drop-shadow-[0_1px_0_hsl(0_0%_0%/0.8)] mt-1">{room.path}</span>
