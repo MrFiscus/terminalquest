@@ -56,8 +56,10 @@ export function GameWorld({ state, onDismissPopup }: GameWorldProps) {
     if (!el || !room) return;
     const compute = () => {
       const r = el.getBoundingClientRect();
-      setTileW(Math.max(1, r.width / room.width));
-      setTileH(Math.max(1, r.height / room.height));
+      // Force perfectly square tiles based on the smaller axis.
+      const tile = Math.max(1, Math.floor(Math.min(r.width / room.width, r.height / room.height)));
+      setTileW(tile);
+      setTileH(tile);
     };
     compute();
     const ro = new ResizeObserver(compute);
