@@ -155,14 +155,38 @@ function MonitorFrame({ title, accent = "hsl(38 100% 50%)", children }: { title:
   );
 }
 
+// ── Scroll reveal hook ───────────────────────────────────────────────────────
+function useReveal<T extends HTMLElement>() {
+  const ref = useRef<T | null>(null);
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    const io = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((e) => {
+          if (e.isIntersecting) {
+            e.target.classList.add("is-visible");
+            io.unobserve(e.target);
+          }
+        });
+      },
+      { threshold: 0.12, rootMargin: "0px 0px -40px 0px" }
+    );
+    io.observe(el);
+    return () => io.disconnect();
+  }, []);
+  return ref;
+}
+
 // ── Shared section wrapper ────────────────────────────────────────────────────
 function StoneSection({ children, tint = "transparent", style = {} }: {
   children: React.ReactNode;
   tint?: string;
   style?: React.CSSProperties;
 }) {
+  const ref = useReveal<HTMLElement>();
   return (
-    <section style={{ position: "relative", ...style }}>
+    <section ref={ref} className="reveal" style={{ position: "relative", ...style }}>
       <div style={{ position: "absolute", inset: 0, background: tint, pointerEvents: "none" }} />
       <div style={{ position: "relative", zIndex: 1 }}>{children}</div>
     </section>
@@ -187,6 +211,7 @@ function FloppyButton({ label }: { label: string }) {
   const [pressed, setPressed] = useState(false);
   return (
     <button type="button" onMouseDown={() => setPressed(true)} onMouseUp={() => setPressed(false)} onMouseLeave={() => setPressed(false)}
+      className="lp-floppy-tilt"
       style={{ position: "relative", width: 68, height: 70, cursor: "pointer", border: "none", background: "none", padding: 0 }}
     >
       {/* Body */}
@@ -263,7 +288,10 @@ export default function Landing() {
   }, [submitted]);
 
   return (
-    <div style={{ position: "fixed", inset: 0, overflowY: "auto", overflowX: "hidden", backgroundImage: `url(${slateTexture})`, backgroundRepeat: "repeat", backgroundSize: "512px 512px" }}>
+    <div style={{ position: "fixed", inset: 0, overflowY: "auto", overflowX: "hidden", backgroundColor: "hsl(230 18% 5%)", backgroundImage: `radial-gradient(ellipse at 50% 30%, hsl(230 14% 14%) 0%, hsl(230 18% 7%) 55%, hsl(230 22% 3%) 100%), url(${slateTexture})`, backgroundRepeat: "no-repeat, no-repeat", backgroundSize: "100% 100%, cover", backgroundPosition: "center, center", backgroundAttachment: "fixed, fixed", backgroundBlendMode: "multiply, normal" }}>
+      {/* Global vignette + grain overlay (fixed — no seams) */}
+      <div style={{ position: "fixed", inset: 0, pointerEvents: "none", zIndex: 0, background: "radial-gradient(ellipse at center, transparent 38%, hsl(0 0% 0% / 0.85) 100%)" }} />
+      <div style={{ position: "fixed", inset: 0, pointerEvents: "none", zIndex: 0, opacity: 0.35, mixBlendMode: "overlay", backgroundImage: "radial-gradient(hsl(0 0% 100% / 0.06) 1px, transparent 1.4px), radial-gradient(hsl(0 0% 0% / 0.4) 1px, transparent 1.4px)", backgroundSize: "5px 5px, 7px 7px", backgroundPosition: "0 0, 2px 3px" }} />
       <style>{`
         .lp-eng {
           font-family: 'Cinzel','MedievalSharp',serif; font-weight:700; color:hsl(0 0% 18%);
@@ -290,10 +318,28 @@ export default function Landing() {
       `}</style>
 
       {/* ══ 1. HERO ═══════════════════════════════════════════════════════════ */}
-      <section style={{ position: "relative", overflow: "hidden" }}>
-        <div style={{ position: "absolute", inset: 0, background: "radial-gradient(ellipse 80% 60% at 50% 45%,hsl(33 60% 22%/0.18) 0%,transparent 60%)", mixBlendMode: "multiply" }} />
-        <div style={{ position: "absolute", inset: 0, pointerEvents: "none", background: "radial-gradient(circle at 50% 10%,hsl(30 100%50%/0.1) 0%,transparent 44%)" }} />
+      <section style={{ position: "relative", overflow: "hidden", zIndex: 1 }}>
+        <div className="lp-breathe" style={{ position: "absolute", inset: 0, background: "radial-gradient(ellipse 80% 60% at 50% 45%,hsl(33 60% 22%/0.28) 0%,transparent 60%)", mixBlendMode: "screen", pointerEvents: "none" }} />
+        <div className="lp-breathe" style={{ position: "absolute", inset: 0, pointerEvents: "none", background: "radial-gradient(circle at 50% 10%,hsl(30 100%50%/0.18) 0%,transparent 44%)", animationDelay: "1.2s" }} />
         <div style={{ position: "absolute", inset: 0, pointerEvents: "none", background: "radial-gradient(ellipse at 50% 50%,transparent 55%,hsl(0 0%0%/0.35) 100%)" }} />
+
+        {/* Ember particles */}
+        {Array.from({ length: 8 }).map((_, i) => {
+          const left = 8 + (i * 11) % 88;
+          const dur = 6 + (i % 4) * 1.2;
+          const delay = (i * 0.9) % 7;
+          const drift = (i % 2 === 0 ? 1 : -1) * (6 + (i % 3) * 4);
+          const bottom = 10 + (i * 7) % 30;
+          return (
+            <span key={i} className="lp-ember" style={{
+              left: `${left}%`,
+              bottom: `${bottom}%`,
+              animationDuration: `${dur}s`,
+              animationDelay: `${delay}s`,
+              ["--ember-drift" as never]: `${drift}px`,
+            }} />
+          );
+        })}
 
         {/* Nav */}
         <div style={{ position: "relative", zIndex: 10, display: "flex", alignItems: "center", gap: 12, padding: "10px 20px", background: "hsl(0 0%0%/0.38)", borderBottom: "1px solid hsl(0 0%0%/0.5)", backdropFilter: "blur(2px)" }}>
@@ -308,10 +354,10 @@ export default function Landing() {
 
         {/* Hero content */}
         <div style={{ position: "relative", zIndex: 5, display: "flex", flexDirection: "column", alignItems: "center", padding: "80px 32px 88px", textAlign: "center" }}>
-          <h1 className="lp-eng" style={{ fontSize: "clamp(44px,7.5vw,100px)", lineHeight: 1.05, margin: 0 }}>
+          <h1 className="lp-eng lp-hero-in" style={{ fontSize: "clamp(44px,7.5vw,100px)", lineHeight: 1.05, margin: 0, animationDelay: "0ms" }}>
             TERMINAL QUEST
           </h1>
-          <p className="lp-eng" style={{ fontSize: "clamp(12px,1.8vw,18px)", letterSpacing: "0.32em", marginTop: 22, color: "hsl(0 0%26%)", fontWeight: 600 }}>
+          <p className="lp-eng lp-hero-in" style={{ fontSize: "clamp(12px,1.8vw,18px)", letterSpacing: "0.32em", marginTop: 22, color: "hsl(0 0%26%)", fontWeight: 600, animationDelay: "220ms" }}>
             ☩ DON'T JUST PLAY THE GAME. WRITE THE REALITY. ☩
           </p>
         </div>
@@ -477,7 +523,7 @@ export default function Landing() {
       <StoneSection tint="radial-gradient(ellipse 70% 55% at 50% 42%,hsl(33 60%20%/0.18) 0%,transparent 55%)">
         <div style={{ padding: "64px 32px 76px", display: "flex", flexDirection: "column", alignItems: "center", gap: 18 }}>
           <div style={{ position: "absolute", inset: 0, pointerEvents: "none", background: "radial-gradient(circle at 50% 22%,hsl(30 100%50%/0.1) 0%,transparent 48%)" }} />
-          <Link to="/play" className="lp-stone-btn" style={{ padding: "20px 56px", fontSize: "clamp(13px,2vw,20px)", position: "relative", zIndex: 1 }}>
+          <Link to="/play" className="lp-stone-btn lp-stone-btn-sweep" style={{ padding: "20px 56px", fontSize: "clamp(13px,2vw,20px)", position: "relative", zIndex: 1 }}>
             <span className="lp-eng-glow">⚔&nbsp;&nbsp;ENTER THE DUNGEON&nbsp;&nbsp;⚔</span>
           </Link>
           <p className="lp-eng" style={{ fontSize: 10, letterSpacing: "0.26em", color: "hsl(0 0%22%)", margin: 0, fontWeight: 600, position: "relative", zIndex: 1 }}>
