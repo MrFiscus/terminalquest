@@ -108,28 +108,29 @@ export function Terminal({ state, onSubmit }: TerminalProps) {
       >
         {state.history.map((line, idx) => {
           const isLast = idx === state.history.length - 1;
+          const tokenColor = line.kind === "output" ? lsTokenClass(line.text) : null;
           return (
             <div
               key={line.id}
               className={cn(
-                "whitespace-pre-wrap transition-opacity",
-                lineClass[line.kind],
-                isLast ? "opacity-100" : "opacity-55",
+                "whitespace-pre-wrap text-left transition-opacity",
+                tokenColor ?? lineClass[line.kind],
+                isLast ? "opacity-100" : "opacity-60",
               )}
             >
-              {linePrefix(line.kind)}
               {line.text}
             </div>
           );
         })}
       </div>
 
-      {/* Input row */}
+      {/* Input row — Ubuntu-style colored prompt */}
       <div className="ember-glow flex items-center gap-2 border-t-2 scriptorium-divider bg-[hsl(0_0%_5%)] px-4 py-2">
-        <span className="text-[hsl(var(--terminal-text)/0.85)]">
-          user@dungeon:
-          <span className="text-[hsl(var(--terminal-prompt))] ember-bloom">{state.cwd}</span>
-          $
+        <span className="font-mono">
+          <span className="text-[#4ade80] font-bold">user@dungeon</span>
+          <span className="text-[#f3f4f6]">:</span>
+          <span className="text-[#60a5fa] font-bold">{state.cwd}</span>
+          <span className="text-[#f3f4f6]">$</span>
         </span>
         <div className="relative flex-1">
           <input
