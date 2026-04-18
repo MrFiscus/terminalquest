@@ -403,19 +403,11 @@
     );
     mix-blend-mode: multiply;
   }
-  /* Carved gold inscription effect for headers */
+  /* Simple readable gold header text */
   .carved-gold {
-    color: hsl(45 90% 60%);
-    background: linear-gradient(180deg, hsl(48 95% 70%) 0%, hsl(42 88% 48%) 55%, hsl(35 80% 32%) 100%);
-    -webkit-background-clip: text;
-    background-clip: text;
-    -webkit-text-fill-color: transparent;
-    text-shadow:
-      0 1px 0 hsl(0 0% 0% / 0.95),
-      0 -1px 0 hsl(45 90% 80% / 0.35),
-      0 0 6px hsl(33 100% 45% / 0.45);
-    filter: drop-shadow(0 1px 1px hsl(0 0% 0% / 0.85));
-    letter-spacing: 0.08em;
+    color: hsl(45 95% 65%);
+    text-shadow: 0 1px 2px hsl(0 0% 0% / 0.8);
+    letter-spacing: 0.05em;
   }
   /* Stone tablet button — inset slab with carved-rock border */
   .stone-tablet-btn {
