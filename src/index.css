@@ -863,3 +863,61 @@
 .lp-campfire {
   animation: lp-campfire-flicker 1.4s ease-in-out infinite alternate;
 }
+
+/* ─── Forged silver dungeon title ─────────────────────────────────────── */
+.lp-silver-title {
+  font-family: 'Pirata One', 'MedievalSharp', 'Cinzel', serif;
+  font-weight: 400;
+  letter-spacing: 0.04em;
+  position: relative;
+  display: inline-block;
+  color: transparent;
+  background-image:
+    /* hammered grain (fine noise) */
+    repeating-linear-gradient(127deg,
+      hsl(220 8% 100% / 0.18) 0 1px,
+      transparent 1px 3px),
+    repeating-linear-gradient(43deg,
+      hsl(220 10% 0% / 0.22) 0 1px,
+      transparent 1px 4px),
+    /* scratch streaks */
+    linear-gradient(92deg,
+      transparent 0%, hsl(0 0% 100% / 0.14) 18%, transparent 22%,
+      transparent 55%, hsl(0 0% 100% / 0.10) 60%, transparent 64%),
+    /* main polished silver gradient */
+    linear-gradient(180deg,
+      hsl(220 18% 96%) 0%,
+      hsl(220 14% 82%) 22%,
+      hsl(220 12% 58%) 48%,
+      hsl(220 10% 38%) 56%,
+      hsl(220 14% 70%) 74%,
+      hsl(220 18% 92%) 100%);
+  background-blend-mode: overlay, overlay, screen, normal;
+  -webkit-background-clip: text;
+          background-clip: text;
+  -webkit-text-fill-color: transparent;
+  text-shadow: none;
+  /* layered drop shadow gives chiseled edge + glow */
+  filter:
+    drop-shadow(0 1px 0 hsl(0 0% 0% / 0.9))
+    drop-shadow(0 2px 0 hsl(0 0% 0% / 0.7))
+    drop-shadow(0 4px 6px hsl(0 0% 0% / 0.85))
+    drop-shadow(0 0 18px hsl(220 30% 70% / 0.25));
+  text-rendering: geometricPrecision;
+}
+/* faint inner highlight engraved on top */
+.lp-silver-title::after {
+  content: attr(data-text);
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: linear-gradient(180deg,
+    hsl(0 0% 100% / 0.35) 0%,
+    hsl(0 0% 100% / 0) 28%,
+    hsl(0 0% 100% / 0) 72%,
+    hsl(0 0% 100% / 0.18) 100%);
+  -webkit-background-clip: text;
+          background-clip: text;
+  -webkit-text-fill-color: transparent;
+  mix-blend-mode: screen;
+}

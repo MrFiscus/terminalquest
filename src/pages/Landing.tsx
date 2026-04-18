@@ -595,13 +595,8 @@ export default function Landing() {
 
         {/* Hero content */}
         <div style={{ position: "relative", zIndex: 5, display: "flex", flexDirection: "column", alignItems: "center", padding: "72px 32px 70px", textAlign: "center" }}>
-          <h1 className="lp-eng lp-hero-in" style={{
-            fontSize: "clamp(44px,7.5vw,100px)", lineHeight: 1.05, margin: 0, animationDelay: "0ms",
-            backgroundImage: "linear-gradient(180deg, hsl(220 15% 96%) 0%, hsl(220 12% 78%) 38%, hsl(220 14% 55%) 62%, hsl(220 10% 88%) 100%)",
-            WebkitBackgroundClip: "text", backgroundClip: "text",
-            WebkitTextFillColor: "transparent", color: "transparent",
-            textShadow: "none",
-            filter: "drop-shadow(0 2px 0 hsl(0 0% 0% / 0.55)) drop-shadow(0 0 14px hsl(220 30% 80% / 0.25))",
+          <h1 className="lp-silver-title lp-hero-in" data-text="TERMINAL QUEST" style={{
+            fontSize: "clamp(56px,9vw,128px)", lineHeight: 1, margin: 0, animationDelay: "0ms",
           }}>
             TERMINAL QUEST
           </h1>
