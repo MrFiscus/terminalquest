@@ -79,11 +79,9 @@ export function GameWorld({ state, onDismissPopup }: GameWorldProps) {
             )}
             {torch && (
               <span
-                className="absolute inset-0 flex items-center justify-center text-torch torch-flicker text-lg"
+                className="absolute inset-0 torch-tex torch-flicker"
                 aria-hidden
-              >
-                ✦
-              </span>
+              />
             )}
           </div>,
         );
