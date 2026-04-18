@@ -11,7 +11,8 @@ interface GameWorldProps {
   onDismissPopup: () => void;
 }
 
-const TILE = 44;
+const MIN_TILE = 24;
+const MAX_TILE = 96;
 
 function dist(ax: number, ay: number, bx: number, by: number) {
   return Math.max(Math.abs(ax - bx), Math.abs(ay - by));
