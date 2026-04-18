@@ -9,6 +9,18 @@ interface GameWorldProps {
 
 const TILE = 44;
 
+/** Chebyshev distance — square radius torchlight. */
+function dist(ax: number, ay: number, bx: number, by: number) {
+  return Math.max(Math.abs(ax - bx), Math.abs(ay - by));
+}
+
+/** Brightness by distance: ≤2 → 1.0, 3 → 0.5, >3 → 0.1 */
+function brightnessFor(d: number): number {
+  if (d <= 2) return 1;
+  if (d === 3) return 0.5;
+  return 0.1;
+}
+
 export function GameWorld({ state }: GameWorldProps) {
   const room = getRoom(state.rooms, state.cwd);
 
@@ -25,9 +37,8 @@ export function GameWorld({ state }: GameWorldProps) {
             key={`${x}-${y}`}
             className={cn(
               "relative",
-              isEdge && !door ? "bg-wall" : "bg-floor",
+              isEdge && !door ? "wall-tex" : (x + y) % 2 === 0 ? "floor-tex-alt" : "floor-tex",
               isEdge && !door && "shadow-[inset_0_-2px_0_hsl(var(--wall-edge))]",
-              !isEdge && (x + y) % 2 === 0 && "bg-floor-alt",
             )}
             style={{ width: TILE, height: TILE }}
           >
@@ -35,9 +46,6 @@ export function GameWorld({ state }: GameWorldProps) {
               <div className="absolute inset-1 flex items-center justify-center bg-door border-2 border-door-frame">
                 <span className="font-pixel text-[8px] text-parchment/90">
                   {door.target === ".." ? "◄" : "►"}
-                </span>
-                <span className="absolute -top-3 left-1/2 -translate-x-1/2 font-pixel text-[7px] text-parchment/80 whitespace-nowrap">
-                  {door.target === ".." ? ".." : `${door.target}/`}
                 </span>
               </div>
             )}
@@ -64,7 +72,7 @@ export function GameWorld({ state }: GameWorldProps) {
   const boardH = room.height * TILE;
 
   return (
-    <div className="relative flex h-full flex-col bg-background">
+    <div className="relative flex h-full flex-col bg-background stone-tex">
       {/* Header */}
       <div className="flex items-center justify-between px-4 py-2 bg-stone-dark border-b border-border">
         <div className="flex flex-col">
@@ -76,13 +84,13 @@ export function GameWorld({ state }: GameWorldProps) {
 
       {/* Stage */}
       <div className="relative flex flex-1 items-center justify-center overflow-hidden p-4">
-        {/* Pure black surround = unvisited darkness */}
         <div
-          className="relative"
+          key={room.path}
+          className="relative pixelate-in"
           style={{
             width: boardW,
             height: boardH,
-            boxShadow: "var(--shadow-room)",
+            boxShadow: "var(--shadow-pit)",
           }}
         >
           {/* Tile grid */}
@@ -96,27 +104,75 @@ export function GameWorld({ state }: GameWorldProps) {
             {grid}
           </div>
 
-          {/* Files (items) */}
-          {room.files.map((f) => (
+          {/* Door labels (above doors, floating) */}
+          {room.doors.map((d) => (
             <div
-              key={f.name}
-              className="pointer-events-none absolute flex items-center justify-center item-float"
+              key={`label-${d.x}-${d.y}`}
+              className="pointer-events-none absolute label-float"
               style={{
-                left: f.x * TILE,
-                top: f.y * TILE,
-                width: TILE,
-                height: TILE,
+                left: d.x * TILE + TILE / 2,
+                top: d.y * TILE - 14,
+                opacity: brightnessFor(dist(state.player.x, state.player.y, d.x, d.y)),
               }}
-              title={f.name}
             >
-              <span className="text-xl drop-shadow-[0_0_6px_hsl(var(--item)/0.6)]">
-                {f.glyph ?? "▣"}
-              </span>
-              <span className="absolute -bottom-0.5 left-1/2 -translate-x-1/2 font-pixel text-[7px] text-item whitespace-nowrap">
-                {f.name}
+              <span className="font-pixel text-[7px] text-parchment whitespace-nowrap rounded bg-stone-slab-edge/85 px-1.5 py-0.5 border border-stone-light/30 shadow-[0_2px_4px_hsl(0_0%_0%/0.6)]">
+                {d.target === ".." ? "../" : `${d.target}/`}
               </span>
             </div>
           ))}
+
+          {/* Files (items) */}
+          {room.files.map((f) => {
+            const b = brightnessFor(dist(state.player.x, state.player.y, f.x, f.y));
+            return (
+              <div
+                key={f.name}
+                className="pointer-events-none absolute flex items-center justify-center item-float transition-opacity duration-200"
+                style={{
+                  left: f.x * TILE,
+                  top: f.y * TILE,
+                  width: TILE,
+                  height: TILE,
+                  opacity: b,
+                }}
+                title={f.name}
+              >
+                <span className="text-xl drop-shadow-[0_0_6px_hsl(var(--item)/0.6)]">
+                  {f.glyph ?? "▣"}
+                </span>
+                <span className="absolute -bottom-0.5 left-1/2 -translate-x-1/2 font-pixel text-[7px] text-item whitespace-nowrap">
+                  {f.name}
+                </span>
+              </div>
+            );
+          })}
+
+          {/* Torchlight darkness overlay — per-tile mask */}
+          <div
+            className="pointer-events-none absolute inset-0 grid light-flicker"
+            style={{
+              gridTemplateColumns: `repeat(${room.width}, ${TILE}px)`,
+              gridTemplateRows: `repeat(${room.height}, ${TILE}px)`,
+            }}
+            aria-hidden
+          >
+            {Array.from({ length: room.width * room.height }).map((_, i) => {
+              const x = i % room.width;
+              const y = Math.floor(i / room.width);
+              const d = dist(state.player.x, state.player.y, x, y);
+              const b = brightnessFor(d);
+              const dark = 1 - b; // 0..0.9
+              return (
+                <div
+                  key={i}
+                  style={{
+                    background: `hsl(var(--background) / ${dark})`,
+                    transition: "background 200ms linear",
+                  }}
+                />
+              );
+            })}
+          </div>
 
           {/* Player */}
           <div
@@ -126,21 +182,28 @@ export function GameWorld({ state }: GameWorldProps) {
               top: state.player.y * TILE,
               width: TILE,
               height: TILE,
+              zIndex: 10,
             }}
           >
             <div
-              className="h-7 w-7 rounded-sm border-2 border-stone-dark bg-player shadow-[0_0_10px_hsl(var(--player)/0.7)]"
+              className="h-7 w-7 rounded-sm border-2 border-stone-dark bg-player shadow-[0_0_18px_hsl(var(--torch-glow)/0.85)]"
               aria-label="player"
             />
           </div>
 
-          {/* Vignette glow */}
+          {/* Soft torch vignette around player */}
           <div
-            className="pointer-events-none absolute inset-0"
+            className="pointer-events-none absolute inset-0 light-flicker"
             style={{
-              background:
-                "radial-gradient(ellipse at center, transparent 35%, hsl(var(--background) / 0.85) 100%)",
+              background: `radial-gradient(circle at ${
+                (state.player.x + 0.5) * TILE
+              }px ${(state.player.y + 0.5) * TILE}px, hsl(var(--torch-glow) / 0.18) 0px, transparent ${
+                TILE * 2.5
+              }px)`,
+              transition: "background 200ms linear",
+              zIndex: 11,
             }}
+            aria-hidden
           />
         </div>
       </div>

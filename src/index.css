@@ -41,6 +41,8 @@
     --stone: 230 10% 20%;
     --stone-light: 230 10% 28%;
     --stone-dark: 230 14% 12%;
+    --stone-slab: 220 12% 16%;
+    --stone-slab-edge: 220 14% 8%;
     --floor: 28 18% 22%;
     --floor-alt: 28 16% 18%;
     --wall: 230 12% 14%;
@@ -58,9 +60,41 @@
     --player: 50 95% 65%;
     --item: 195 80% 65%;
     --victory: 145 70% 55%;
+    --gold: 45 90% 55%;
 
-    --shadow-room: 0 0 60px hsl(var(--torch-glow) / 0.15) inset, 0 0 0 2px hsl(var(--stone-dark));
+    /* Atmospheric shadows */
+    --shadow-pit:
+      inset 0 0 0 3px hsl(var(--stone-slab-edge)),
+      inset 0 0 0 6px hsl(var(--stone-dark)),
+      inset 0 12px 24px hsl(0 0% 0% / 0.85),
+      inset 0 -8px 18px hsl(0 0% 0% / 0.7),
+      0 0 60px hsl(var(--torch-glow) / 0.18) inset;
+    --shadow-room: var(--shadow-pit);
     --shadow-torch: 0 0 12px hsl(var(--torch-glow) / 0.7);
+    --shadow-terminal-glow:
+      inset 0 0 60px hsl(var(--torch-glow) / 0.08),
+      inset 0 0 120px hsl(var(--torch-glow) / 0.04);
+    --shadow-bevel-out:
+      inset 2px 2px 0 hsl(var(--stone-light) / 0.7),
+      inset -2px -2px 0 hsl(var(--stone-slab-edge));
+    --shadow-bevel-in:
+      inset 2px 2px 0 hsl(var(--stone-slab-edge)),
+      inset -2px -2px 0 hsl(var(--stone-light) / 0.6);
+
+    /* Stone tile pattern (CSS-only) */
+    --stone-pattern:
+      linear-gradient(135deg, hsl(0 0% 100% / 0.025) 0%, transparent 50%),
+      linear-gradient(45deg, hsl(0 0% 0% / 0.18) 0%, transparent 50%),
+      repeating-linear-gradient(
+        0deg,
+        hsl(0 0% 0% / 0.18) 0 1px,
+        transparent 1px 22px
+      ),
+      repeating-linear-gradient(
+        90deg,
+        hsl(0 0% 0% / 0.18) 0 1px,
+        transparent 1px 22px
+      );
 
     --sidebar-background: 230 18% 6%;
     --sidebar-foreground: 42 45% 86%;
@@ -120,6 +154,26 @@
     -webkit-font-smoothing: none;
     font-smooth: never;
   }
+
+  /* Ultra-thin dark scrollbar */
+  *::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+  *::-webkit-scrollbar-track {
+    background: hsl(var(--terminal-bg));
+  }
+  *::-webkit-scrollbar-thumb {
+    background: hsl(var(--stone-dark));
+    border-radius: 2px;
+  }
+  *::-webkit-scrollbar-thumb:hover {
+    background: hsl(var(--stone));
+  }
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: hsl(var(--stone-dark)) hsl(var(--terminal-bg));
+  }
 }
 
 @layer utilities {
@@ -128,9 +182,9 @@
     letter-spacing: 0.05em;
   }
   .font-mono-pixel {
-    font-family: 'VT323', 'Courier New', monospace;
-    font-size: 1.15rem;
-    line-height: 1.25;
+    font-family: 'JetBrains Mono', 'VT323', 'Courier New', monospace;
+    font-size: 14px;
+    line-height: 1.6;
   }
   .torch-flicker {
     animation: torch-flicker 1.6s infinite alternate ease-in-out;
@@ -140,6 +194,15 @@
   }
   .item-float {
     animation: item-float 2s infinite alternate ease-in-out;
+  }
+  .label-float {
+    animation: label-float 2.4s infinite alternate ease-in-out;
+  }
+  .light-flicker {
+    animation: light-flicker 1.2s infinite ease-in-out;
+  }
+  .pixelate-in {
+    animation: pixelate-in 0.45s ease-out;
   }
   .scanlines::before {
     content: "";
@@ -154,6 +217,69 @@
     );
     mix-blend-mode: multiply;
   }
+
+  /* Stone tile texture */
+  .stone-tex {
+    background-image: var(--stone-pattern);
+    background-size: 22px 22px, 22px 22px, 22px 22px, 22px 22px;
+  }
+  .floor-tex {
+    background-color: hsl(var(--floor));
+    background-image:
+      radial-gradient(hsl(0 0% 0% / 0.18) 1px, transparent 1.2px),
+      linear-gradient(135deg, hsl(0 0% 100% / 0.025), transparent 60%);
+    background-size: 6px 6px, 100% 100%;
+  }
+  .floor-tex-alt {
+    background-color: hsl(var(--floor-alt));
+    background-image:
+      radial-gradient(hsl(0 0% 0% / 0.22) 1px, transparent 1.2px),
+      linear-gradient(135deg, hsl(0 0% 100% / 0.02), transparent 60%);
+    background-size: 6px 6px, 100% 100%;
+  }
+  .wall-tex {
+    background-color: hsl(var(--wall));
+    background-image:
+      linear-gradient(135deg, hsl(0 0% 100% / 0.04), transparent 50%),
+      repeating-linear-gradient(0deg, hsl(0 0% 0% / 0.35) 0 1px, transparent 1px 12px),
+      repeating-linear-gradient(90deg, hsl(0 0% 0% / 0.35) 0 1px, transparent 1px 18px);
+  }
+
+  /* Stone pillar divider with bevel */
+  .pillar-divider {
+    width: 14px;
+    background:
+      linear-gradient(
+        to right,
+        hsl(var(--stone-slab-edge)) 0%,
+        hsl(var(--stone)) 30%,
+        hsl(var(--stone-light)) 50%,
+        hsl(var(--stone)) 70%,
+        hsl(var(--stone-slab-edge)) 100%
+      );
+    box-shadow:
+      inset 0 0 0 1px hsl(0 0% 0% / 0.5),
+      0 0 10px hsl(0 0% 0% / 0.6);
+    position: relative;
+  }
+  .pillar-divider::before,
+  .pillar-divider::after {
+    content: "";
+    position: absolute;
+    left: -2px;
+    right: -2px;
+    height: 18px;
+    background:
+      linear-gradient(
+        to right,
+        hsl(var(--stone-slab-edge)),
+        hsl(var(--stone-light)),
+        hsl(var(--stone-slab-edge))
+      );
+    box-shadow: inset 0 1px 0 hsl(0 0% 100% / 0.08), 0 2px 4px hsl(0 0% 0% / 0.7);
+  }
+  .pillar-divider::before { top: 0; }
+  .pillar-divider::after  { bottom: 0; }
 }
 
 @keyframes torch-flicker {
@@ -168,4 +294,19 @@
 @keyframes item-float {
   from { transform: translateY(0); }
   to   { transform: translateY(-3px); }
+}
+@keyframes label-float {
+  from { transform: translate(-50%, 0); }
+  to   { transform: translate(-50%, -3px); }
+}
+@keyframes light-flicker {
+  0%, 100% { opacity: 1; }
+  25%      { opacity: 0.93; }
+  50%      { opacity: 0.97; }
+  75%      { opacity: 0.9; }
+}
+@keyframes pixelate-in {
+  0%   { filter: blur(8px) contrast(1.4); transform: scale(1.06); opacity: 0.4; }
+  60%  { filter: blur(2px) contrast(1.2); transform: scale(1.02); opacity: 0.85; }
+  100% { filter: blur(0) contrast(1);     transform: scale(1);    opacity: 1; }
 }

@@ -49,7 +49,10 @@ export default {
           DEFAULT: "hsl(var(--stone))",
           light: "hsl(var(--stone-light))",
           dark: "hsl(var(--stone-dark))",
+          slab: "hsl(var(--stone-slab))",
+          "slab-edge": "hsl(var(--stone-slab-edge))",
         },
+        gold: "hsl(var(--gold))",
         floor: {
           DEFAULT: "hsl(var(--floor))",
           alt: "hsl(var(--floor-alt))",
