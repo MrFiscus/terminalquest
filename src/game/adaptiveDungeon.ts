@@ -1,6 +1,24 @@
 import type { LinuxCommand } from "./types";
 
-const commands: LinuxCommand[] = ["ls", "cd", "mkdir", "pwd", "cat", "mv", "rm", "find", "file"];
+const commands: LinuxCommand[] = [
+  "ls",
+  "cd",
+  "mkdir",
+  "pwd",
+  "cat",
+  "mv",
+  "rm",
+  "find",
+  "file",
+  "clear",
+  "echo",
+  "touch",
+  "cp",
+  "grep",
+  "help",
+  "hint",
+  "man",
+];
 const commandSet = new Set(commands);
 
 export type CommandStats = Record<LinuxCommand, { uses: number; mistakes: number }>;
@@ -55,6 +73,14 @@ export function adaptationMessage(weakCommands: LinuxCommand[]): string | null {
     file: "The scrolls blur... you must learn what each relic truly is.",
     cat: "The runes whisper... you must learn to read what you find.",
     pwd: "The floor turns... you must learn where you stand.",
+    clear: "The terminal fog thickens... clear the view when the path feels crowded.",
+    echo: "The walls listen... echo words to learn how the shell speaks.",
+    touch: "Blank scrolls await... touch creates a new empty file.",
+    cp: "The relics reflect... copy what you need without moving it.",
+    grep: "The ink sharpens... search within scrolls for the words that matter.",
+    help: "The old manuals stir... ask for help when the command list fades.",
+    hint: "The Dungeon Master leans closer... seek a hint when the trail grows cold.",
+    man: "The manual stones awaken... read a command before casting it.",
   };
   return messages[main];
 }

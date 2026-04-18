@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { useEffect, useMemo, useRef, useState, type CSSProperties, type ReactNode } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
 import { getRoom } from "@/game/dungeon";
@@ -6,7 +6,7 @@ import { PlayerSprite } from "@/components/PlayerSprite";
 import { ScrollPopup } from "@/components/ScrollPopup";
 import archwayDoor from "@/assets/archway-door.png";
 import scrollItem from "@/assets/scroll-item.png";
-import type { GameState, VfxPulse } from "@/game/types";
+import type { DecorKind, GameState, VfxPulse } from "@/game/types";
 
 interface GameWorldProps {
   state: GameState;
@@ -35,12 +35,53 @@ function smoothLight(d: number, radius: number) {
 
 function brightnessFor(d: number): number {
   // Smooth fade — used for proximity-based UI opacity (labels, items).
-  return Math.max(0.18, smoothLight(d, 4.5));
+  return Math.max(0.38, smoothLight(d, 5.5));
 }
 
 function vfxKindFor(vfx: VfxPulse[], x: number, y: number) {
   for (let i = vfx.length - 1; i >= 0; i--) {
     if (vfx[i].cells.some((c) => c.x === x && c.y === y)) return vfx[i].kind;
+  }
+  return null;
+}
+
+function wallTransform(x: number, y: number, width: number, height: number) {
+  if (x === 0) return "scaleX(-1)";
+  if (y === height - 1) return "scaleY(-1)";
+  if (x === width - 1) return "none";
+  return y === 0 ? "none" : undefined;
+}
+
+function floorTint(x: number, y: number) {
+  if ((x * 13 + y * 7) % 17 === 0) return "rgba(255,255,255,0.035)";
+  if ((x * 5 + y * 11) % 19 === 0) return "rgba(0,0,0,0.06)";
+  return "transparent";
+}
+
+const decorSpriteFor = (kind: DecorKind) => `/assets/dungeon/props/${kind}.png`;
+
+function floorFeatureStyle(kind: DecorKind): CSSProperties | null {
+  if (kind === "crack") {
+    return {
+      width: "76%",
+      height: "42%",
+      opacity: 0.5,
+      transform: "rotate(-8deg)",
+      background:
+        "linear-gradient(150deg, transparent 0 42%, rgba(8,9,12,0.7) 43% 47%, transparent 48% 100%), linear-gradient(32deg, transparent 0 58%, rgba(8,9,12,0.55) 59% 62%, transparent 63% 100%)",
+      filter: "blur(0.2px)",
+    };
+  }
+  if (kind === "water") {
+    return {
+      width: "86%",
+      height: "56%",
+      opacity: 0.5,
+      borderRadius: "45%",
+      background:
+        "radial-gradient(ellipse at 45% 45%, rgba(84,147,169,0.52), rgba(29,73,93,0.38) 58%, rgba(12,27,38,0) 72%)",
+      boxShadow: "inset 0 0 8px rgba(166,220,235,0.22)",
+    };
   }
   return null;
 }
@@ -57,8 +98,7 @@ export function GameWorld({ state, onDismissPopup, headerRight }: GameWorldProps
     if (!el || !room) return;
     const compute = () => {
       const r = el.getBoundingClientRect();
-      // Force perfectly square tiles based on the smaller axis.
-      const tile = Math.max(1, Math.floor(Math.min(r.width / room.width, r.height / room.height)));
+      const tile = Math.max(MIN_TILE, Math.min(MAX_TILE, Math.floor(Math.min(r.width / room.width, r.height / room.height))));
       setTileW(tile);
       setTileH(tile);
     };
@@ -76,25 +116,34 @@ export function GameWorld({ state, onDismissPopup, headerRight }: GameWorldProps
         const isEdge = x === 0 || y === 0 || x === room.width - 1 || y === room.height - 1;
         const door = room.doors.find((d) => d.x === x && d.y === y);
         const torch = room.tiles.find((t) => t.x === x && t.y === y && t.kind === "torch");
-        const isWall = isEdge && !door;
         cells.push(
           <div
             key={`${x}-${y}`}
-            className={cn("relative overflow-hidden", y === 0 && !door ? "wall-cast-shadow" : "")}
-            style={{
-              width: tileW,
-              height: tileH,
-              backgroundImage: isWall
-                ? "url(/assets/dungeon/tiles/wall.png)"
-                : "url(/assets/dungeon/tiles/floor.png)",
-              backgroundSize: "100% 100%",
-              backgroundRepeat: "no-repeat",
-              imageRendering: "pixelated",
-              boxShadow: isWall
-                ? "inset 0 4px 0 hsl(0 0% 100% / 0.10), inset 0 -3px 0 hsl(0 0% 0% / 0.6), inset 0 0 0 1px hsl(0 0% 0% / 0.5)"
-                : "inset 0 0 0 1px hsl(0 0% 0% / 0.35)",
-            }}
+            className={cn("relative overflow-visible", y === 0 && !door ? "wall-cast-shadow" : "")}
+            style={{ width: tileW, height: tileH }}
           >
+            {!isEdge && !door && (
+              <span className="absolute inset-0" style={{ background: floorTint(x, y) }} />
+            )}
+            {isEdge && !door && (
+              <img
+                src="/assets/dungeon/tiles/wall.png"
+                alt=""
+                draggable={false}
+                className="absolute inset-[-10%] h-[120%] w-[120%] object-cover opacity-95"
+                style={{
+                  imageRendering: "pixelated",
+                  transform: wallTransform(x, y, room.width, room.height),
+                  filter: (x + y) % 9 === 0 ? "brightness(1.18)" : (x * 3 + y) % 11 === 0 ? "brightness(0.78)" : undefined,
+                }}
+              />
+            )}
+            {door && (
+              <span
+                className="absolute inset-0"
+                style={{ background: "radial-gradient(circle at 50% 58%, rgba(0,0,0,0.48), transparent 62%)" }}
+              />
+            )}
             {door && (
               <img
                 src={archwayDoor}
@@ -137,6 +186,18 @@ export function GameWorld({ state, onDismissPopup, headerRight }: GameWorldProps
   const TILE = Math.min(tileW, tileH);
   const boardW = room.width * tileW;
   const boardH = room.height * tileH;
+  const playerLight = {
+    x: (state.player.x + 0.5) * tileW,
+    y: (state.player.y + 0.5) * tileH,
+    radius: TILE * 4.4,
+  };
+  const torchLights = room.tiles
+    .filter((t) => t.kind === "torch")
+    .map((t) => ({
+      x: (t.x + 0.5) * tileW,
+      y: (t.y + 0.5) * tileH,
+      radius: TILE * 3.2,
+    }));
 
   // Mini-map flash on pwd
   const showMinimap = state.vfx.some((v) => v.kind === "pwd");
@@ -173,25 +234,69 @@ export function GameWorld({ state, onDismissPopup, headerRight }: GameWorldProps
       >
         <div
           key={room.path}
-          className="relative pixelate-in"
+          className="relative pixelate-in overflow-hidden"
           style={{
             width: boardW,
             height: boardH,
+            background:
+              "radial-gradient(circle at 48% 42%, rgba(106,113,124,0.66) 0%, rgba(53,59,68,0.58) 46%, rgba(15,17,23,0.94) 100%), linear-gradient(135deg, rgba(255,255,255,0.08), rgba(0,0,0,0.22))",
             boxShadow:
               "var(--shadow-pit), inset 0 0 60px 10px rgba(0,0,0,0.25)",
           }}
         >
+          <div
+            className="pointer-events-none absolute inset-0"
+            style={{
+              background:
+                "radial-gradient(circle at 18% 24%, rgba(255,185,89,0.14), transparent 28%), radial-gradient(circle at 82% 28%, rgba(255,220,150,0.08), transparent 26%), linear-gradient(90deg, rgba(255,255,255,0.025) 1px, transparent 1px), linear-gradient(0deg, rgba(0,0,0,0.08) 1px, transparent 1px)",
+              backgroundSize: "auto, auto, 54px 54px, 54px 54px",
+              zIndex: 0,
+            }}
+          />
           {/* Tile grid */}
           <div
-            className="grid relative"
+            className="grid relative pointer-events-none"
             style={{
               gridTemplateColumns: `repeat(${room.width}, ${tileW}px)`,
               gridTemplateRows: `repeat(${room.height}, ${tileH}px)`,
-              zIndex: 0,
+              zIndex: 2,
             }}
           >
             {grid}
           </div>
+
+          {/* Generated room props assembled from individual sprites. */}
+          {(room.decor ?? []).map((decor, index) => {
+            const featureStyle = floorFeatureStyle(decor.kind);
+            return (
+              <div
+                key={`decor-${decor.kind}-${decor.x}-${decor.y}-${index}`}
+                className="pointer-events-none absolute flex items-center justify-center"
+                style={{
+                  left: decor.x * tileW,
+                  top: decor.y * tileH,
+                  width: tileW,
+                  height: tileH,
+                  zIndex: featureStyle ? 3 : 7,
+                }}
+              >
+                {featureStyle ? (
+                  <span aria-hidden style={featureStyle} />
+                ) : (
+                  <img
+                    src={decorSpriteFor(decor.kind)}
+                    alt=""
+                    draggable={false}
+                    className={cn(
+                      "object-contain drop-shadow-[0_3px_3px_hsl(0_0%_0%/0.65)]",
+                      decor.kind === "ladder" ? "h-[150%] w-[80%]" : "h-[88%] w-[88%]",
+                    )}
+                    style={{ imageRendering: "pixelated" }}
+                  />
+                )}
+              </div>
+            );
+          })}
 
           {/* VFX overlay (per-cell) */}
           <div
@@ -263,25 +368,6 @@ export function GameWorld({ state, onDismissPopup, headerRight }: GameWorldProps
               </span>
             </div>
           ))}
-
-          {/* Torch labels */}
-          {room.tiles
-            .filter((t) => t.kind === "torch")
-            .map((t) => (
-              <div
-                key={`torch-label-${t.x}-${t.y}`}
-                className="pointer-events-none absolute label-float"
-                style={{
-                  left: t.x * tileW + tileW / 2,
-                  top: t.y * tileH - 16,
-                  transform: "translateX(-50%)",
-                  opacity: brightnessFor(edist(state.player.x, state.player.y, t.x, t.y)),
-                  zIndex: 30,
-                }}
-              >
-                <span className="label-chip breathe text-[7px]">torch</span>
-              </div>
-            ))}
 
           {/* Files (items) */}
           {room.files.map((f) => {

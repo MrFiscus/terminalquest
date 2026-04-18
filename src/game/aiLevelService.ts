@@ -10,6 +10,8 @@ export interface GenerateLevelInput {
   difficulty: Difficulty;
   weakCommands: string[];
   recentMistakes: string[];
+  familiarity?: number;
+  generationSeed?: string;
 }
 
 export interface LevelRoom {
@@ -36,10 +38,10 @@ type RawLevel = {
   hint?: unknown;
 };
 
-const roomCounts: Record<Difficulty, number> = {
-  easy: 4,
-  medium: 6,
-  hard: 8,
+const defaultFamiliarityByDifficulty: Record<Difficulty, number> = {
+  easy: 20,
+  medium: 55,
+  hard: 85,
 };
 
 const validCommands = new Set<LinuxCommand>([
@@ -52,9 +54,41 @@ const validCommands = new Set<LinuxCommand>([
   "rm",
   "find",
   "file",
+  "touch",
+  "cp",
+  "grep",
 ]);
 
-const fallbackIds = ["foyer", "vault", "archive", "crypt", "forge", "library", "cellar", "sanctum"];
+const fallbackIds = [
+  "foyer",
+  "vault",
+  "archive",
+  "crypt",
+  "forge",
+  "library",
+  "cellar",
+  "sanctum",
+  "gallery",
+  "observatory",
+];
+
+const clamp = (value: number, min: number, max: number) => Math.min(max, Math.max(min, value));
+
+function hashSeed(seed: string) {
+  let hash = 2166136261;
+  for (let i = 0; i < seed.length; i++) {
+    hash ^= seed.charCodeAt(i);
+    hash = Math.imul(hash, 16777619);
+  }
+  return hash >>> 0;
+}
+
+export function roomCountForFamiliarity(familiarity: number | undefined, difficulty: Difficulty) {
+  const value = Number.isFinite(familiarity)
+    ? clamp(Math.round(familiarity as number), 0, 100)
+    : defaultFamiliarityByDifficulty[difficulty];
+  return clamp(Math.round(3 + (value / 100) * 7), 3, 10);
+}
 
 const cleanId = (value: unknown, fallback: string) => {
   const raw = typeof value === "string" ? value : fallback;
@@ -107,7 +141,7 @@ export function validateLevel(raw: unknown, input: GenerateLevelInput): Omit<Gen
   const data = raw && typeof raw === "object" ? raw as RawLevel : null;
   if (!data || !Array.isArray(data.rooms)) return null;
 
-  const expectedRooms = roomCounts[input.difficulty];
+  const expectedRooms = roomCountForFamiliarity(input.familiarity, input.difficulty);
   if (data.rooms.length !== expectedRooms) return null;
 
   const rooms: LevelRoom[] = [];
@@ -158,12 +192,17 @@ export function validateLevel(raw: unknown, input: GenerateLevelInput): Omit<Gen
     start,
     hint: typeof data.hint === "string" ? data.hint.split(/\s+/).slice(0, 12).join(" ") : "Use ls, find, then mv.",
   };
-  return { ...valid, ...flavorLevelRoomIds(valid.rooms, valid.start) };
+  return { ...valid, ...flavorLevelRoomIds(valid.rooms, valid.start, input.generationSeed ?? input.difficulty) };
 }
 
 export function fallbackLevel(input: GenerateLevelInput): Omit<GeneratedLevel, "roomMap" | "targetFile"> {
-  const count = roomCounts[input.difficulty];
-  const ids = fallbackIds.slice(0, count);
+  const familiarity = Number.isFinite(input.familiarity)
+    ? clamp(Math.round(input.familiarity as number), 0, 100)
+    : defaultFamiliarityByDifficulty[input.difficulty];
+  const count = roomCountForFamiliarity(familiarity, input.difficulty);
+  const seed = input.generationSeed ?? `${input.difficulty}/${familiarity}`;
+  const offset = hashSeed(seed) % fallbackIds.length;
+  const ids = fallbackIds.map((_, index) => fallbackIds[(index + offset) % fallbackIds.length]).slice(0, count);
   const weak = input.weakCommands.filter((cmd): cmd is LinuxCommand => validCommands.has(cmd as LinuxCommand));
   const required = unique(["ls", "cd", "file", "find", "mv", ...weak] as LinuxCommand[]);
   const mainWeak = weak[0];
@@ -189,7 +228,7 @@ export function fallbackLevel(input: GenerateLevelInput): Omit<GeneratedLevel, "
         };
       }),
     };
-    return { ...level, ...flavorLevelRoomIds(level.rooms, level.start) };
+    return { ...level, ...flavorLevelRoomIds(level.rooms, level.start, seed) };
   }
 
   if (mainWeak === "mv") {
@@ -207,7 +246,7 @@ export function fallbackLevel(input: GenerateLevelInput): Omit<GeneratedLevel, "
         ]),
       })),
     };
-    return { ...level, ...flavorLevelRoomIds(level.rooms, level.start) };
+    return { ...level, ...flavorLevelRoomIds(level.rooms, level.start, seed) };
   }
 
   if (mainWeak === "ls") {
@@ -225,7 +264,7 @@ export function fallbackLevel(input: GenerateLevelInput): Omit<GeneratedLevel, "
         ].filter((exit) => exit !== id)),
       })),
     };
-    return { ...level, ...flavorLevelRoomIds(level.rooms, level.start) };
+    return { ...level, ...flavorLevelRoomIds(level.rooms, level.start, seed) };
   }
 
   if (mainWeak === "mkdir") {
@@ -243,7 +282,7 @@ export function fallbackLevel(input: GenerateLevelInput): Omit<GeneratedLevel, "
         ].filter((exit) => exit !== id)),
       })),
     };
-    return { ...level, ...flavorLevelRoomIds(level.rooms, level.start) };
+    return { ...level, ...flavorLevelRoomIds(level.rooms, level.start, seed) };
   }
 
   const level = {
@@ -260,7 +299,7 @@ export function fallbackLevel(input: GenerateLevelInput): Omit<GeneratedLevel, "
       ]),
     })),
   };
-  return { ...level, ...flavorLevelRoomIds(level.rooms, level.start) };
+  return { ...level, ...flavorLevelRoomIds(level.rooms, level.start, seed) };
 }
 
 const glyphFor = (name: string) => {

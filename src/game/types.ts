@@ -1,5 +1,22 @@
 export type TileKind = "wall" | "floor" | "door" | "torch";
-export type LinuxCommand = "ls" | "cd" | "mkdir" | "pwd" | "cat" | "mv" | "rm" | "find" | "file";
+export type LinuxCommand =
+  | "ls"
+  | "cd"
+  | "mkdir"
+  | "pwd"
+  | "cat"
+  | "mv"
+  | "rm"
+  | "find"
+  | "file"
+  | "clear"
+  | "echo"
+  | "touch"
+  | "cp"
+  | "grep"
+  | "help"
+  | "hint"
+  | "man";
 
 export type Direction =
   | "north"
@@ -32,6 +49,22 @@ export interface FileItem {
   glyph?: string;
 }
 
+export type DecorKind =
+  | "barrel"
+  | "chest"
+  | "crack"
+  | "crate"
+  | "ladder"
+  | "lamp"
+  | "sack"
+  | "water";
+
+export interface DecorItem {
+  kind: DecorKind;
+  x: number;
+  y: number;
+}
+
 export interface Room {
   path: string;
   name: string;
@@ -41,6 +74,7 @@ export interface Room {
   tiles: Tile[];
   doors: DoorTile[];
   files: FileItem[];
+  decor?: DecorItem[];
   spawn: { x: number; y: number };
   returnSpawn?: { x: number; y: number };
 }

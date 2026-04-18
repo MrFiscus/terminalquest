@@ -187,6 +187,10 @@ export function buildStubRoom(parentPath: string, name: string): Room {
     tiles,
     doors: [backDoor],
     files: [],
+    decor: [
+      { kind: "crate", x: width - 2, y: height - 2 },
+      { kind: "crack", x: 2, y: height - 2 },
+    ],
     spawn: { x: 1, y: Math.floor(height / 2) },
     returnSpawn: { x: 1, y: Math.floor(height / 2) },
   };

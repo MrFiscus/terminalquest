@@ -16,14 +16,18 @@ const Index = () => {
   const [generating, setGenerating] = useState<Difficulty | null>(null);
   const [activeDifficulty, setActiveDifficulty] = useState<Difficulty | null>(null);
   const [hasEntered, setHasEntered] = useState(false);
+  const [linuxFamiliarity, setLinuxFamiliarity] = useState<number | undefined>(undefined);
 
-  const loadAIDungeon = async (difficulty: Difficulty) => {
+  const loadAIDungeon = async (difficulty: Difficulty, familiarity = linuxFamiliarity) => {
     if (generating || state.animating) return;
+    const generationSeed = `${difficulty}-${familiarity ?? "tier"}-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
     setGenerating(difficulty);
     try {
       const weakCommands = getWeakCommands(state.commandStats, 4);
       const level = await generateLevel({
         difficulty,
+        familiarity,
+        generationSeed,
         weakCommands,
         recentMistakes: state.recentMistakes,
       });
@@ -38,9 +42,10 @@ const Index = () => {
     return (
       <DifficultyMenu
         busy={Boolean(generating)}
-        onConfirm={(difficulty) => {
+        onConfirm={(difficulty, familiarity) => {
+          setLinuxFamiliarity(familiarity);
           setHasEntered(true);
-          void loadAIDungeon(difficulty);
+          void loadAIDungeon(difficulty, familiarity);
         }}
       />
     );

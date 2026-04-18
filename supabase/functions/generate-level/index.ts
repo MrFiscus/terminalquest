@@ -3,13 +3,30 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
-const roomCounts: Record<string, number> = {
-  easy: 4,
-  medium: 6,
-  hard: 8,
+const difficultyDefaults: Record<string, number> = {
+  easy: 20,
+  medium: 55,
+  hard: 85,
 };
 
-const prompt = (difficulty: string, weakCommands: string[], recentMistakes: string[]) => `You generate a dungeon level for a Linux terminal learning game.
+const clamp = (value: number, min: number, max: number) => Math.min(max, Math.max(min, value));
+
+const roomCountForFamiliarity = (familiarity: unknown, difficulty: string) => {
+  const fallback = difficultyDefaults[difficulty] ?? 55;
+  const value = typeof familiarity === "number" && Number.isFinite(familiarity)
+    ? clamp(Math.round(familiarity), 0, 100)
+    : fallback;
+  return clamp(Math.round(3 + (value / 100) * 7), 3, 10);
+};
+
+const prompt = (
+  difficulty: string,
+  familiarity: number,
+  roomCount: number,
+  generationSeed: string,
+  weakCommands: string[],
+  recentMistakes: string[],
+) => `You generate a dungeon level for a Linux terminal learning game.
 
 STRICT RULES:
 - Output ONLY valid JSON
@@ -23,6 +40,9 @@ GAME MODEL:
 
 INPUT:
 d=${difficulty}
+f=${familiarity}
+rooms=${roomCount}
+seed=${generationSeed}
 w=${weakCommands.join(",")}
 m=${recentMistakes.join(",")}
 
@@ -41,15 +61,17 @@ OUTPUT:
 }
 
 CONSTRAINTS:
-- easy: exactly 4 rooms
-- medium: exactly 6 rooms
-- hard: exactly 8 rooms
+- exactly ${roomCount} rooms
+- room count is always 3-10
 - max 2 items per room
 - each room must have at least 1 exit
 - rooms must form a connected graph
+- low f: simple chain or one branch
+- high f: more branches and traversal
 - no coordinates
 - no descriptions
 - short ids, one word
+- use seed to vary names and structure between runs
 
 LEARNING RULES:
 - required must include weak commands
@@ -70,9 +92,17 @@ Deno.serve(async (req) => {
 
   try {
     const body = await req.json();
-    const difficulty = typeof body.difficulty === "string" && roomCounts[body.difficulty]
+    const difficulty = typeof body.difficulty === "string" && difficultyDefaults[body.difficulty]
       ? body.difficulty
       : "easy";
+    const fallbackFamiliarity = difficultyDefaults[difficulty] ?? 55;
+    const familiarity = typeof body.familiarity === "number" && Number.isFinite(body.familiarity)
+      ? clamp(Math.round(body.familiarity), 0, 100)
+      : fallbackFamiliarity;
+    const roomCount = roomCountForFamiliarity(familiarity, difficulty);
+    const generationSeed = typeof body.generationSeed === "string"
+      ? body.generationSeed.slice(0, 40)
+      : crypto.randomUUID().slice(0, 12);
     const weakCommands = Array.isArray(body.weakCommands)
       ? body.weakCommands.filter((cmd: unknown): cmd is string => typeof cmd === "string").slice(0, 5)
       : [];
@@ -101,7 +131,7 @@ Deno.serve(async (req) => {
         max_tokens: 520,
         temperature: 0.35,
         system: "Return only compact valid JSON. No markdown.",
-        messages: [{ role: "user", content: prompt(difficulty, weakCommands, recentMistakes) }],
+        messages: [{ role: "user", content: prompt(difficulty, familiarity, roomCount, generationSeed, weakCommands, recentMistakes) }],
       }),
     });
 

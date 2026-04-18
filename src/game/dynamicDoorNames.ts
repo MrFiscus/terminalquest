@@ -47,9 +47,9 @@ const nounFor = (id: string) => {
   return parts.find((part) => nounHints.includes(part)) ?? parts.at(-1) ?? "chamber";
 };
 
-export function flavorfulDoorName(id: string, used = new Set<string>()): string {
+export function flavorfulDoorName(id: string, used = new Set<string>(), seedSalt = ""): string {
   const noun = nounFor(id);
-  const seed = hash(id);
+  const seed = hash(`${seedSalt}/${id}`);
   let name = `${adjectives[seed % adjectives.length]}-${noun}`.slice(0, 24).replace(/-+$/g, "");
   let suffix = 2;
   while (used.has(name)) {
@@ -63,11 +63,12 @@ export function flavorfulDoorName(id: string, used = new Set<string>()): string 
 export function flavorLevelRoomIds(
   rooms: LevelRoom[],
   start: string,
+  seedSalt = "",
 ): { rooms: LevelRoom[]; start: string } {
   const used = new Set<string>();
   const renamed = new Map<string, string>();
   for (const room of rooms) {
-    renamed.set(room.id, flavorfulDoorName(room.id, used));
+    renamed.set(room.id, flavorfulDoorName(room.id, used, seedSalt));
   }
 
   return {

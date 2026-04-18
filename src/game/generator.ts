@@ -1,4 +1,4 @@
-import type { DoorTile, FileItem, Room, Tile } from "./types";
+import type { DecorItem, DecorKind, DoorTile, FileItem, Room, Tile } from "./types";
 
 /**
  * Deterministic procedural room/dungeon generator.
@@ -87,6 +87,67 @@ function pickSides(count: number, rng: () => number): WallSide[] {
   return out;
 }
 
+function decorSetForRoom(name: string): DecorKind[] {
+  const roomName = name.toLowerCase();
+  if (roomName.includes("vault")) return ["chest", "crate", "barrel", "sack"];
+  if (roomName.includes("storage") || roomName.includes("archive")) return ["crate", "barrel", "sack", "ladder"];
+  if (roomName.includes("crypt")) return ["crack", "crack", "sack"];
+  if (roomName.includes("cellar") || roomName.includes("damp")) return ["water", "barrel", "crack", "sack"];
+  return ["crate", "barrel", "sack", "crack", "lamp"];
+}
+
+function buildDecor(
+  spec: RoomSpec,
+  width: number,
+  height: number,
+  rng: () => number,
+  doors: DoorTile[],
+  files: FileItem[],
+  spawn: { x: number; y: number },
+): DecorItem[] {
+  const occupied = new Set<string>([
+    `${spawn.x},${spawn.y}`,
+    ...doors.map((door) => `${door.x},${door.y}`),
+    ...files.map((file) => `${file.x},${file.y}`),
+  ]);
+  const nearDoor = (x: number, y: number) =>
+    doors.some((door) => Math.abs(door.x - x) + Math.abs(door.y - y) <= 1);
+  const nearCenter = (x: number, y: number) =>
+    Math.abs(x - Math.floor(width / 2)) <= 1 && Math.abs(y - Math.floor(height / 2)) <= 1;
+
+  const candidates: { x: number; y: number }[] = [];
+  for (let y = 1; y < height - 1; y++) {
+    for (let x = 1; x < width - 1; x++) {
+      const nearWall = x <= 2 || x >= width - 3 || y <= 2 || y >= height - 3;
+      if (!nearWall || nearCenter(x, y) || nearDoor(x, y)) continue;
+      candidates.push({ x, y });
+    }
+  }
+
+  for (let i = candidates.length - 1; i > 0; i--) {
+    const j = Math.floor(rng() * (i + 1));
+    [candidates[i], candidates[j]] = [candidates[j], candidates[i]];
+  }
+
+  const kinds = decorSetForRoom(spec.name);
+  const maxDecor = Math.min(spec.name.toLowerCase().includes("vault") ? 5 : 4, candidates.length);
+  const decor: DecorItem[] = [];
+
+  for (const pos of candidates) {
+    if (decor.length >= maxDecor) break;
+    const key = `${pos.x},${pos.y}`;
+    if (occupied.has(key)) continue;
+    occupied.add(key);
+    decor.push({
+      kind: kinds[decor.length % kinds.length],
+      x: pos.x,
+      y: pos.y,
+    });
+  }
+
+  return decor;
+}
+
 export function addDoorToRoom(room: Room, target: string): Room | null {
   if (room.doors.some((door) => door.target === target)) return null;
   const used = new Set(room.doors.map((door) => `${door.x},${door.y}`));
@@ -108,8 +169,8 @@ export function addDoorToRoom(room: Room, target: string): Room | null {
 
 /** Generate a single room from a spec deterministically (seeded by path). */
 export function generateRoom(spec: RoomSpec): Room {
-  const width = spec.width ?? 11;
-  const height = spec.height ?? 7;
+  const width = spec.width ?? 15;
+  const height = spec.height ?? 10;
   const rng = mulberry32(hashString(spec.path));
 
   const tiles = carveBase(width, height);
@@ -190,6 +251,7 @@ export function generateRoom(spec: RoomSpec): Room {
   const returnSpawn = firstExit
     ? { x: Math.max(1, Math.min(width - 2, firstExit.x - 1)), y: firstExit.y }
     : undefined;
+  const decor = buildDecor(spec, width, height, rng, doors, files, spawn);
 
   return {
     path: spec.path,
@@ -200,6 +262,7 @@ export function generateRoom(spec: RoomSpec): Room {
     tiles,
     doors,
     files,
+    decor,
     spawn,
     returnSpawn,
   };
