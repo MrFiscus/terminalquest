@@ -179,7 +179,7 @@ export function GameWorld({ state, onDismissPopup, headerRight }: GameWorldProps
             width: boardW,
             height: boardH,
             boxShadow:
-              "var(--shadow-pit), inset 0 0 120px 40px rgba(0,0,0,0.75), inset 0 0 240px 80px rgba(0,0,0,0.55)",
+              "var(--shadow-pit), inset 0 0 60px 10px rgba(0,0,0,0.25)",
           }}
         >
           {/* Tile grid */}
