@@ -318,10 +318,28 @@ export default function Landing() {
       `}</style>
 
       {/* ══ 1. HERO ═══════════════════════════════════════════════════════════ */}
-      <section style={{ position: "relative", overflow: "hidden" }}>
-        <div style={{ position: "absolute", inset: 0, background: "radial-gradient(ellipse 80% 60% at 50% 45%,hsl(33 60% 22%/0.18) 0%,transparent 60%)", mixBlendMode: "multiply" }} />
-        <div style={{ position: "absolute", inset: 0, pointerEvents: "none", background: "radial-gradient(circle at 50% 10%,hsl(30 100%50%/0.1) 0%,transparent 44%)" }} />
+      <section style={{ position: "relative", overflow: "hidden", zIndex: 1 }}>
+        <div className="lp-breathe" style={{ position: "absolute", inset: 0, background: "radial-gradient(ellipse 80% 60% at 50% 45%,hsl(33 60% 22%/0.28) 0%,transparent 60%)", mixBlendMode: "screen", pointerEvents: "none" }} />
+        <div className="lp-breathe" style={{ position: "absolute", inset: 0, pointerEvents: "none", background: "radial-gradient(circle at 50% 10%,hsl(30 100%50%/0.18) 0%,transparent 44%)", animationDelay: "1.2s" }} />
         <div style={{ position: "absolute", inset: 0, pointerEvents: "none", background: "radial-gradient(ellipse at 50% 50%,transparent 55%,hsl(0 0%0%/0.35) 100%)" }} />
+
+        {/* Ember particles */}
+        {Array.from({ length: 8 }).map((_, i) => {
+          const left = 8 + (i * 11) % 88;
+          const dur = 6 + (i % 4) * 1.2;
+          const delay = (i * 0.9) % 7;
+          const drift = (i % 2 === 0 ? 1 : -1) * (6 + (i % 3) * 4);
+          const bottom = 10 + (i * 7) % 30;
+          return (
+            <span key={i} className="lp-ember" style={{
+              left: `${left}%`,
+              bottom: `${bottom}%`,
+              animationDuration: `${dur}s`,
+              animationDelay: `${delay}s`,
+              ["--ember-drift" as never]: `${drift}px`,
+            }} />
+          );
+        })}
 
         {/* Nav */}
         <div style={{ position: "relative", zIndex: 10, display: "flex", alignItems: "center", gap: 12, padding: "10px 20px", background: "hsl(0 0%0%/0.38)", borderBottom: "1px solid hsl(0 0%0%/0.5)", backdropFilter: "blur(2px)" }}>
@@ -336,10 +354,10 @@ export default function Landing() {
 
         {/* Hero content */}
         <div style={{ position: "relative", zIndex: 5, display: "flex", flexDirection: "column", alignItems: "center", padding: "80px 32px 88px", textAlign: "center" }}>
-          <h1 className="lp-eng" style={{ fontSize: "clamp(44px,7.5vw,100px)", lineHeight: 1.05, margin: 0 }}>
+          <h1 className="lp-eng lp-hero-in" style={{ fontSize: "clamp(44px,7.5vw,100px)", lineHeight: 1.05, margin: 0, animationDelay: "0ms" }}>
             TERMINAL QUEST
           </h1>
-          <p className="lp-eng" style={{ fontSize: "clamp(12px,1.8vw,18px)", letterSpacing: "0.32em", marginTop: 22, color: "hsl(0 0%26%)", fontWeight: 600 }}>
+          <p className="lp-eng lp-hero-in" style={{ fontSize: "clamp(12px,1.8vw,18px)", letterSpacing: "0.32em", marginTop: 22, color: "hsl(0 0%26%)", fontWeight: 600, animationDelay: "220ms" }}>
             ☩ DON'T JUST PLAY THE GAME. WRITE THE REALITY. ☩
           </p>
         </div>
