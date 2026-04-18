@@ -494,7 +494,26 @@ export default function Landing() {
 
       {/* ══ 4. AI MENTOR ══════════════════════════════════════════════════════ */}
       <StoneSection tint="radial-gradient(ellipse at 50% 100%,hsl(280 30%12%/0.14) 0%,transparent 55%),hsl(0 0%0%/0.2)">
-        <div style={{ padding: "54px 32px 62px", maxWidth: 780, margin: "0 auto" }}>
+        <div style={{ position: "relative", padding: "54px 32px 62px", maxWidth: 780, margin: "0 auto" }}>
+          {/* Ambient breathing glows — purple mentor aura */}
+          <div className="lp-breathe" style={{ position: "absolute", inset: 0, pointerEvents: "none", background: "radial-gradient(ellipse 70% 55% at 50% 50%,hsl(280 50%35%/0.16) 0%,transparent 60%)" }} />
+          <div className="lp-breathe" style={{ position: "absolute", inset: 0, pointerEvents: "none", background: "radial-gradient(ellipse 60% 45% at 20% 30%,hsl(280 60%40%/0.10) 0%,transparent 60%)", animationDelay: "1.8s" }} />
+          {/* Embers — violet tinted via filter */}
+          {Array.from({ length: 5 }).map((_, i) => {
+            const left = 10 + (i * 18) % 82;
+            const dur = 7.5 + (i % 3) * 1.1;
+            const delay = (i * 1.5) % 6;
+            const drift = (i % 2 === 0 ? 1 : -1) * (5 + (i % 3) * 4);
+            return (
+              <span key={i} className="lp-ember" style={{
+                left: `${left}%`, bottom: `${12 + (i * 9) % 38}%`,
+                background: "hsl(280 80% 65%)",
+                boxShadow: "0 0 6px hsl(280 80% 60% / 0.9), 0 0 12px hsl(280 80% 55% / 0.5)",
+                animationDuration: `${dur}s`, animationDelay: `${delay}s`,
+                ["--ember-drift" as never]: `${drift}px`,
+              }} />
+            );
+          })}
           <SectionTitle>✦ YOUR AI MENTOR ✦</SectionTitle>
 
           {/* Mentor card — styled like the in-game WizardPopup + ScrollPopup */}
