@@ -159,10 +159,11 @@ export function GameWorld({ state, onDismissPopup }: GameWorldProps) {
         >
           {/* Tile grid */}
           <div
-            className="grid"
+            className="grid relative"
             style={{
               gridTemplateColumns: `repeat(${room.width}, ${tileW}px)`,
               gridTemplateRows: `repeat(${room.height}, ${tileH}px)`,
+              zIndex: 0,
             }}
           >
             {grid}
@@ -230,7 +231,7 @@ export function GameWorld({ state, onDismissPopup }: GameWorldProps) {
                 left: d.x * tileW + tileW / 2,
                 top: d.y * tileH - 16,
                 opacity: brightnessFor(edist(state.player.x, state.player.y, d.x, d.y)),
-                zIndex: 9,
+                zIndex: 51,
               }}
             >
               <span className="label-chip breathe text-[7px]">
@@ -251,7 +252,7 @@ export function GameWorld({ state, onDismissPopup }: GameWorldProps) {
                   top: t.y * tileH - 16,
                   transform: "translateX(-50%)",
                   opacity: brightnessFor(edist(state.player.x, state.player.y, t.x, t.y)),
-                  zIndex: 9,
+                  zIndex: 51,
                 }}
               >
                 <span className="label-chip breathe text-[7px]">torch</span>
@@ -271,7 +272,7 @@ export function GameWorld({ state, onDismissPopup }: GameWorldProps) {
                   width: tileW,
                   height: tileH,
                   opacity: b,
-                  zIndex: 7,
+                  zIndex: 50,
                 }}
                 title={f.name}
               >
@@ -289,23 +290,13 @@ export function GameWorld({ state, onDismissPopup }: GameWorldProps) {
             );
           })}
 
-          {/* Smooth radial darkness overlay — single layer with light sources */}
+          {/* Soft vignette + warm torch tint — clear center, edges fade to charcoal */}
           {(() => {
             const playerCx = (state.player.x + 0.5) * tileW;
             const playerCy = (state.player.y + 0.5) * tileH;
-            const playerR = TILE * 4.2;
+            const playerR = TILE * 5.5;
 
             const torches = room.tiles.filter((t) => t.kind === "torch");
-            // Each light source punches a soft transparent hole in the dark veil.
-            const lightHoles = [
-              `radial-gradient(circle at ${playerCx}px ${playerCy}px, transparent 0px, transparent ${playerR * 0.35}px, hsl(0 0% 4% / 0.55) ${playerR * 0.75}px, hsl(0 0% 3% / 0.96) ${playerR}px)`,
-              ...torches.map((t) => {
-                const cx = (t.x + 0.5) * tileW;
-                const cy = (t.y + 0.5) * tileH;
-                const r = TILE * 3.2;
-                return `radial-gradient(circle at ${cx}px ${cy}px, transparent 0px, transparent ${r * 0.3}px, hsl(0 0% 4% / 0.5) ${r * 0.7}px, hsl(0 0% 3% / 0.96) ${r}px)`;
-              }),
-            ];
 
             const warmGlow = [
               `radial-gradient(circle at ${playerCx}px ${playerCy}px, hsl(33 100% 55% / 0.18) 0px, hsl(33 100% 55% / 0.08) ${playerR * 0.5}px, transparent ${playerR}px)`,
@@ -319,14 +310,13 @@ export function GameWorld({ state, onDismissPopup }: GameWorldProps) {
 
             return (
               <>
-                {/* Deep charcoal void — covers everything outside light circles. */}
+                {/* Edge-only vignette: fully clear center, only outer edges fade to soft charcoal. */}
                 <div
                   className="pointer-events-none absolute inset-0 light-flicker"
                   style={{
-                    background: lightHoles.join(", "),
-                    backgroundBlendMode: "multiply",
+                    background: `radial-gradient(ellipse at ${playerCx}px ${playerCy}px, rgba(0,0,0,0) 0%, rgba(0,0,0,0) 55%, hsl(0 0% 6% / 0.45) 100%)`,
                     transition: "background 240ms ease-out",
-                    zIndex: 6,
+                    zIndex: 10,
                   }}
                   aria-hidden
                 />
@@ -353,7 +343,7 @@ export function GameWorld({ state, onDismissPopup }: GameWorldProps) {
             style={{
               width: tileW,
               height: tileH,
-              zIndex: 10,
+              zIndex: 50,
             }}
           >
             <span className="ground-shadow" aria-hidden />
