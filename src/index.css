@@ -295,20 +295,25 @@
     background-size: 22px 22px, 22px 22px, 22px 22px, 22px 22px;
   }
   .floor-tex {
-    background-color: hsl(var(--floor));
-    background-image: url("/src/assets/flagstone-floor.png");
-    background-size: 128px 128px;
-    background-repeat: repeat;
+    background-color: hsl(230 8% 14%);
+    background-image:
+      linear-gradient(hsl(230 6% 16% / 0.6), hsl(230 6% 16% / 0.6)),
+      url("/src/assets/flagstone-floor.png");
+    background-size: 100% 100%, 128px 128px;
+    background-repeat: no-repeat, repeat;
     image-rendering: pixelated;
+    filter: grayscale(0.7) brightness(0.55) contrast(0.55);
   }
   .floor-tex-alt {
-    background-color: hsl(var(--floor-alt));
-    background-image: url("/src/assets/flagstone-floor.png");
-    background-size: 128px 128px;
-    background-repeat: repeat;
-    background-position: 64px 64px;
+    background-color: hsl(230 8% 12%);
+    background-image:
+      linear-gradient(hsl(230 6% 14% / 0.65), hsl(230 6% 14% / 0.65)),
+      url("/src/assets/flagstone-floor.png");
+    background-size: 100% 100%, 128px 128px;
+    background-repeat: no-repeat, repeat;
+    background-position: 0 0, 64px 64px;
     image-rendering: pixelated;
-    filter: brightness(0.92);
+    filter: grayscale(0.7) brightness(0.5) contrast(0.55);
   }
   .wall-tex {
     background-color: hsl(var(--wall));
