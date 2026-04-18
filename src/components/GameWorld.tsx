@@ -154,7 +154,8 @@ export function GameWorld({ state, onDismissPopup }: GameWorldProps) {
           style={{
             width: boardW,
             height: boardH,
-            boxShadow: "var(--shadow-pit)",
+            boxShadow:
+              "var(--shadow-pit), inset 0 0 120px 40px rgba(0,0,0,0.75), inset 0 0 240px 80px rgba(0,0,0,0.55)",
           }}
         >
           {/* Tile grid */}
@@ -290,37 +291,53 @@ export function GameWorld({ state, onDismissPopup }: GameWorldProps) {
             );
           })}
 
-          {/* Soft vignette + warm torch tint — clear center, edges fade to charcoal */}
+          {/* Torchlit radial lighting: warm light around player + torches, deep charcoal beyond ~3 tiles */}
           {(() => {
             const playerCx = (state.player.x + 0.5) * tileW;
             const playerCy = (state.player.y + 0.5) * tileH;
-            const playerR = TILE * 5.5;
+            const playerR = TILE * 3.5;
 
             const torches = room.tiles.filter((t) => t.kind === "torch");
 
+            // Warm radial torchlight tint (rgba(255,150,50,0.15))
             const warmGlow = [
-              `radial-gradient(circle at ${playerCx}px ${playerCy}px, hsl(33 100% 55% / 0.18) 0px, hsl(33 100% 55% / 0.08) ${playerR * 0.5}px, transparent ${playerR}px)`,
+              `radial-gradient(circle at ${playerCx}px ${playerCy}px, rgba(255,150,50,0.18) 0px, rgba(255,150,50,0.10) ${playerR * 0.55}px, rgba(255,150,50,0) ${playerR}px)`,
               ...torches.map((t) => {
                 const cx = (t.x + 0.5) * tileW;
                 const cy = (t.y + 0.5) * tileH;
                 const r = TILE * 3.2;
-                return `radial-gradient(circle at ${cx}px ${cy}px, hsl(33 100% 55% / 0.28) 0px, hsl(33 100% 55% / 0.1) ${r * 0.5}px, transparent ${r}px)`;
+                return `radial-gradient(circle at ${cx}px ${cy}px, rgba(255,150,50,0.28) 0px, rgba(255,150,50,0.12) ${r * 0.5}px, rgba(255,150,50,0) ${r}px)`;
               }),
             ];
 
+            // Darkness mask: holes of clarity around each light source, deep charcoal #0a0a0a everywhere else.
+            // Use mask-image with white = visible darkness, black = cleared (lit).
+            const lightMaskHoles = [
+              `radial-gradient(circle at ${playerCx}px ${playerCy}px, black 0px, black ${TILE * 2.2}px, rgba(0,0,0,0.35) ${TILE * 3}px, transparent ${TILE * 3.6}px)`,
+              ...torches.map((t) => {
+                const cx = (t.x + 0.5) * tileW;
+                const cy = (t.y + 0.5) * tileH;
+                return `radial-gradient(circle at ${cx}px ${cy}px, black 0px, black ${TILE * 1.8}px, rgba(0,0,0,0.4) ${TILE * 2.6}px, transparent ${TILE * 3.2}px)`;
+              }),
+            ].join(", ");
+
             return (
               <>
-                {/* Edge-only vignette: fully clear center, only outer edges fade to soft charcoal. */}
+                {/* Deep charcoal darkness with light holes */}
                 <div
                   className="pointer-events-none absolute inset-0 light-flicker"
                   style={{
-                    background: `radial-gradient(ellipse at ${playerCx}px ${playerCy}px, rgba(0,0,0,0) 0%, rgba(0,0,0,0) 55%, hsl(0 0% 6% / 0.45) 100%)`,
-                    transition: "background 240ms ease-out",
+                    background: "#0a0a0a",
+                    WebkitMaskImage: lightMaskHoles,
+                    maskImage: lightMaskHoles,
+                    WebkitMaskComposite: "source-out",
+                    maskComposite: "subtract",
+                    transition: "all 240ms ease-out",
                     zIndex: 10,
                   }}
                   aria-hidden
                 />
-                {/* Warm torch tint — soft orange wash over lit areas. */}
+                {/* Warm torch tint — soft orange wash over lit areas */}
                 <div
                   className="pointer-events-none absolute inset-0 light-flicker mix-blend-screen"
                   style={{
