@@ -84,6 +84,8 @@ export interface GameState {
   won: boolean;
   /** True while an animation is running; terminal input disabled. */
   animating: boolean;
+  /** True during cd room-fade transition (200ms). */
+  transitioning: boolean;
   /** Active visual effects layered on the world. */
   vfx: VfxPulse[];
   /** Active parchment popup from `cat`. */

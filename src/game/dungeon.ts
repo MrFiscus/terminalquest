@@ -1,4 +1,4 @@
-import type { DoorTile, FileItem, Room } from "./types";
+import type { DoorTile, FileItem, Room, Tile } from "./types";
 import { generateDungeon, type RoomSpec } from "./generator";
 
 export const START_PATH = "/home/user";
@@ -126,4 +126,68 @@ export function findFile(room: Room, name: string): FileItem | undefined {
 
 export function findDoor(room: Room, target: string): DoorTile | undefined {
   return room.doors.find((d) => d.target === target);
+}
+
+/**
+ * Find an empty wall slot adjacent to the given tile to spawn a new door.
+ * Returns null if no spot exists.
+ */
+export function findAdjacentWallSlot(
+  room: Room,
+  near: { x: number; y: number },
+): { x: number; y: number } | null {
+  // BFS outward from `near`, return first wall edge tile that isn't already a door.
+  const seen = new Set<string>();
+  const q: { x: number; y: number }[] = [near];
+  seen.add(`${near.x},${near.y}`);
+  while (q.length) {
+    const cur = q.shift()!;
+    for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
+      const nx = cur.x + dx;
+      const ny = cur.y + dy;
+      if (nx < 0 || ny < 0 || nx >= room.width || ny >= room.height) continue;
+      const k = `${nx},${ny}`;
+      if (seen.has(k)) continue;
+      seen.add(k);
+      const isEdge = nx === 0 || ny === 0 || nx === room.width - 1 || ny === room.height - 1;
+      const isCorner =
+        (nx === 0 || nx === room.width - 1) && (ny === 0 || ny === room.height - 1);
+      const occupied = room.doors.some((d) => d.x === nx && d.y === ny);
+      if (isEdge && !isCorner && !occupied) return { x: nx, y: ny };
+      // Continue searching through floor tiles to find a wall slot
+      if (!isEdge) q.push({ x: nx, y: ny });
+    }
+  }
+  return null;
+}
+
+/**
+ * Build a minimal stub child room for an mkdir-created folder.
+ * 9x7 walled chamber with a back door (..) and no other content.
+ */
+export function buildStubRoom(parentPath: string, name: string): Room {
+  const width = 9;
+  const height = 7;
+  const tiles: Tile[] = [];
+  for (let y = 0; y < height; y++) {
+    for (let x = 0; x < width; x++) {
+      const isEdge = x === 0 || y === 0 || x === width - 1 || y === height - 1;
+      tiles.push({ x, y, kind: isEdge ? "wall" : "floor" });
+    }
+  }
+  tiles.push({ x: 1, y: 1, kind: "torch" });
+  tiles.push({ x: width - 2, y: 1, kind: "torch" });
+  const backDoor: DoorTile = { x: 0, y: Math.floor(height / 2), kind: "door", target: ".." };
+  return {
+    path: `${parentPath}/${name}`,
+    name: `~/${name}`,
+    description: "A freshly carved alcove. The walls smell of chalk dust.",
+    width,
+    height,
+    tiles,
+    doors: [backDoor],
+    files: [],
+    spawn: { x: 1, y: Math.floor(height / 2) },
+    returnSpawn: { x: 1, y: Math.floor(height / 2) },
+  };
 }

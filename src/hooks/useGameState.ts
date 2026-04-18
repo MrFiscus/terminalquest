@@ -36,6 +36,7 @@ function initialState(): GameState {
     commandHistory: [],
     won: false,
     animating: false,
+    transitioning: false,
     vfx: [],
     popup: null,
   };
@@ -229,7 +230,18 @@ export function useGameState() {
         if (result.effect && (result.effect.type === "pickup" || result.effect.type === "win")) {
           await animatePickup();
         }
-        if (result.effect) applyEffect(result.effect);
+        if (result.effect) {
+          if (result.effect.type === "enterRoom") {
+            // 200ms fade-out, swap room, fade-in
+            setState((cur) => ({ ...cur, transitioning: true }));
+            await new Promise((r) => setTimeout(r, 200));
+            applyEffect(result.effect);
+            await new Promise((r) => setTimeout(r, 50));
+            setState((cur) => ({ ...cur, transitioning: false }));
+          } else {
+            applyEffect(result.effect);
+          }
+        }
         setState((cur) => ({ ...cur, animating: false }));
       } else if (result.effect) {
         applyEffect(result.effect);

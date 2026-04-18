@@ -2,12 +2,14 @@ import { dmRespond } from "./dmStub";
 import {
   INVENTORY_PATH,
   TARGET_FILE,
+  buildStubRoom,
+  findAdjacentWallSlot,
   findDoor,
   findFile,
   getRoom,
   resolvePath,
 } from "./dungeon";
-import type { CommandResult, GameState } from "./types";
+import type { CommandResult, DoorTile, GameState } from "./types";
 
 function out(text: string): CommandResult["lines"][number] {
   return { kind: "output", text };
@@ -106,7 +108,7 @@ export function runCommand(raw: string, state: GameState): CommandResult {
     case "cat": {
       const name = args[0];
       if (!name) return { lines: [err("cat: missing file")] };
-      const f = findFile(room, name);
+      const f = findFile(room, name) ?? state.inventory.find((it) => it.name === name);
       if (!f) return { lines: [err(`cat: ${name}: no such file`)] };
       const body = f.contents ?? "(empty file)";
       return {
@@ -152,12 +154,28 @@ export function runCommand(raw: string, state: GameState): CommandResult {
     case "mkdir": {
       const name = args[0];
       if (!name) return { lines: [err("mkdir: missing name")] };
+      if (!/^[a-zA-Z0-9_-]+$/.test(name)) {
+        return { lines: [err(`mkdir: invalid name '${name}'`)] };
+      }
+      const newPath = `${state.cwd}/${name}`;
+      if (state.rooms[newPath] || findDoor(room, name)) {
+        return { lines: [err(`mkdir: '${name}' already exists`)] };
+      }
+      const slot = findAdjacentWallSlot(room, state.player);
+      if (!slot) {
+        return { lines: [err(`mkdir: no wall space nearby to carve a door`)] };
+      }
+      const newDoor: DoorTile = { x: slot.x, y: slot.y, kind: "door", target: name };
+      const updatedRoom = { ...room, doors: [...room.doors, newDoor] };
+      const newRoom = buildStubRoom(state.cwd, name);
       return {
         lines: [
-          out(`You scratch '${name}' into the wall.`),
-          dm("The dungeon shrugs. New doors require deeper magic."),
+          out(`You carve '${name}' into the wall — a door manifests.`),
         ],
-        vfx: { kind: "manifest", cells: [{ x: state.player.x, y: state.player.y }], durationMs: 1400 },
+        patch: {
+          rooms: { ...state.rooms, [room.path]: updatedRoom, [newPath]: newRoom },
+        },
+        vfx: { kind: "manifest", cells: [{ x: slot.x, y: slot.y }], durationMs: 1400 },
       };
     }
 
