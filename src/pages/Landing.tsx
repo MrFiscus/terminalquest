@@ -856,6 +856,9 @@ export default function Landing() {
         </div>
       </StoneSection>
 
+      {/* ══ TESTIMONIAL SCROLL ═══════════════════════════════════════════════ */}
+      <TestimonialScroll />
+
       {/* ══ 5. CTA ════════════════════════════════════════════════════════════ */}
       <StoneSection tint="radial-gradient(ellipse 70% 55% at 50% 42%,hsl(33 60%20%/0.18) 0%,transparent 55%)">
         <div style={{ position: "relative", padding: "64px 32px 76px", display: "flex", flexDirection: "column", alignItems: "center", gap: 18 }}>
