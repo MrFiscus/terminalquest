@@ -9,10 +9,10 @@ interface TerminalProps {
 
 // Colors map: ash white default, ember gold for prompt, soft accents elsewhere.
 const lineClass: Record<TerminalLine["kind"], string> = {
-  input: "text-[hsl(var(--terminal-prompt))]",
+  input: "text-[hsl(var(--terminal-prompt))] ember-bloom",
   output: "text-[hsl(var(--terminal-text))]",
-  error: "text-[hsl(0_0%_63%)] italic",            // muted silver, italic
-  dm: "text-[hsl(0_0%_63%)] italic",               // Dungeon Master = silver italic
+  error: "text-[hsl(0_0%_63%)] italic",
+  dm: "text-[hsl(0_0%_63%)] italic",
   system: "text-[hsl(0_0%_63%)] italic",
   victory: "text-[hsl(140_60%_60%)] font-semibold",
 };
