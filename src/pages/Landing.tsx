@@ -365,10 +365,28 @@ export default function Landing() {
 
       {/* ══ 2. DUAL MONITORS ══════════════════════════════════════════════════ */}
       <StoneSection tint="hsl(0 0%0%/0.28)">
-        <div style={{ padding: "54px 32px 58px", maxWidth: 1100, margin: "0 auto" }}>
+        <div style={{ position: "relative", padding: "54px 32px 58px", maxWidth: 1100, margin: "0 auto" }}>
+          {/* Ambient breathing glows */}
+          <div className="lp-breathe" style={{ position: "absolute", inset: 0, pointerEvents: "none", background: "radial-gradient(ellipse 70% 55% at 30% 40%,hsl(38 100%50%/0.10) 0%,transparent 60%)" }} />
+          <div className="lp-breathe" style={{ position: "absolute", inset: 0, pointerEvents: "none", background: "radial-gradient(ellipse 70% 55% at 70% 60%,hsl(140 60%40%/0.08) 0%,transparent 60%)", animationDelay: "1.6s" }} />
+          {/* Embers */}
+          {Array.from({ length: 5 }).map((_, i) => {
+            const left = 12 + (i * 19) % 80;
+            const dur = 7 + (i % 3) * 1.3;
+            const delay = (i * 1.4) % 6;
+            const drift = (i % 2 === 0 ? 1 : -1) * (5 + (i % 3) * 4);
+            return (
+              <span key={i} className="lp-ember" style={{
+                left: `${left}%`, bottom: `${15 + (i * 9) % 40}%`,
+                animationDuration: `${dur}s`, animationDelay: `${delay}s`,
+                ["--ember-drift" as never]: `${drift}px`,
+              }} />
+            );
+          })}
+
           <SectionTitle>✦ TWO WORLDS · ONE KEYBOARD ✦</SectionTitle>
 
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 4px 1fr", height: 288 }}>
+          <div style={{ position: "relative", zIndex: 1, display: "grid", gridTemplateColumns: "1fr 4px 1fr", height: 288 }}>
             <MonitorFrame title="TERMINAL  /  DUNGEON-01" accent="hsl(38 100% 50%)">
               <TerminalDemo />
             </MonitorFrame>
@@ -378,7 +396,7 @@ export default function Landing() {
 
             <MonitorFrame title="DUNGEON  /  ENTRANCE" accent="hsl(140 60% 45%)">
               <div style={{ height: "100%", background: "hsl(230 18%5%)", display: "flex", alignItems: "center", justifyContent: "center", position: "relative", overflow: "hidden" }}>
-                <div style={{ position: "absolute", inset: 0, pointerEvents: "none", background: "radial-gradient(ellipse at 50% 35%,hsl(33 80%22%/0.1) 0%,transparent 60%)" }} />
+                <div className="lp-breathe" style={{ position: "absolute", inset: 0, pointerEvents: "none", background: "radial-gradient(ellipse at 50% 35%,hsl(33 80%22%/0.18) 0%,transparent 60%)" }} />
                 <PixelDungeon sz={23} />
                 <div style={{ position: "absolute", bottom: 8, left: "50%", transform: "translateX(-50%)", background: "hsl(0 60%12%/0.9)", border: "1px solid hsl(0 65%35%/0.55)", borderRadius: 2, padding: "2px 8px", fontFamily: "'Press Start 2P',monospace", fontSize: 6, color: "hsl(0 75%65%)", whiteSpace: "nowrap" }}>
                   ⚠ BRIDGE MISSING
@@ -388,7 +406,7 @@ export default function Landing() {
           </div>
 
           {/* Monitor stands */}
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 4px 1fr" }}>
+          <div style={{ position: "relative", zIndex: 1, display: "grid", gridTemplateColumns: "1fr 4px 1fr" }}>
             {[0, 2].map(i => (
               <div key={i} style={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
                 <div style={{ width: 56, height: 12, background: "hsl(220 12%7%)", borderRadius: "0 0 3px 3px" }} />
@@ -402,10 +420,27 @@ export default function Landing() {
 
       {/* ══ 3. HOW WE PLAY ════════════════════════════════════════════════════ */}
       <StoneSection tint="radial-gradient(ellipse at 50% 0%,hsl(33 60%18%/0.22) 0%,transparent 60%),hsl(0 0%0%/0.22)">
-        <div style={{ padding: "54px 32px 62px", maxWidth: 880, margin: "0 auto" }}>
+        <div style={{ position: "relative", padding: "54px 32px 62px", maxWidth: 880, margin: "0 auto" }}>
+          {/* Ambient breathing glows */}
+          <div className="lp-breathe" style={{ position: "absolute", inset: 0, pointerEvents: "none", background: "radial-gradient(ellipse 60% 50% at 25% 50%,hsl(33 100%50%/0.12) 0%,transparent 60%)" }} />
+          <div className="lp-breathe" style={{ position: "absolute", inset: 0, pointerEvents: "none", background: "radial-gradient(ellipse 60% 50% at 80% 50%,hsl(33 80%45%/0.10) 0%,transparent 60%)", animationDelay: "2s" }} />
+          {/* Embers */}
+          {Array.from({ length: 5 }).map((_, i) => {
+            const left = 8 + (i * 21) % 84;
+            const dur = 7 + (i % 3) * 1.2;
+            const delay = (i * 1.3) % 6;
+            const drift = (i % 2 === 0 ? -1 : 1) * (5 + (i % 3) * 4);
+            return (
+              <span key={i} className="lp-ember" style={{
+                left: `${left}%`, bottom: `${10 + (i * 11) % 35}%`,
+                animationDuration: `${dur}s`, animationDelay: `${delay}s`,
+                ["--ember-drift" as never]: `${drift}px`,
+              }} />
+            );
+          })}
           <SectionTitle>✦ HOW WE PLAY ✦</SectionTitle>
 
-          <div style={{ display: "flex", gap: 36, alignItems: "center" }}>
+          <div style={{ position: "relative", zIndex: 1, display: "flex", gap: 36, alignItems: "center" }}>
             {/* Left: command input + floppy */}
             <div style={{ flex: 1 }}>
               <div className="lp-eng" style={{ fontSize: 10, letterSpacing: "0.22em", color: "hsl(0 0%28%)", fontWeight: 600, marginBottom: 10 }}>YOUR COMMAND</div>
@@ -459,7 +494,26 @@ export default function Landing() {
 
       {/* ══ 4. AI MENTOR ══════════════════════════════════════════════════════ */}
       <StoneSection tint="radial-gradient(ellipse at 50% 100%,hsl(280 30%12%/0.14) 0%,transparent 55%),hsl(0 0%0%/0.2)">
-        <div style={{ padding: "54px 32px 62px", maxWidth: 780, margin: "0 auto" }}>
+        <div style={{ position: "relative", padding: "54px 32px 62px", maxWidth: 780, margin: "0 auto" }}>
+          {/* Ambient breathing glows — purple mentor aura */}
+          <div className="lp-breathe" style={{ position: "absolute", inset: 0, pointerEvents: "none", background: "radial-gradient(ellipse 70% 55% at 50% 50%,hsl(280 50%35%/0.16) 0%,transparent 60%)" }} />
+          <div className="lp-breathe" style={{ position: "absolute", inset: 0, pointerEvents: "none", background: "radial-gradient(ellipse 60% 45% at 20% 30%,hsl(280 60%40%/0.10) 0%,transparent 60%)", animationDelay: "1.8s" }} />
+          {/* Embers — violet tinted via filter */}
+          {Array.from({ length: 5 }).map((_, i) => {
+            const left = 10 + (i * 18) % 82;
+            const dur = 7.5 + (i % 3) * 1.1;
+            const delay = (i * 1.5) % 6;
+            const drift = (i % 2 === 0 ? 1 : -1) * (5 + (i % 3) * 4);
+            return (
+              <span key={i} className="lp-ember" style={{
+                left: `${left}%`, bottom: `${12 + (i * 9) % 38}%`,
+                background: "hsl(280 80% 65%)",
+                boxShadow: "0 0 6px hsl(280 80% 60% / 0.9), 0 0 12px hsl(280 80% 55% / 0.5)",
+                animationDuration: `${dur}s`, animationDelay: `${delay}s`,
+                ["--ember-drift" as never]: `${drift}px`,
+              }} />
+            );
+          })}
           <SectionTitle>✦ YOUR AI MENTOR ✦</SectionTitle>
 
           {/* Mentor card — styled like the in-game WizardPopup + ScrollPopup */}
@@ -521,8 +575,24 @@ export default function Landing() {
 
       {/* ══ 5. CTA ════════════════════════════════════════════════════════════ */}
       <StoneSection tint="radial-gradient(ellipse 70% 55% at 50% 42%,hsl(33 60%20%/0.18) 0%,transparent 55%)">
-        <div style={{ padding: "64px 32px 76px", display: "flex", flexDirection: "column", alignItems: "center", gap: 18 }}>
-          <div style={{ position: "absolute", inset: 0, pointerEvents: "none", background: "radial-gradient(circle at 50% 22%,hsl(30 100%50%/0.1) 0%,transparent 48%)" }} />
+        <div style={{ position: "relative", padding: "64px 32px 76px", display: "flex", flexDirection: "column", alignItems: "center", gap: 18 }}>
+          {/* Ambient breathing glows */}
+          <div className="lp-breathe" style={{ position: "absolute", inset: 0, pointerEvents: "none", background: "radial-gradient(circle at 50% 50%,hsl(30 100%50%/0.22) 0%,transparent 50%)" }} />
+          <div className="lp-breathe" style={{ position: "absolute", inset: 0, pointerEvents: "none", background: "radial-gradient(ellipse 80% 60% at 50% 60%,hsl(33 80%40%/0.14) 0%,transparent 60%)", animationDelay: "1.5s" }} />
+          {/* Embers — denser around the CTA */}
+          {Array.from({ length: 10 }).map((_, i) => {
+            const left = 6 + (i * 11) % 88;
+            const dur = 6 + (i % 4) * 1.2;
+            const delay = (i * 0.7) % 7;
+            const drift = (i % 2 === 0 ? 1 : -1) * (5 + (i % 3) * 5);
+            return (
+              <span key={i} className="lp-ember" style={{
+                left: `${left}%`, bottom: `${10 + (i * 7) % 50}%`,
+                animationDuration: `${dur}s`, animationDelay: `${delay}s`,
+                ["--ember-drift" as never]: `${drift}px`,
+              }} />
+            );
+          })}
           <Link to="/play" className="lp-stone-btn lp-stone-btn-sweep" style={{ padding: "20px 56px", fontSize: "clamp(13px,2vw,20px)", position: "relative", zIndex: 1 }}>
             <span className="lp-eng-glow">⚔&nbsp;&nbsp;ENTER THE DUNGEON&nbsp;&nbsp;⚔</span>
           </Link>
