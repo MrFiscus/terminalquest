@@ -129,10 +129,10 @@ export function GameWorld({ state, onDismissPopup }: GameWorldProps) {
         <span className="font-pixel text-[9px] text-parchment/60">TERMINAL · QUEST</span>
       </div>
 
-      {/* Stage */}
+      {/* Stage — fills the entire right panel, no padding, no gaps */}
       <div
         ref={stageRef}
-        className="relative flex flex-1 items-center justify-center overflow-hidden p-4"
+        className="relative flex-1 overflow-hidden"
       >
         <div
           key={room.path}
