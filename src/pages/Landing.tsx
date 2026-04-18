@@ -365,10 +365,28 @@ export default function Landing() {
 
       {/* ══ 2. DUAL MONITORS ══════════════════════════════════════════════════ */}
       <StoneSection tint="hsl(0 0%0%/0.28)">
-        <div style={{ padding: "54px 32px 58px", maxWidth: 1100, margin: "0 auto" }}>
+        <div style={{ position: "relative", padding: "54px 32px 58px", maxWidth: 1100, margin: "0 auto" }}>
+          {/* Ambient breathing glows */}
+          <div className="lp-breathe" style={{ position: "absolute", inset: 0, pointerEvents: "none", background: "radial-gradient(ellipse 70% 55% at 30% 40%,hsl(38 100%50%/0.10) 0%,transparent 60%)" }} />
+          <div className="lp-breathe" style={{ position: "absolute", inset: 0, pointerEvents: "none", background: "radial-gradient(ellipse 70% 55% at 70% 60%,hsl(140 60%40%/0.08) 0%,transparent 60%)", animationDelay: "1.6s" }} />
+          {/* Embers */}
+          {Array.from({ length: 5 }).map((_, i) => {
+            const left = 12 + (i * 19) % 80;
+            const dur = 7 + (i % 3) * 1.3;
+            const delay = (i * 1.4) % 6;
+            const drift = (i % 2 === 0 ? 1 : -1) * (5 + (i % 3) * 4);
+            return (
+              <span key={i} className="lp-ember" style={{
+                left: `${left}%`, bottom: `${15 + (i * 9) % 40}%`,
+                animationDuration: `${dur}s`, animationDelay: `${delay}s`,
+                ["--ember-drift" as never]: `${drift}px`,
+              }} />
+            );
+          })}
+
           <SectionTitle>✦ TWO WORLDS · ONE KEYBOARD ✦</SectionTitle>
 
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 4px 1fr", height: 288 }}>
+          <div style={{ position: "relative", zIndex: 1, display: "grid", gridTemplateColumns: "1fr 4px 1fr", height: 288 }}>
             <MonitorFrame title="TERMINAL  /  DUNGEON-01" accent="hsl(38 100% 50%)">
               <TerminalDemo />
             </MonitorFrame>
@@ -378,7 +396,7 @@ export default function Landing() {
 
             <MonitorFrame title="DUNGEON  /  ENTRANCE" accent="hsl(140 60% 45%)">
               <div style={{ height: "100%", background: "hsl(230 18%5%)", display: "flex", alignItems: "center", justifyContent: "center", position: "relative", overflow: "hidden" }}>
-                <div style={{ position: "absolute", inset: 0, pointerEvents: "none", background: "radial-gradient(ellipse at 50% 35%,hsl(33 80%22%/0.1) 0%,transparent 60%)" }} />
+                <div className="lp-breathe" style={{ position: "absolute", inset: 0, pointerEvents: "none", background: "radial-gradient(ellipse at 50% 35%,hsl(33 80%22%/0.18) 0%,transparent 60%)" }} />
                 <PixelDungeon sz={23} />
                 <div style={{ position: "absolute", bottom: 8, left: "50%", transform: "translateX(-50%)", background: "hsl(0 60%12%/0.9)", border: "1px solid hsl(0 65%35%/0.55)", borderRadius: 2, padding: "2px 8px", fontFamily: "'Press Start 2P',monospace", fontSize: 6, color: "hsl(0 75%65%)", whiteSpace: "nowrap" }}>
                   ⚠ BRIDGE MISSING
@@ -388,7 +406,7 @@ export default function Landing() {
           </div>
 
           {/* Monitor stands */}
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 4px 1fr" }}>
+          <div style={{ position: "relative", zIndex: 1, display: "grid", gridTemplateColumns: "1fr 4px 1fr" }}>
             {[0, 2].map(i => (
               <div key={i} style={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
                 <div style={{ width: 56, height: 12, background: "hsl(220 12%7%)", borderRadius: "0 0 3px 3px" }} />
