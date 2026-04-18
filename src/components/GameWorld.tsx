@@ -68,7 +68,7 @@ export function GameWorld({ state, onDismissPopup }: GameWorldProps) {
               isEdge && !door ? "wall-tex" : (x + y) % 2 === 0 ? "floor-tex-alt" : "floor-tex",
               isEdge && !door && "shadow-[inset_0_-2px_0_hsl(var(--wall-edge))]",
             )}
-            style={{ width: TILE, height: TILE }}
+            style={{ width: tileW, height: tileH }}
           >
             {door && (
               <div className="absolute inset-1 flex items-center justify-center bg-door border-2 border-door-frame">
@@ -90,14 +90,16 @@ export function GameWorld({ state, onDismissPopup }: GameWorldProps) {
       }
     }
     return cells;
-  }, [room, TILE]);
+  }, [room, tileW, tileH]);
 
   if (!room) {
     return <div className="flex h-full items-center justify-center text-muted-foreground">The void.</div>;
   }
 
-  const boardW = room.width * TILE;
-  const boardH = room.height * TILE;
+  // Sprite size scales with the smaller axis so the player remains square.
+  const TILE = Math.min(tileW, tileH);
+  const boardW = room.width * tileW;
+  const boardH = room.height * tileH;
 
   // Mini-map flash on pwd
   const showMinimap = state.vfx.some((v) => v.kind === "pwd");
