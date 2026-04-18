@@ -72,11 +72,12 @@ export function GameWorld({ state, onDismissPopup }: GameWorldProps) {
             style={{ width: tileW, height: tileH }}
           >
             {door && (
-              <div className="absolute inset-1 flex items-center justify-center bg-door border-2 border-door-frame">
-                <span className="font-pixel text-[8px] text-parchment/90">
-                  {door.target === ".." ? "◄" : "►"}
-                </span>
-              </div>
+              <img
+                src={archwayDoor}
+                alt={door.target === ".." ? "exit archway" : `${door.target} archway`}
+                className="absolute inset-0 h-full w-full object-contain pointer-events-none"
+                style={{ imageRendering: "pixelated", transform: "scale(1.15)", transformOrigin: "center bottom" }}
+              />
             )}
             {torch && (
               <span
