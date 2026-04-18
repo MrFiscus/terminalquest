@@ -223,12 +223,13 @@
   .ground-shadow {
     position: absolute;
     left: 50%;
-    bottom: 6%;
+    bottom: 4%;
     transform: translateX(-50%);
-    width: 70%;
-    height: 22%;
+    width: 65%;
+    height: 18%;
     border-radius: 50%;
-    background: radial-gradient(ellipse at center, hsl(0 0% 0% / 0.7) 0%, hsl(0 0% 0% / 0.4) 45%, transparent 75%);
+    background: radial-gradient(ellipse at center, hsl(0 0% 0% / 0.55) 0%, hsl(0 0% 0% / 0.35) 50%, transparent 78%);
+    opacity: 0.4;
     filter: blur(4px);
     pointer-events: none;
   }

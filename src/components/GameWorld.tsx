@@ -99,8 +99,15 @@ export function GameWorld({ state, onDismissPopup }: GameWorldProps) {
               <img
                 src={archwayDoor}
                 alt={door.target === ".." ? "exit archway" : `${door.target} archway`}
-                className="absolute inset-0 h-full w-full object-contain pointer-events-none"
-                style={{ imageRendering: "pixelated", transform: "scale(1.15)", transformOrigin: "center bottom" }}
+                className="absolute left-1/2 -translate-x-1/2 pointer-events-none"
+                style={{
+                  bottom: 0,
+                  width: "85%",
+                  height: "85%",
+                  objectFit: "contain",
+                  imageRendering: "pixelated",
+                  transformOrigin: "center bottom",
+                }}
               />
             )}
             {torch && (
@@ -297,8 +304,14 @@ export function GameWorld({ state, onDismissPopup }: GameWorldProps) {
                 <img
                   src={scrollItem}
                   alt={f.name}
-                  className="h-[80%] w-[80%] object-contain drop-shadow-[0_3px_3px_hsl(0_0%_0%/0.7)] drop-shadow-[0_0_8px_hsl(var(--gold)/0.55)]"
-                  style={{ imageRendering: "pixelated" }}
+                  className="object-contain drop-shadow-[0_2px_2px_hsl(0_0%_0%/0.6)] drop-shadow-[0_0_6px_hsl(var(--gold)/0.55)]"
+                  style={{
+                    width: "60%",
+                    height: "60%",
+                    imageRendering: "pixelated",
+                    position: "relative",
+                    zIndex: 1,
+                  }}
                 />
                 <span className="absolute -bottom-1 left-1/2 -translate-x-1/2 label-chip breathe text-[7px]">
                   {f.name}
@@ -346,7 +359,7 @@ export function GameWorld({ state, onDismissPopup }: GameWorldProps) {
 
           {/* Player sprite (framer-motion tile movement) */}
           <motion.div
-            className="pointer-events-none absolute flex items-center justify-center"
+            className="pointer-events-none absolute"
             initial={false}
             animate={{ left: state.player.x * tileW, top: state.player.y * tileH }}
             transition={{ type: "tween", ease: "linear", duration: 0.1 }}
@@ -356,9 +369,15 @@ export function GameWorld({ state, onDismissPopup }: GameWorldProps) {
               zIndex: 20,
             }}
           >
+            {/* Soft ground shadow pinned to floor */}
             <span className="ground-shadow" aria-hidden />
-            <PlayerSprite anim={state.playerAnim} facing={state.playerFacing} size={Math.min(TILE, 48)} />
-
+            {/* Knight anchored so feet sit at the bottom of the tile */}
+            <div
+              className="absolute left-1/2 -translate-x-1/2 flex items-end justify-center"
+              style={{ bottom: 0, width: "100%", height: "100%" }}
+            >
+              <PlayerSprite anim={state.playerAnim} facing={state.playerFacing} size={Math.min(TILE, 48)} />
+            </div>
           </motion.div>
           {/* Mini-map (pwd flash) */}
           {showMinimap && (
