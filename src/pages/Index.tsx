@@ -1,16 +1,32 @@
-// Update this page (the content is just a fallback if you fail to update the page)
+import { GameWorld } from "@/components/GameWorld";
+import { InventoryBar } from "@/components/InventoryBar";
+import { Terminal } from "@/components/Terminal";
+import { VictoryOverlay } from "@/components/VictoryOverlay";
+import { useGameState } from "@/hooks/useGameState";
 
-// IMPORTANT: Fully REPLACE this with your own code
-const PlaceholderIndex = () => {
-  // PLACEHOLDER: Replace this entire return statement with the user's app.
-  // The inline background color is intentionally not part of the design system.
+const Index = () => {
+  const { state, submit, reset } = useGameState();
+
   return (
-    <div className="flex min-h-screen items-center justify-center" style={{ backgroundColor: '#fcfbf8' }}>
-      <img data-lovable-blank-page-placeholder="REMOVE_THIS" src="/placeholder.svg" alt="Your app will live here!" />
-    </div>
+    <main className="relative grid h-screen w-screen grid-cols-1 md:grid-cols-2 overflow-hidden bg-background">
+      <h1 className="sr-only">Terminal Quest — Linux Dungeon RPG</h1>
+
+      {/* Left: Terminal */}
+      <section aria-label="Terminal" className="h-full min-h-0">
+        <Terminal state={state} onSubmit={submit} />
+      </section>
+
+      {/* Right: Game world + inventory */}
+      <section aria-label="Dungeon" className="flex h-full min-h-0 flex-col">
+        <div className="min-h-0 flex-1">
+          <GameWorld state={state} />
+        </div>
+        <InventoryBar items={state.inventory} />
+      </section>
+
+      {state.won && <VictoryOverlay onReset={reset} />}
+    </main>
   );
 };
-
-const Index = PlaceholderIndex;
 
 export default Index;
