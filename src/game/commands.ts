@@ -152,12 +152,28 @@ export function runCommand(raw: string, state: GameState): CommandResult {
     case "mkdir": {
       const name = args[0];
       if (!name) return { lines: [err("mkdir: missing name")] };
+      if (!/^[a-zA-Z0-9_-]+$/.test(name)) {
+        return { lines: [err(`mkdir: invalid name '${name}'`)] };
+      }
+      const newPath = `${state.cwd}/${name}`;
+      if (state.rooms[newPath] || findDoor(room, name)) {
+        return { lines: [err(`mkdir: '${name}' already exists`)] };
+      }
+      const slot = findAdjacentWallSlot(room, state.player);
+      if (!slot) {
+        return { lines: [err(`mkdir: no wall space nearby to carve a door`)] };
+      }
+      const newDoor: DoorTile = { x: slot.x, y: slot.y, kind: "door", target: name };
+      const updatedRoom = { ...room, doors: [...room.doors, newDoor] };
+      const newRoom = buildStubRoom(state.cwd, name);
       return {
         lines: [
-          out(`You scratch '${name}' into the wall.`),
-          dm("The dungeon shrugs. New doors require deeper magic."),
+          out(`You carve '${name}' into the wall — a door manifests.`),
         ],
-        vfx: { kind: "manifest", cells: [{ x: state.player.x, y: state.player.y }], durationMs: 1400 },
+        patch: {
+          rooms: { ...state.rooms, [room.path]: updatedRoom, [newPath]: newRoom },
+        },
+        vfx: { kind: "manifest", cells: [{ x: slot.x, y: slot.y }], durationMs: 1400 },
       };
     }
 

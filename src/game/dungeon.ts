@@ -1,4 +1,4 @@
-import type { DoorTile, FileItem, Room } from "./types";
+import type { DoorTile, FileItem, Room, Tile } from "./types";
 import { generateDungeon, type RoomSpec } from "./generator";
 
 export const START_PATH = "/home/user";
