@@ -66,7 +66,7 @@ Only suggest commands available in this game: ls, cd, mkdir, pwd, cat, mv, rm, f
 
 async function askClaude(input: string, mode: DungeonMasterMode, context: DungeonMasterContext) {
   const ANTHROPIC_API_KEY = Deno.env.get("ANTHROPIC_API_KEY");
-  const ANTHROPIC_MODEL = Deno.env.get("ANTHROPIC_MODEL") ?? "claude-3-5-haiku-latest";
+  const ANTHROPIC_MODEL = Deno.env.get("ANTHROPIC_MODEL") ?? "claude-haiku-4-5-20251001";
   if (!ANTHROPIC_API_KEY) return fallbackReply(input, mode, context);
 
   const response = await fetch("https://api.anthropic.com/v1/messages", {
