@@ -2,12 +2,14 @@ import { dmRespond } from "./dmStub";
 import {
   INVENTORY_PATH,
   TARGET_FILE,
+  buildStubRoom,
+  findAdjacentWallSlot,
   findDoor,
   findFile,
   getRoom,
   resolvePath,
 } from "./dungeon";
-import type { CommandResult, GameState } from "./types";
+import type { CommandResult, DoorTile, GameState } from "./types";
 
 function out(text: string): CommandResult["lines"][number] {
   return { kind: "output", text };
