@@ -118,7 +118,7 @@ export function GameWorld({ state, onDismissPopup, headerRight }: GameWorldProps
                   src="/assets/dungeon/tiles/torch.png"
                   alt=""
                   draggable={false}
-                  className="absolute inset-0 h-full w-full object-contain pointer-events-none torch-flicker torch-glow"
+                  className="absolute inset-0 h-full w-full object-contain pointer-events-none torch-glow"
                   style={{ imageRendering: "pixelated" }}
                 />
               </>
