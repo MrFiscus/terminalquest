@@ -339,7 +339,7 @@ export function GameWorld({ state, onDismissPopup }: GameWorldProps) {
             style={{
               width: tileW,
               height: tileH,
-              zIndex: 50,
+              zIndex: 20,
             }}
           >
             <span className="ground-shadow" aria-hidden />
@@ -350,7 +350,7 @@ export function GameWorld({ state, onDismissPopup }: GameWorldProps) {
           {showMinimap && (
             <div
               className="pointer-events-none absolute right-2 top-2 animate-fade-in"
-              style={{ zIndex: 20 }}
+              style={{ zIndex: 30 }}
             >
               <div
                 className="grid gap-0.5 p-1 bg-stone-slab-edge/90 border border-stone-light/40"
