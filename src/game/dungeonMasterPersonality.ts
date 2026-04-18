@@ -29,7 +29,7 @@ export function updatePerformanceSummary(
   const helpLike = classifyTerminalInput(input) === "help-like";
   return {
     ...summary,
-    recentOutcomes: [failed ? "failure" : "success", ...summary.recentOutcomes].slice(0, 8),
+    recentOutcomes: [(failed ? "failure" : "success") as "failure" | "success", ...summary.recentOutcomes].slice(0, 8),
     invalidStreak: failed && !command && !helpLike ? summary.invalidStreak + 1 : failed ? summary.invalidStreak : 0,
     confusionStreak: failed && helpLike ? summary.confusionStreak + 1 : failed ? summary.confusionStreak : 0,
     successStreak: failed ? 0 : summary.successStreak + 1,
