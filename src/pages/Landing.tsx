@@ -468,7 +468,6 @@ export default function Landing() {
 
       {/* ══ FEATURED COMMANDS ════════════════════════════════════════════════ */}
       <CommandsCarousel />
-      </section>
 
       {/* ══ 2. DUAL MONITORS ══════════════════════════════════════════════════ */}
       <StoneSection tint="hsl(0 0%0%/0.28)">
