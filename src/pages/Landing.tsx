@@ -575,8 +575,24 @@ export default function Landing() {
 
       {/* ══ 5. CTA ════════════════════════════════════════════════════════════ */}
       <StoneSection tint="radial-gradient(ellipse 70% 55% at 50% 42%,hsl(33 60%20%/0.18) 0%,transparent 55%)">
-        <div style={{ padding: "64px 32px 76px", display: "flex", flexDirection: "column", alignItems: "center", gap: 18 }}>
-          <div style={{ position: "absolute", inset: 0, pointerEvents: "none", background: "radial-gradient(circle at 50% 22%,hsl(30 100%50%/0.1) 0%,transparent 48%)" }} />
+        <div style={{ position: "relative", padding: "64px 32px 76px", display: "flex", flexDirection: "column", alignItems: "center", gap: 18 }}>
+          {/* Ambient breathing glows */}
+          <div className="lp-breathe" style={{ position: "absolute", inset: 0, pointerEvents: "none", background: "radial-gradient(circle at 50% 50%,hsl(30 100%50%/0.22) 0%,transparent 50%)" }} />
+          <div className="lp-breathe" style={{ position: "absolute", inset: 0, pointerEvents: "none", background: "radial-gradient(ellipse 80% 60% at 50% 60%,hsl(33 80%40%/0.14) 0%,transparent 60%)", animationDelay: "1.5s" }} />
+          {/* Embers — denser around the CTA */}
+          {Array.from({ length: 10 }).map((_, i) => {
+            const left = 6 + (i * 11) % 88;
+            const dur = 6 + (i % 4) * 1.2;
+            const delay = (i * 0.7) % 7;
+            const drift = (i % 2 === 0 ? 1 : -1) * (5 + (i % 3) * 5);
+            return (
+              <span key={i} className="lp-ember" style={{
+                left: `${left}%`, bottom: `${10 + (i * 7) % 50}%`,
+                animationDuration: `${dur}s`, animationDelay: `${delay}s`,
+                ["--ember-drift" as never]: `${drift}px`,
+              }} />
+            );
+          })}
           <Link to="/play" className="lp-stone-btn lp-stone-btn-sweep" style={{ padding: "20px 56px", fontSize: "clamp(13px,2vw,20px)", position: "relative", zIndex: 1 }}>
             <span className="lp-eng-glow">⚔&nbsp;&nbsp;ENTER THE DUNGEON&nbsp;&nbsp;⚔</span>
           </Link>
