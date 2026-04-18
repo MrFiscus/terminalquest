@@ -36,15 +36,15 @@ const Index = () => {
       <div className="pillar-divider h-full" aria-hidden />
 
       <section aria-label="Dungeon" className="flex h-full min-h-0 flex-col">
-        <div className="flex shrink-0 items-center gap-2 border-b border-stone-slab-edge bg-stone-slab px-3 py-2">
-          <span className="font-pixel text-[9px] text-primary">Claude Dungeon</span>
+        <div className="flex shrink-0 items-center gap-2 carved-stone-tex border-b-2 border-stone-slab-edge px-3 py-2">
+          <span className="font-pixel carved-gold text-[10px] tracking-wider">Claude Dungeon</span>
           {(["easy", "medium", "hard"] as Difficulty[]).map((difficulty) => (
             <button
               key={difficulty}
               type="button"
               onClick={() => loadAIDungeon(difficulty)}
               disabled={Boolean(generating) || state.animating}
-              className="rounded-sm border border-primary/50 px-2 py-1 font-mono-pixel text-xs uppercase text-parchment transition-colors hover:bg-primary hover:text-primary-foreground disabled:cursor-not-allowed disabled:opacity-50"
+              className="stone-tablet-btn font-pixel text-[9px] uppercase px-3 py-1.5"
             >
               {generating === difficulty ? "..." : difficulty}
             </button>
