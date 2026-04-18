@@ -523,7 +523,7 @@ export default function Landing() {
       <StoneSection tint="radial-gradient(ellipse 70% 55% at 50% 42%,hsl(33 60%20%/0.18) 0%,transparent 55%)">
         <div style={{ padding: "64px 32px 76px", display: "flex", flexDirection: "column", alignItems: "center", gap: 18 }}>
           <div style={{ position: "absolute", inset: 0, pointerEvents: "none", background: "radial-gradient(circle at 50% 22%,hsl(30 100%50%/0.1) 0%,transparent 48%)" }} />
-          <Link to="/play" className="lp-stone-btn" style={{ padding: "20px 56px", fontSize: "clamp(13px,2vw,20px)", position: "relative", zIndex: 1 }}>
+          <Link to="/play" className="lp-stone-btn lp-stone-btn-sweep" style={{ padding: "20px 56px", fontSize: "clamp(13px,2vw,20px)", position: "relative", zIndex: 1 }}>
             <span className="lp-eng-glow">⚔&nbsp;&nbsp;ENTER THE DUNGEON&nbsp;&nbsp;⚔</span>
           </Link>
           <p className="lp-eng" style={{ fontSize: 10, letterSpacing: "0.26em", color: "hsl(0 0%22%)", margin: 0, fontWeight: 600, position: "relative", zIndex: 1 }}>
