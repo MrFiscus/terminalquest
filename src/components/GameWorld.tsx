@@ -242,19 +242,20 @@ export function GameWorld({ state, onDismissPopup }: GameWorldProps) {
             })}
           </div>
 
-          {/* Player sprite */}
-          <div
-            className="pointer-events-none absolute flex items-center justify-center transition-[left,top] duration-100 ease-linear"
+          {/* Player sprite (framer-motion tile movement) */}
+          <motion.div
+            className="pointer-events-none absolute flex items-center justify-center"
+            initial={false}
+            animate={{ left: state.player.x * TILE, top: state.player.y * TILE }}
+            transition={{ type: "tween", ease: "linear", duration: 0.1 }}
             style={{
-              left: state.player.x * TILE,
-              top: state.player.y * TILE,
               width: TILE,
               height: TILE,
               zIndex: 10,
             }}
           >
             <PlayerSprite anim={state.playerAnim} facing={state.playerFacing} size={32} />
-          </div>
+          </motion.div>
 
           {/* Soft torch vignette */}
           <div
