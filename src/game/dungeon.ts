@@ -1,104 +1,55 @@
-import type { DoorTile, FileItem, Room, Tile } from "./types";
-
-const W = 11;
-const H = 7;
-
-/** Build a rectangular room: outer walls + floor. */
-function baseTiles(width = W, height = H): Tile[] {
-  const tiles: Tile[] = [];
-  for (let y = 0; y < height; y++) {
-    for (let x = 0; x < width; x++) {
-      const isEdge = x === 0 || y === 0 || x === width - 1 || y === height - 1;
-      tiles.push({ x, y, kind: isEdge ? "wall" : "floor" });
-    }
-  }
-  // Torches in corners (decorative)
-  tiles.push({ x: 1, y: 1, kind: "torch" });
-  tiles.push({ x: width - 2, y: 1, kind: "torch" });
-  return tiles;
-}
-
-const entryHall: Room = {
-  path: "/home/user",
-  name: "Entry Hall",
-  description: "A cold stone chamber. Torches sputter against damp walls.",
-  width: W,
-  height: H,
-  tiles: baseTiles(),
-  doors: [
-    // East door leads to hallway/
-    { x: W - 1, y: 3, kind: "door", target: "hallway" } as DoorTile,
-  ],
-  files: [
-    {
-      name: "readme.txt",
-      x: 3,
-      y: 3,
-      glyph: "📜",
-      contents:
-        "Welcome, adventurer.\nThis dungeon obeys the laws of the shell.\nFolders are doors. Files are loot.\nFind victory.jpg and move it into ~/inventory:\n  mv victory.jpg ~/inventory",
-    },
-    { name: "torch", x: 5, y: 4, glyph: "🔥", contents: "A wooden torch. Warm to the touch." },
-  ],
-  spawn: { x: 2, y: 3 },
-};
-
-const hallway: Room = {
-  path: "/home/user/hallway",
-  name: "Stone Hallway",
-  description: "A narrow corridor of mossy bricks. Two doors, two fates.",
-  width: W,
-  height: H,
-  tiles: baseTiles(),
-  doors: [
-    { x: 0, y: 3, kind: "door", target: ".." } as DoorTile,
-    { x: W - 1, y: 3, kind: "door", target: "treasury" } as DoorTile,
-  ],
-  files: [
-    {
-      name: "note.txt",
-      x: 5,
-      y: 3,
-      glyph: "📜",
-      contents: "Scrawled in chalk: 'The treasury lies east. Beware the dust.'",
-    },
-  ],
-  spawn: { x: 1, y: 3 },
-  returnSpawn: { x: W - 2, y: 3 },
-};
-
-const treasury: Room = {
-  path: "/home/user/hallway/treasury",
-  name: "Treasury",
-  description: "Gold dust hangs in the air. A single relic gleams.",
-  width: W,
-  height: H,
-  tiles: baseTiles(),
-  doors: [
-    { x: 0, y: 3, kind: "door", target: ".." } as DoorTile,
-  ],
-  files: [
-    {
-      name: "victory.jpg",
-      x: 6,
-      y: 3,
-      glyph: "🏆",
-      contents: "A radiant image of freedom. The way out.",
-    },
-    { name: "dust", x: 4, y: 5, glyph: "✨", contents: "Just dust. Ancient and shimmering." },
-  ],
-  spawn: { x: 1, y: 3 },
-};
-
-export const DEFAULT_ROOMS: Record<string, Room> = {
-  [entryHall.path]: entryHall,
-  [hallway.path]: hallway,
-  [treasury.path]: treasury,
-};
+import type { DoorTile, FileItem, Room } from "./types";
+import { generateDungeon, type RoomSpec } from "./generator";
 
 export const START_PATH = "/home/user";
 export const INVENTORY_PATH = "/home/user/inventory";
 export const TARGET_FILE = "victory.jpg";
+
+const SPECS: RoomSpec[] = [
+  {
+    path: "/home/user",
+    name: "Entry Hall",
+    description: "A cold stone chamber. Torches sputter against damp walls.",
+    hasParent: false,
+    exits: ["hallway"],
+    files: [
+      {
+        name: "readme.txt",
+        glyph: "📜",
+        contents:
+          "Welcome, adventurer.\nThis dungeon obeys the laws of the shell.\nFolders are doors. Files are loot.\nFind victory.jpg and move it into ~/inventory:\n  mv victory.jpg ~/inventory",
+      },
+      { name: "torch", glyph: "🔥", contents: "A wooden torch. Warm to the touch." },
+    ],
+  },
+  {
+    path: "/home/user/hallway",
+    name: "Stone Hallway",
+    description: "A narrow corridor of mossy bricks. Two doors, two fates.",
+    hasParent: true,
+    exits: ["treasury"],
+    files: [
+      {
+        name: "note.txt",
+        glyph: "📜",
+        contents: "Scrawled in chalk: 'The treasury lies onward. Beware the dust.'",
+      },
+    ],
+  },
+  {
+    path: "/home/user/hallway/treasury",
+    name: "Treasury",
+    description: "Gold dust hangs in the air. A single relic gleams.",
+    hasParent: true,
+    exits: [],
+    files: [
+      { name: "victory.jpg", glyph: "🏆", contents: "A radiant image of freedom. The way out." },
+      { name: "dust", glyph: "✨", contents: "Just dust. Ancient and shimmering." },
+    ],
+  },
+];
+
+export const DEFAULT_ROOMS: Record<string, Room> = generateDungeon(SPECS, START_PATH);
 
 /** Resolve a cd-style argument against cwd. Returns absolute path. */
 export function resolvePath(cwd: string, arg: string): string {
