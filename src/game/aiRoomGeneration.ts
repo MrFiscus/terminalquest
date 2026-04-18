@@ -52,7 +52,7 @@ function sanitizeBlueprint(value: unknown, fallbackName: string): RoomBlueprint 
   const items = Array.isArray(data.visibleItems)
     ? data.visibleItems.slice(0, 3).map((item, index) => {
         const entry = item && typeof item === "object" ? item as Record<string, unknown> : {};
-        const type = entry.type === "chest" || entry.type === "potion" || entry.type === "scroll" ? entry.type : "file";
+        const type: RoomBlueprintItem["type"] = entry.type === "chest" || entry.type === "potion" || entry.type === "scroll" ? entry.type : "file";
         return {
           name: cleanName(entry.name, `item${index + 1}.txt`),
           type,
