@@ -8,12 +8,12 @@ interface TerminalProps {
 }
 
 const lineClass: Record<TerminalLine["kind"], string> = {
-  input: "text-terminal-prompt",
-  output: "text-terminal-text",
-  error: "text-terminal-error",
-  dm: "text-terminal-dm italic",
-  system: "text-parchment/80",
-  victory: "text-victory font-pixel text-xs",
+  input: "text-zinc-400",
+  output: "text-zinc-100",
+  error: "text-red-400",
+  dm: "text-violet-300 italic",
+  system: "text-zinc-500",
+  victory: "text-emerald-400 font-semibold",
 };
 
 function linePrefix(kind: TerminalLine["kind"]): string {
@@ -35,6 +35,16 @@ export function Terminal({ state, onSubmit }: TerminalProps) {
   useEffect(() => {
     if (!state.animating) inputRef.current?.focus();
   }, [state.animating]);
+
+  // Auto-focus on every keystroke anywhere
+  useEffect(() => {
+    const onKey = () => {
+      if (state.animating || state.won) return;
+      if (document.activeElement !== inputRef.current) inputRef.current?.focus();
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [state.animating, state.won]);
 
   const handleKey = (e: KeyboardEvent<HTMLInputElement>) => {
     if (e.key === "Enter") {
@@ -67,31 +77,24 @@ export function Terminal({ state, onSubmit }: TerminalProps) {
 
   return (
     <div
-      className="relative flex h-full flex-col bg-terminal-bg"
-      style={{
-        border: "8px solid hsl(var(--stone-slab-edge))",
-        boxShadow:
-          "inset 0 0 0 2px hsl(var(--stone-slab)), inset 0 0 60px hsl(var(--torch-glow) / 0.08), inset 0 0 120px hsl(var(--torch-glow) / 0.04), 0 0 24px hsl(0 0% 0% / 0.6)",
-      }}
+      className="relative flex h-full flex-col bg-zinc-950"
       onClick={() => inputRef.current?.focus()}
     >
       {/* Title bar */}
-      <div className="flex items-center justify-between px-3 py-2 bg-stone-slab-edge border-b-2 border-stone-slab">
-        <div className="flex items-center gap-2">
-          <div className="h-3 w-3 rounded-full bg-destructive" />
-          <div className="h-3 w-3 rounded-full bg-primary" />
-          <div className="h-3 w-3 rounded-full bg-accent" />
+      <div className="flex items-center justify-between px-3 py-1.5 bg-zinc-900 border-b border-zinc-800">
+        <div className="flex items-center gap-1.5">
+          <div className="h-2.5 w-2.5 rounded-full bg-zinc-600" />
+          <div className="h-2.5 w-2.5 rounded-full bg-zinc-600" />
+          <div className="h-2.5 w-2.5 rounded-full bg-zinc-600" />
         </div>
-        <span className="font-pixel text-[10px] text-parchment/70">
-          /bin/dungeon — bash
-        </span>
-        <span className="font-pixel text-[10px] text-muted-foreground">tty1</span>
+        <span className="text-[11px] text-zinc-500 font-mono-clean">user@dungeon — bash</span>
+        <span className="text-[11px] text-zinc-600 font-mono-clean">tty1</span>
       </div>
 
       {/* History */}
       <div
         ref={scrollRef}
-        className="scanlines relative flex-1 overflow-y-auto px-4 py-3 font-mono-pixel"
+        className="relative flex-1 overflow-y-auto px-4 py-3 font-mono-clean"
       >
         {state.history.map((line) => (
           <div key={line.id} className={cn("whitespace-pre-wrap", lineClass[line.kind])}>
@@ -102,27 +105,29 @@ export function Terminal({ state, onSubmit }: TerminalProps) {
       </div>
 
       {/* Input row */}
-      <div className="flex items-center gap-2 border-t-2 border-stone-slab bg-terminal-bg px-4 py-2 font-mono-pixel">
-        <span className="text-terminal-prompt">
-          user@dungeon:<span className="text-primary">{state.cwd}</span>$
+      <div className="flex items-center gap-2 border-t border-zinc-800 bg-zinc-950 px-4 py-2 font-mono-clean">
+        <span className="text-zinc-400">
+          user@dungeon:<span className="text-emerald-400">{state.cwd}</span>$
         </span>
-        <input
-          ref={inputRef}
-          value={input}
-          onChange={(e) => setInput(e.target.value)}
-          onKeyDown={handleKey}
-          disabled={state.animating || state.won}
-          autoFocus
-          spellCheck={false}
-          autoComplete="off"
-          className="flex-1 bg-transparent text-terminal-text outline-none caret-transparent disabled:opacity-60"
-          aria-label="Terminal input"
-        />
-        <span
-          className="inline-block h-4 w-2.5 animate-pulse"
-          style={{ background: "hsl(var(--terminal-prompt))" }}
-          aria-hidden
-        />
+        <div className="relative flex-1">
+          <input
+            ref={inputRef}
+            value={input}
+            onChange={(e) => setInput(e.target.value)}
+            onKeyDown={handleKey}
+            disabled={state.animating || state.won}
+            autoFocus
+            spellCheck={false}
+            autoComplete="off"
+            className="w-full bg-transparent text-zinc-100 outline-none caret-transparent disabled:opacity-60"
+            aria-label="Terminal input"
+          />
+          <span
+            className="cursor-block pointer-events-none absolute top-1/2 -translate-y-1/2"
+            style={{ left: `${input.length}ch` }}
+            aria-hidden
+          />
+        </div>
       </div>
     </div>
   );
