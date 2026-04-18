@@ -296,17 +296,19 @@
   }
   .floor-tex {
     background-color: hsl(var(--floor));
-    background-image: url("/src/assets/env-floor.png");
-    background-size: 32px 32px;
+    background-image: url("/src/assets/flagstone-floor.png");
+    background-size: 128px 128px;
     background-repeat: repeat;
     image-rendering: pixelated;
   }
   .floor-tex-alt {
     background-color: hsl(var(--floor-alt));
-    background-image: url("/src/assets/env-floor-alt.png");
-    background-size: 32px 32px;
+    background-image: url("/src/assets/flagstone-floor.png");
+    background-size: 128px 128px;
     background-repeat: repeat;
+    background-position: 64px 64px;
     image-rendering: pixelated;
+    filter: brightness(0.92);
   }
   .wall-tex {
     background-color: hsl(var(--wall));
@@ -316,7 +318,7 @@
     image-rendering: pixelated;
   }
   .torch-tex {
-    background-image: url("/src/assets/env-torch.png");
+    background-image: url("/src/assets/brazier.png");
     background-size: contain;
     background-repeat: no-repeat;
     background-position: center;
