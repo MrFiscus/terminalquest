@@ -21,8 +21,8 @@ export function InventoryBar({ items, slots = 5, activeIndex = 0 }: InventoryBar
       style={{ boxShadow: "inset 0 2px 0 hsl(var(--stone-light) / 0.35), inset 0 -2px 8px hsl(0 0% 0% / 0.6)" }}
     >
       <div className="mb-2 flex items-center justify-between">
-        <span className="font-pixel carved-gold text-[10px]">~/inventory</span>
-        <span className="font-pixel text-[9px] text-parchment/80 drop-shadow-[0_1px_0_hsl(0_0%_0%/0.8)]">
+        <span className="font-pixel carved-gold text-[12px]">~/inventory</span>
+        <span className="font-pixel text-[11px] text-parchment">
           {items.length}/{slots}
         </span>
       </div>
