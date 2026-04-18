@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
 import { getRoom } from "@/game/dungeon";
@@ -11,6 +11,7 @@ import type { GameState, VfxPulse } from "@/game/types";
 interface GameWorldProps {
   state: GameState;
   onDismissPopup: () => void;
+  headerRight?: ReactNode;
 }
 
 const MIN_TILE = 24;
@@ -44,7 +45,7 @@ function vfxKindFor(vfx: VfxPulse[], x: number, y: number) {
   return null;
 }
 
-export function GameWorld({ state, onDismissPopup }: GameWorldProps) {
+export function GameWorld({ state, onDismissPopup, headerRight }: GameWorldProps) {
   const room = getRoom(state.rooms, state.cwd);
   const stageRef = useRef<HTMLDivElement>(null);
   const [tileW, setTileW] = useState(44);
@@ -157,13 +158,13 @@ export function GameWorld({ state, onDismissPopup }: GameWorldProps) {
           />
         )}
       </AnimatePresence>
-      {/* Header */}
-      <div className="flex items-center justify-between px-4 py-2 carved-stone-tex border-b-2 border-[hsl(var(--terminal-frame))] relative z-10">
-        <div className="flex flex-col">
-          <span className="font-pixel carved-gold text-[11px]">{room.name}</span>
-          <span className="font-pixel text-[8px] text-parchment/70 mt-1 drop-shadow-[0_1px_0_hsl(0_0%_0%/0.8)]">{room.path}</span>
+      {/* Header — single dark-iron bar; difficulty toggles injected from parent via slot */}
+      <div className="flex items-center justify-between gap-3 px-4 py-2 iron-header border-b-2 border-[hsl(var(--terminal-frame))] relative z-10">
+        <div className="flex flex-col min-w-0">
+          <span className="font-pixel carved-gold text-[11px] truncate">{room.name}</span>
+          <span className="font-pixel text-[8px] text-parchment/70 mt-1 drop-shadow-[0_1px_0_hsl(0_0%_0%/0.8)] truncate">{room.path}</span>
         </div>
-        <span className="font-pixel carved-gold text-[10px]">TERMINAL · QUEST</span>
+        {headerRight}
       </div>
 
       {/* Stage — fills the right panel; dungeon stays a centered square */}
