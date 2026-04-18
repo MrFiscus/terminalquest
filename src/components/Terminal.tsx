@@ -9,10 +9,10 @@ interface TerminalProps {
 
 // Colors map: ash white default, ember gold for prompt, soft accents elsewhere.
 const lineClass: Record<TerminalLine["kind"], string> = {
-  input: "text-[hsl(var(--terminal-prompt))]",
+  input: "text-[hsl(var(--terminal-prompt))] ember-bloom",
   output: "text-[hsl(var(--terminal-text))]",
-  error: "text-[hsl(0_0%_63%)] italic",            // muted silver, italic
-  dm: "text-[hsl(0_0%_63%)] italic",               // Dungeon Master = silver italic
+  error: "text-[hsl(0_0%_63%)] italic",
+  dm: "text-[hsl(0_0%_63%)] italic",
   system: "text-[hsl(0_0%_63%)] italic",
   victory: "text-[hsl(140_60%_60%)] font-semibold",
 };
@@ -77,7 +77,7 @@ export function Terminal({ state, onSubmit }: TerminalProps) {
 
   return (
     <div
-      className="relative flex h-full flex-col scriptorium-bg scriptorium-frame font-mono-clean"
+      className="relative flex h-full flex-col scriptorium-bg scriptorium-frame iron-rivets font-mono-clean"
       onClick={() => inputRef.current?.focus()}
     >
       {/* Title bar */}
@@ -118,7 +118,7 @@ export function Terminal({ state, onSubmit }: TerminalProps) {
       <div className="ember-glow flex items-center gap-2 border-t-2 scriptorium-divider bg-[hsl(0_0%_5%)] px-4 py-2">
         <span className="text-[hsl(var(--terminal-text)/0.85)]">
           user@dungeon:
-          <span className="text-[hsl(var(--terminal-prompt))]">{state.cwd}</span>
+          <span className="text-[hsl(var(--terminal-prompt))] ember-bloom">{state.cwd}</span>
           $
         </span>
         <div className="relative flex-1">
@@ -131,8 +131,7 @@ export function Terminal({ state, onSubmit }: TerminalProps) {
             autoFocus
             spellCheck={false}
             autoComplete="off"
-            className="w-full bg-transparent text-[hsl(var(--terminal-prompt))] outline-none caret-transparent disabled:opacity-60"
-            style={{ textShadow: "0 0 6px hsl(38 100% 50% / 0.45)" }}
+            className="w-full bg-transparent text-[hsl(var(--terminal-prompt))] outline-none caret-transparent disabled:opacity-60 ember-bloom"
             aria-label="Terminal input"
           />
           <span
