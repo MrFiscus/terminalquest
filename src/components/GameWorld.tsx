@@ -213,8 +213,8 @@ export function GameWorld({ state, onDismissPopup }: GameWorldProps) {
               key={`label-${d.x}-${d.y}`}
               className="pointer-events-none absolute label-float"
               style={{
-                left: d.x * TILE + TILE / 2,
-                top: d.y * TILE - 14,
+                left: d.x * tileW + tileW / 2,
+                top: d.y * tileH - 14,
                 opacity: brightnessFor(dist(state.player.x, state.player.y, d.x, d.y)),
                 zIndex: 9,
               }}
@@ -233,10 +233,10 @@ export function GameWorld({ state, onDismissPopup }: GameWorldProps) {
                 key={f.name}
                 className="pointer-events-none absolute flex items-center justify-center item-float transition-opacity duration-200"
                 style={{
-                  left: f.x * TILE,
-                  top: f.y * TILE,
-                  width: TILE,
-                  height: TILE,
+                  left: f.x * tileW,
+                  top: f.y * tileH,
+                  width: tileW,
+                  height: tileH,
                   opacity: b,
                   zIndex: 7,
                 }}
