@@ -597,23 +597,18 @@ export default function Landing() {
         {/* Hero content */}
         <div style={{ position: "relative", zIndex: 5, display: "flex", flexDirection: "column", alignItems: "center", padding: "72px 32px 70px", textAlign: "center" }}>
           <h1
-            className="lp-hero-in"
+            className="lp-hero-in lp-silver-cast"
             style={{
               margin: 0,
               animationDelay: "0ms",
-              width: "min(92vw, 1100px)",
-              filter:
-                "drop-shadow(0 0 18px rgba(150,200,255,0.45)) drop-shadow(0 0 40px rgba(120,170,230,0.35)) drop-shadow(0 0 80px rgba(90,140,210,0.25)) drop-shadow(0 6px 8px rgba(0,0,0,0.85))",
+              fontFamily: "'Cinzel', 'Pirata One', serif",
+              fontWeight: 900,
+              letterSpacing: "0.05em",
+              fontSize: "clamp(56px,9vw,128px)",
+              lineHeight: 1,
             }}
-            aria-label="TERMINAL QUEST"
           >
-            <img
-              src={terminalQuestTitle}
-              alt="TERMINAL QUEST"
-              width={2064}
-              height={512}
-              style={{ width: "100%", height: "auto", display: "block" }}
-            />
+            TERMINAL QUEST
           </h1>
           <p className="lp-eng lp-hero-in" style={{ fontSize: "clamp(12px,1.8vw,18px)", letterSpacing: "0.32em", marginTop: 22, color: "hsl(0 0%26%)", fontWeight: 600, animationDelay: "220ms" }}>
             ☩ DON'T JUST PLAY THE GAME. WRITE THE REALITY. ☩
