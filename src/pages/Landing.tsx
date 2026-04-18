@@ -339,6 +339,183 @@ function RobotAvatar() {
   );
 }
 
+// ── Hero tagline rotator ──────────────────────────────────────────────────────
+const TAGLINES = [
+  "LEARN LINUX. SLAY DRAGONS.",
+  "YOUR TERMINAL IS YOUR SWORD.",
+  "AI DUNGEON MASTER INCLUDED.",
+  "EVERY COMMAND IS A SPELL.",
+];
+
+// ── Animated count-up ─────────────────────────────────────────────────────────
+function useCountUp(target: number, durationMs = 1400) {
+  const ref = useRef<HTMLSpanElement | null>(null);
+  const [val, setVal] = useState(0);
+  const started = useRef(false);
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    const io = new IntersectionObserver((entries) => {
+      entries.forEach((e) => {
+        if (e.isIntersecting && !started.current) {
+          started.current = true;
+          const start = performance.now();
+          const tick = (t: number) => {
+            const p = Math.min(1, (t - start) / durationMs);
+            const eased = 1 - Math.pow(1 - p, 3);
+            setVal(Math.round(target * eased));
+            if (p < 1) requestAnimationFrame(tick);
+          };
+          requestAnimationFrame(tick);
+          io.unobserve(e.target);
+        }
+      });
+    }, { threshold: 0.4 });
+    io.observe(el);
+    return () => io.disconnect();
+  }, [target, durationMs]);
+  return { ref, val };
+}
+
+// ── Stat ribbon ───────────────────────────────────────────────────────────────
+function StatRibbon() {
+  const a = useCountUp(47);
+  const b = useCountUp(12);
+  return (
+    <StoneSection tint="hsl(0 0%0%/0.32)">
+      <div style={{ position: "relative", padding: "18px 24px", borderTop: "1px solid hsl(0 0%100%/0.05)", borderBottom: "1px solid hsl(0 0%100%/0.05)", background: "linear-gradient(180deg, hsl(0 0%0%/0.35), hsl(0 0%0%/0.5))" }}>
+        <div className="lp-breathe" style={{ position: "absolute", inset: 0, pointerEvents: "none", background: "radial-gradient(ellipse 60% 80% at 50% 50%, hsl(33 100%50%/0.08) 0%, transparent 70%)" }} />
+        <div className="lp-eng" style={{ position: "relative", zIndex: 1, display: "flex", flexWrap: "wrap", justifyContent: "center", alignItems: "center", gap: "clamp(14px, 4vw, 48px)", fontSize: "clamp(10px, 1.3vw, 13px)", letterSpacing: "0.22em", color: "hsl(0 0% 30%)", fontWeight: 700 }}>
+          <span><span ref={a.ref} style={{ color: "hsl(38 80% 58%)", textShadow: "0 0 8px hsl(33 100% 45% / 0.4)" }}>⚔ {a.val}</span> COMMANDS</span>
+          <span style={{ color: "hsl(0 0% 18%)" }}>·</span>
+          <span><span ref={b.ref} style={{ color: "hsl(140 55% 50%)", textShadow: "0 0 8px hsl(140 55% 35% / 0.4)" }}>🗝 {b.val}</span> DUNGEONS</span>
+          <span style={{ color: "hsl(0 0% 18%)" }}>·</span>
+          <span style={{ color: "hsl(280 50% 60%)", textShadow: "0 0 8px hsl(280 50% 40% / 0.4)" }}>🤖 AI MENTOR</span>
+          <span style={{ color: "hsl(0 0% 18%)" }}>·</span>
+          <span style={{ color: "hsl(38 80% 58%)" }}>🆓 FREE TO PLAY</span>
+        </div>
+      </div>
+    </StoneSection>
+  );
+}
+
+// ── Featured commands carousel ────────────────────────────────────────────────
+const FEATURED_CMDS: { cmd: string; flavor: string }[] = [
+  { cmd: "ls",    flavor: "survey the chamber for items and doorways" },
+  { cmd: "cd",    flavor: "step through a portal into another room" },
+  { cmd: "cat",   flavor: "read aloud from any ancient scroll" },
+  { cmd: "grep",  flavor: "divine the secret runes hidden in any file" },
+  { cmd: "mkdir", flavor: "conjure a new chamber from raw stone" },
+  { cmd: "chmod", flavor: "rewrite the laws that bind an artifact" },
+  { cmd: "find",  flavor: "send forth a familiar to seek what is lost" },
+  { cmd: "rm",    flavor: "banish a cursed object back to the void" },
+];
+function CommandsCarousel() {
+  return (
+    <StoneSection tint="radial-gradient(ellipse at 50% 0%,hsl(33 60%18%/0.15) 0%,transparent 60%),hsl(0 0%0%/0.22)">
+      <div style={{ position: "relative", padding: "48px 0 56px", maxWidth: 1200, margin: "0 auto" }}>
+        <div className="lp-breathe" style={{ position: "absolute", inset: 0, pointerEvents: "none", background: "radial-gradient(ellipse 70% 50% at 50% 50%,hsl(38 100%50%/0.08) 0%,transparent 60%)" }} />
+        {Array.from({ length: 6 }).map((_, i) => {
+          const left = 8 + (i * 17) % 84;
+          return (
+            <span key={i} className="lp-ember" style={{
+              left: `${left}%`, bottom: `${10 + (i * 9) % 35}%`,
+              animationDuration: `${7 + (i % 3) * 1.2}s`,
+              animationDelay: `${(i * 1.1) % 6}s`,
+              ["--ember-drift" as never]: `${(i % 2 === 0 ? 1 : -1) * (5 + (i % 3) * 4)}px`,
+            }} />
+          );
+        })}
+        <div style={{ padding: "0 32px" }}>
+          <SectionTitle>✦ SPELLS YOU WILL LEARN ✦</SectionTitle>
+        </div>
+        <div style={{
+          position: "relative", zIndex: 1,
+          display: "flex", gap: 18, padding: "8px 32px 16px",
+          overflowX: "auto", scrollSnapType: "x mandatory",
+        }}>
+          {FEATURED_CMDS.map((c, i) => (
+            <div
+              key={c.cmd}
+              className="lp-tablet"
+              style={{
+                flex: "0 0 auto", width: 200, minHeight: 130,
+                scrollSnapAlign: "start",
+                background: "linear-gradient(180deg, hsl(228 10% 22%), hsl(228 12% 14%))",
+                backgroundImage: `url(${slateTexture})`,
+                backgroundSize: "300px 300px",
+                backgroundBlendMode: "multiply",
+                border: "2px solid hsl(0 0% 3%)",
+                borderRadius: 4,
+                boxShadow:
+                  "inset 1px 1px 0 hsl(0 0%100%/0.1), inset -1px -1px 0 hsl(0 0%0%/0.85)," +
+                  "inset 0 0 24px hsl(0 0%0%/0.55)," +
+                  "0 6px 18px hsl(0 0%0%/0.6), 0 0 14px hsl(33 100%45%/0.08)",
+                padding: "16px 16px 14px",
+                display: "flex", flexDirection: "column", gap: 8,
+                position: "relative", overflow: "hidden",
+                animationDelay: `${(i % 4) * 0.6}s`,
+              }}
+            >
+              <div style={{ position: "absolute", inset: 0, background: "hsl(0 0%0%/0.5)", pointerEvents: "none" }} />
+              <div style={{ position: "relative", zIndex: 1, fontFamily: "'JetBrains Mono', monospace", fontSize: 18, fontWeight: 700, color: "hsl(38 90% 60%)", textShadow: "0 0 10px hsl(33 100% 45% / 0.55), 0 1px 0 hsl(0 0% 0% / 0.9)", letterSpacing: "0.04em" }}>
+                $ {c.cmd}
+              </div>
+              <div style={{ position: "relative", zIndex: 1, height: 1, background: "linear-gradient(90deg, transparent, hsl(33 60% 30% / 0.5), transparent)" }} />
+              <div style={{ position: "relative", zIndex: 1, fontFamily: "'Cinzel', serif", fontSize: 11, lineHeight: 1.5, color: "hsl(42 30% 65%)", fontStyle: "italic" }}>
+                {c.flavor}
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </StoneSection>
+  );
+}
+
+// ── Testimonial scroll ────────────────────────────────────────────────────────
+const QUOTES = [
+  { t: "I learned more sysadmin in 2 hours than in my whole CS class.", a: "apprentice_dev" },
+  { t: "Finally, a way to grind grep without crying.", a: "tux_warlock" },
+  { t: "My terminal phobia is officially cured.", a: "rookie_root" },
+  { t: "The Dungeon Master roasted my typo. 10/10.", a: "shellshock42" },
+];
+function TestimonialScroll() {
+  return (
+    <StoneSection tint="radial-gradient(ellipse at 50% 50%,hsl(42 30%20%/0.10) 0%,transparent 65%),hsl(0 0%0%/0.24)">
+      <div style={{ position: "relative", padding: "56px 32px 60px", maxWidth: 720, margin: "0 auto" }}>
+        <div className="lp-breathe" style={{ position: "absolute", inset: 0, pointerEvents: "none", background: "radial-gradient(ellipse 60% 50% at 50% 50%,hsl(42 60%30%/0.10) 0%,transparent 60%)" }} />
+        <SectionTitle>✦ VOICES FROM THE CRYPT ✦</SectionTitle>
+        <div className="scriptorium-bg scriptorium-frame iron-rivets" style={{ position: "relative", padding: "32px 36px", minHeight: 140, display: "flex", alignItems: "center", justifyContent: "center", overflow: "hidden" }}>
+          <div style={{ position: "absolute", inset: 0, pointerEvents: "none", background: "repeating-linear-gradient(to bottom, transparent 0, transparent 2px, hsl(0 0% 0% / 0.13) 3px)" }} />
+          <div style={{ position: "relative", width: "100%", height: 80 }}>
+            {QUOTES.map((q, i) => (
+              <div
+                key={i}
+                className="lp-quote"
+                style={{
+                  position: "absolute", inset: 0,
+                  display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 12,
+                  textAlign: "center", opacity: 0,
+                  animationDelay: `${i * 7}s`,
+                  animationDuration: `${QUOTES.length * 7}s`,
+                }}
+              >
+                <div style={{ fontFamily: "'VT323', monospace", fontSize: 22, lineHeight: 1.4, color: "hsl(42 35% 75%)", fontStyle: "italic", textShadow: "0 1px 0 hsl(0 0% 0% / 0.85)" }}>
+                  "{q.t}"
+                </div>
+                <div className="lp-eng" style={{ fontSize: 10, letterSpacing: "0.22em", color: "hsl(38 60% 50%)", fontWeight: 600 }}>
+                  — {q.a}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    </StoneSection>
+  );
+}
+
 // ═════════════════════════════════════════════════════════════════════════════
 export default function Landing() {
   const cmdFull = "user@dungeon:~/entrance$ cd crypt";
