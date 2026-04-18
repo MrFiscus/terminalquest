@@ -77,7 +77,6 @@ export function GameWorld({ state, onDismissPopup, headerRight }: GameWorldProps
         const door = room.doors.find((d) => d.x === x && d.y === y);
         const torch = room.tiles.find((t) => t.x === x && t.y === y && t.kind === "torch");
         const isWall = isEdge && !door;
-        const isAltFloor = !isWall && (x * 7 + y * 13) % 6 === 0;
         cells.push(
           <div
             key={`${x}-${y}`}
@@ -87,7 +86,7 @@ export function GameWorld({ state, onDismissPopup, headerRight }: GameWorldProps
               height: tileH,
               backgroundImage: isWall
                 ? "url(/assets/dungeon/tiles/wall.png)"
-                : `url(/assets/dungeon/tiles/${isAltFloor ? "floor-alt.png" : "floor.png"})`,
+                : "url(/assets/dungeon/tiles/floor.png)",
               backgroundSize: "100% 100%",
               backgroundRepeat: "no-repeat",
               imageRendering: "pixelated",
