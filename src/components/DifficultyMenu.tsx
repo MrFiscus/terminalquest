@@ -129,7 +129,7 @@ export const DifficultyMenu = ({ onConfirm, busy }: DifficultyMenuProps) => {
       {/* Content */}
       <div className="relative z-10 h-full flex flex-col items-center justify-center px-8 pt-16">
         <h1 className="engraved engraved-hover text-center" style={{ fontSize: 92, lineHeight: 1.05 }}>
-          DUNGEON DIFFICULTY
+          TERMINAL QUEST
         </h1>
         <div className="mt-3 engraved engraved-muted text-center" style={{ fontSize: 22, letterSpacing: "0.3em" }}>
           ☩ CHOOSE THY PERIL ☩
