@@ -284,15 +284,15 @@ export function GameWorld({ state, onDismissPopup }: GameWorldProps) {
           <motion.div
             className="pointer-events-none absolute flex items-center justify-center"
             initial={false}
-            animate={{ left: state.player.x * TILE, top: state.player.y * TILE }}
+            animate={{ left: state.player.x * tileW, top: state.player.y * tileH }}
             transition={{ type: "tween", ease: "linear", duration: 0.1 }}
             style={{
-              width: TILE,
-              height: TILE,
+              width: tileW,
+              height: tileH,
               zIndex: 10,
             }}
           >
-            <PlayerSprite anim={state.playerAnim} facing={state.playerFacing} size={32} />
+            <PlayerSprite anim={state.playerAnim} facing={state.playerFacing} size={Math.min(TILE, 48)} />
           </motion.div>
 
           {/* Soft torch vignette */}
@@ -300,8 +300,8 @@ export function GameWorld({ state, onDismissPopup }: GameWorldProps) {
             className="pointer-events-none absolute inset-0 light-flicker"
             style={{
               background: `radial-gradient(circle at ${
-                (state.player.x + 0.5) * TILE
-              }px ${(state.player.y + 0.5) * TILE}px, hsl(var(--torch-glow) / 0.18) 0px, transparent ${
+                (state.player.x + 0.5) * tileW
+              }px ${(state.player.y + 0.5) * tileH}px, hsl(var(--torch-glow) / 0.18) 0px, transparent ${
                 TILE * 2.5
               }px)`,
               transition: "background 200ms linear",
