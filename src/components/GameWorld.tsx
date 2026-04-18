@@ -134,7 +134,10 @@ export function GameWorld({ state, onDismissPopup }: GameWorldProps) {
       </div>
 
       {/* Stage */}
-      <div className="relative flex flex-1 items-center justify-center overflow-hidden p-4">
+      <div
+        ref={stageRef}
+        className="relative flex flex-1 items-center justify-center overflow-hidden p-4"
+      >
         <div
           key={room.path}
           className="relative pixelate-in"
