@@ -35,11 +35,11 @@ export function runCommand(raw: string, state: GameState): CommandResult {
           out("  ls                     list files & doors here"),
           out("  cd <dir>               enter a door (folder)"),
           out("  pwd                    print current room path"),
-          out("  cat <file>             read a file"),
-          out("  file <name>            describe a file"),
-          out("  find <name>            search this room for a name"),
-          out("  mkdir <name>           carve a new alcove (cosmetic)"),
-          out("  rm <name>              destroy a file"),
+          out("  cat <file>             read a scroll"),
+          out("  file <name>            inspect an item"),
+          out("  find <name>            track a name"),
+          out("  mkdir <name>           manifest a marker"),
+          out("  rm <name>              vanish a file"),
           out("  mv <file> ~/inventory  pick up a file"),
           out("  clear                  clear the terminal"),
           out("  help                   this list"),
@@ -52,27 +52,34 @@ export function runCommand(raw: string, state: GameState): CommandResult {
       return { lines: [], clear: true };
 
     case "pwd":
-      return { lines: [out(state.cwd)] };
+      return {
+        lines: [out(state.cwd)],
+        vfx: { kind: "pwd", cells: [{ x: state.player.x, y: state.player.y }], durationMs: 1400 },
+      };
 
     case "ls": {
       const entries = [
         ...room.doors.map((d) => `${d.target}/`),
         ...room.files.map((f) => f.name),
       ];
-      return { lines: entries.length ? entries.map(out) : [out("(empty)")] };
+      const cells = [
+        ...room.doors.map((d) => ({ x: d.x, y: d.y })),
+        ...room.files.map((f) => ({ x: f.x, y: f.y })),
+      ];
+      return {
+        lines: entries.length ? entries.map(out) : [out("(empty)")],
+        vfx: { kind: "ls", cells, durationMs: 900 },
+      };
     }
 
     case "cd": {
       const arg = args[0];
       if (!arg) return { lines: [err("cd: missing argument")] };
-      // Resolve target path
       const targetPath = resolvePath(state.cwd, arg);
-      // Allow cd to a child folder via door, or `..` via back door
       let doorTarget: string | undefined;
       if (arg === "..") doorTarget = "..";
       else if (!arg.includes("/")) doorTarget = arg;
       else {
-        // absolute or multi-segment — only allow if door exists matching last segment
         const last = targetPath.split("/").pop() || "";
         if (findDoor(room, last)) doorTarget = last;
       }
@@ -101,7 +108,11 @@ export function runCommand(raw: string, state: GameState): CommandResult {
       if (!name) return { lines: [err("cat: missing file")] };
       const f = findFile(room, name);
       if (!f) return { lines: [err(`cat: ${name}: no such file`)] };
-      return { lines: (f.contents ?? "(empty file)").split("\n").map(out) };
+      const body = f.contents ?? "(empty file)";
+      return {
+        lines: body.split("\n").map(out),
+        popup: { title: name, body },
+      };
     }
 
     case "file": {
@@ -111,16 +122,31 @@ export function runCommand(raw: string, state: GameState): CommandResult {
       if (!f) return { lines: [err(`file: ${name}: not found`)] };
       const ext = name.includes(".") ? name.split(".").pop() : "";
       const desc = ext === "jpg" ? "JPEG image data, ancient" : ext === "txt" ? "ASCII text, scrawled" : "data, mysterious";
-      return { lines: [out(`${name}: ${desc}`)] };
+      return {
+        lines: [out(`${name}: ${desc}`)],
+        vfx: { kind: "inspect", cells: [{ x: f.x, y: f.y }], durationMs: 1600 },
+      };
     }
 
     case "find": {
       const name = args[0];
       if (!name) return { lines: [err("find: missing pattern")] };
       const hits: string[] = [];
-      for (const f of room.files) if (f.name.includes(name)) hits.push(`./${f.name}`);
-      for (const d of room.doors) if (d.target.includes(name)) hits.push(`./${d.target}/`);
-      return { lines: hits.length ? hits.map(out) : [out(`(no matches in ${room.name})`)] };
+      const cells: { x: number; y: number }[] = [];
+      for (const f of room.files)
+        if (f.name.includes(name)) {
+          hits.push(`./${f.name}`);
+          cells.push({ x: f.x, y: f.y });
+        }
+      for (const d of room.doors)
+        if (d.target.includes(name)) {
+          hits.push(`./${d.target}/`);
+          cells.push({ x: d.x, y: d.y });
+        }
+      return {
+        lines: hits.length ? hits.map(out) : [out(`(no matches in ${room.name})`)],
+        vfx: cells.length ? { kind: "find", cells, durationMs: 2200 } : undefined,
+      };
     }
 
     case "mkdir": {
@@ -131,6 +157,7 @@ export function runCommand(raw: string, state: GameState): CommandResult {
           out(`You scratch '${name}' into the wall.`),
           dm("The dungeon shrugs. New doors require deeper magic."),
         ],
+        vfx: { kind: "manifest", cells: [{ x: state.player.x, y: state.player.y }], durationMs: 1400 },
       };
     }
 
@@ -146,6 +173,7 @@ export function runCommand(raw: string, state: GameState): CommandResult {
       return {
         lines: [out(`You smash '${name}' into nothing.`)],
         patch: { rooms: { ...state.rooms, [room.path]: newRoom } },
+        vfx: { kind: "rm", cells: [{ x: f.x, y: f.y }], durationMs: 1100 },
       };
     }
 

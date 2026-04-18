@@ -53,6 +53,23 @@ export interface TerminalLine {
   text: string;
 }
 
+export type PlayerAnim = "idle" | "walking" | "pickingUp";
+export type PlayerFacing = "down" | "up" | "left" | "right";
+
+export interface VfxPulse {
+  id: number;
+  /** Tile coords highlighted briefly. */
+  cells: { x: number; y: number }[];
+  kind: "ls" | "find" | "rm" | "manifest" | "inspect" | "pwd";
+  expiresAt: number;
+}
+
+export interface ScrollPopup {
+  id: number;
+  title: string;
+  body: string;
+}
+
 export interface GameState {
   cwd: string;
   rooms: Record<string, Room>;
@@ -60,11 +77,17 @@ export interface GameState {
   inventoryPath: string;
   targetFile: string;
   player: { x: number; y: number };
+  playerAnim: PlayerAnim;
+  playerFacing: PlayerFacing;
   history: TerminalLine[];
   commandHistory: string[];
   won: boolean;
   /** True while an animation is running; terminal input disabled. */
   animating: boolean;
+  /** Active visual effects layered on the world. */
+  vfx: VfxPulse[];
+  /** Active parchment popup from `cat`. */
+  popup: ScrollPopup | null;
 }
 
 export interface CommandResult {
@@ -80,4 +103,8 @@ export interface CommandResult {
     | { type: "win" };
   /** Special: clear history. */
   clear?: boolean;
+  /** Visual effect to add to state.vfx. */
+  vfx?: Omit<VfxPulse, "id" | "expiresAt"> & { durationMs?: number };
+  /** Show parchment popup (cat). */
+  popup?: { title: string; body: string };
 }

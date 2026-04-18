@@ -8,9 +8,15 @@ import {
   getRoom,
   pathfind,
 } from "@/game/dungeon";
-import type { CommandResult, GameState, TerminalLine } from "@/game/types";
+import type {
+  CommandResult,
+  GameState,
+  PlayerFacing,
+  TerminalLine,
+} from "@/game/types";
 
 const STEP_MS = 110;
+const PICKUP_MS = 520;
 
 function initialState(): GameState {
   const startRoom = DEFAULT_ROOMS[START_PATH];
@@ -21,6 +27,8 @@ function initialState(): GameState {
     inventoryPath: INVENTORY_PATH,
     targetFile: TARGET_FILE,
     player: { ...startRoom.spawn },
+    playerAnim: "idle",
+    playerFacing: "down",
     history: [
       { id: 1, kind: "system", text: "Terminal Quest v1.0 — type `help` to begin." },
       { id: 2, kind: "system", text: `You stand in ${startRoom.name}. ${startRoom.description}` },
@@ -28,7 +36,15 @@ function initialState(): GameState {
     commandHistory: [],
     won: false,
     animating: false,
+    vfx: [],
+    popup: null,
   };
+}
+
+function facingFor(dx: number, dy: number): PlayerFacing | null {
+  if (dx === 0 && dy === 0) return null;
+  if (Math.abs(dx) >= Math.abs(dy)) return dx > 0 ? "right" : "left";
+  return dy > 0 ? "down" : "up";
 }
 
 export function useGameState() {
@@ -55,15 +71,27 @@ export function useGameState() {
         if (!room) return resolve();
         const path = pathfind(room, s.player, target);
         if (!path || path.length === 0) {
-          // Teleport fallback
           setState((cur) => ({ ...cur, player: { ...target } }));
           return resolve();
         }
+        setState((cur) => ({ ...cur, playerAnim: "walking" }));
         let i = 0;
         const step = () => {
-          if (i >= path.length) return resolve();
+          if (i >= path.length) {
+            setState((cur) => ({ ...cur, playerAnim: "idle" }));
+            return resolve();
+          }
           const tile = path[i++];
-          setState((cur) => ({ ...cur, player: { x: tile.x, y: tile.y } }));
+          setState((cur) => {
+            const dx = tile.x - cur.player.x;
+            const dy = tile.y - cur.player.y;
+            const f = facingFor(dx, dy);
+            return {
+              ...cur,
+              player: { x: tile.x, y: tile.y },
+              playerFacing: f ?? cur.playerFacing,
+            };
+          });
           setTimeout(step, STEP_MS);
         };
         step();
@@ -71,6 +99,16 @@ export function useGameState() {
     },
     [],
   );
+
+  const animatePickup = useCallback((): Promise<void> => {
+    return new Promise((resolve) => {
+      setState((cur) => ({ ...cur, playerAnim: "pickingUp" }));
+      setTimeout(() => {
+        setState((cur) => ({ ...cur, playerAnim: "idle" }));
+        resolve();
+      }, PICKUP_MS);
+    });
+  }, []);
 
   const applyEffect = useCallback(
     (effect: NonNullable<CommandResult["effect"]>) => {
@@ -141,12 +179,10 @@ export function useGameState() {
       const s = stateRef.current;
       if (s.animating || s.won) return;
 
-      // Echo prompt + input
       appendLines([{ kind: "input", text: `user@dungeon:${s.cwd}$ ${raw}` }]);
 
       if (!raw.trim()) return;
 
-      // Push to command history
       setState((cur) => ({
         ...cur,
         commandHistory: [...cur.commandHistory, raw],
@@ -163,29 +199,57 @@ export function useGameState() {
         setState((cur) => ({ ...cur, ...result.patch }));
       }
 
+      // VFX: add then expire
+      if (result.vfx) {
+        const id = nextId();
+        const dur = result.vfx.durationMs ?? 1000;
+        const vfx = {
+          id,
+          kind: result.vfx.kind,
+          cells: result.vfx.cells,
+          expiresAt: Date.now() + dur,
+        };
+        setState((cur) => ({ ...cur, vfx: [...cur.vfx, vfx] }));
+        setTimeout(() => {
+          setState((cur) => ({ ...cur, vfx: cur.vfx.filter((v) => v.id !== id) }));
+        }, dur);
+      }
+
+      // Popup (cat)
+      if (result.popup) {
+        const id = nextId();
+        setState((cur) => ({ ...cur, popup: { id, ...result.popup! } }));
+      }
+
       appendLines(result.lines);
 
       if (result.walkTo) {
         setState((cur) => ({ ...cur, animating: true }));
         await animateWalk(result.walkTo);
+        if (result.effect && (result.effect.type === "pickup" || result.effect.type === "win")) {
+          await animatePickup();
+        }
         if (result.effect) applyEffect(result.effect);
         setState((cur) => ({ ...cur, animating: false }));
       } else if (result.effect) {
         applyEffect(result.effect);
       }
     },
-    [animateWalk, appendLines, applyEffect],
+    [animateWalk, animatePickup, appendLines, applyEffect],
   );
+
+  const dismissPopup = useCallback(() => {
+    setState((cur) => ({ ...cur, popup: null }));
+  }, []);
 
   const reset = useCallback(() => {
     idRef.current = 100;
     setState(initialState());
   }, []);
 
-  // Optional: keyboard focus passthrough hook can be added here later.
   useEffect(() => {
     // no-op
   }, []);
 
-  return { state, submit, reset };
+  return { state, submit, reset, dismissPopup };
 }
