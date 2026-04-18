@@ -20,10 +20,21 @@ function dist(ax: number, ay: number, bx: number, by: number) {
   return Math.max(Math.abs(ax - bx), Math.abs(ay - by));
 }
 
+function edist(ax: number, ay: number, bx: number, by: number) {
+  return Math.hypot(ax - bx, ay - by);
+}
+
+// Smooth radial falloff used for opacity of items/doors/labels.
+// Returns 1 at the source and ~0 beyond `radius`.
+function smoothLight(d: number, radius: number) {
+  if (d >= radius) return 0;
+  const t = 1 - d / radius;
+  return Math.max(0, Math.min(1, t * t));
+}
+
 function brightnessFor(d: number): number {
-  if (d <= 2) return 1;
-  if (d === 3) return 0.5;
-  return 0.1;
+  // Smooth fade — used for proximity-based UI opacity (labels, items).
+  return Math.max(0.18, smoothLight(d, 4.5));
 }
 
 function vfxKindFor(vfx: VfxPulse[], x: number, y: number) {
