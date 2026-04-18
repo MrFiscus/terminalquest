@@ -7,13 +7,14 @@ interface TerminalProps {
   onSubmit: (raw: string) => void;
 }
 
+// Colors map: ash white default, ember gold for prompt, soft accents elsewhere.
 const lineClass: Record<TerminalLine["kind"], string> = {
-  input: "text-zinc-400",
-  output: "text-zinc-100",
-  error: "text-red-400",
-  dm: "text-violet-300 italic",
-  system: "text-zinc-500",
-  victory: "text-emerald-400 font-semibold",
+  input: "text-[hsl(var(--terminal-prompt))]",
+  output: "text-[hsl(var(--terminal-text))]",
+  error: "text-[hsl(0_70%_60%)]",
+  dm: "text-[hsl(280_55%_72%)] italic",
+  system: "text-[hsl(0_0%_55%)]",
+  victory: "text-[hsl(140_60%_60%)] font-semibold",
 };
 
 function linePrefix(kind: TerminalLine["kind"]): string {
@@ -36,7 +37,6 @@ export function Terminal({ state, onSubmit }: TerminalProps) {
     if (!state.animating) inputRef.current?.focus();
   }, [state.animating]);
 
-  // Auto-focus on every keystroke anywhere
   useEffect(() => {
     const onKey = () => {
       if (state.animating || state.won) return;
@@ -77,24 +77,24 @@ export function Terminal({ state, onSubmit }: TerminalProps) {
 
   return (
     <div
-      className="relative flex h-full flex-col bg-zinc-950"
+      className="relative flex h-full flex-col scriptorium-bg scriptorium-frame font-mono-clean"
       onClick={() => inputRef.current?.focus()}
     >
       {/* Title bar */}
-      <div className="flex items-center justify-between px-3 py-1.5 bg-zinc-900 border-b border-zinc-800">
+      <div className="flex items-center justify-between px-3 py-1.5 border-b-2 scriptorium-divider bg-[hsl(0_0%_6%)]">
         <div className="flex items-center gap-1.5">
-          <div className="h-2.5 w-2.5 rounded-full bg-zinc-600" />
-          <div className="h-2.5 w-2.5 rounded-full bg-zinc-600" />
-          <div className="h-2.5 w-2.5 rounded-full bg-zinc-600" />
+          <div className="h-2.5 w-2.5 rounded-full bg-[hsl(0_0%_18%)] shadow-[inset_0_0_2px_hsl(0_0%_0%/0.9)]" />
+          <div className="h-2.5 w-2.5 rounded-full bg-[hsl(0_0%_18%)] shadow-[inset_0_0_2px_hsl(0_0%_0%/0.9)]" />
+          <div className="h-2.5 w-2.5 rounded-full bg-[hsl(0_0%_18%)] shadow-[inset_0_0_2px_hsl(0_0%_0%/0.9)]" />
         </div>
-        <span className="text-[11px] text-zinc-500 font-mono-clean">user@dungeon — bash</span>
-        <span className="text-[11px] text-zinc-600 font-mono-clean">tty1</span>
+        <span className="text-[11px] text-[hsl(var(--terminal-text)/0.7)]">user@dungeon — bash</span>
+        <span className="text-[11px] text-[hsl(0_0%_45%)]">tty1</span>
       </div>
 
       {/* History */}
       <div
         ref={scrollRef}
-        className="relative flex-1 overflow-y-auto px-4 py-3 font-mono-clean"
+        className="scriptorium-scroll relative flex-1 overflow-y-auto px-4 py-3"
       >
         {state.history.map((line, idx) => {
           const isLast = idx === state.history.length - 1;
@@ -115,9 +115,11 @@ export function Terminal({ state, onSubmit }: TerminalProps) {
       </div>
 
       {/* Input row */}
-      <div className="flex items-center gap-2 border-t border-zinc-800 bg-zinc-950 px-4 py-2 font-mono-clean">
-        <span className="text-zinc-400">
-          user@dungeon:<span className="text-emerald-400">{state.cwd}</span>$
+      <div className="ember-glow flex items-center gap-2 border-t-2 scriptorium-divider bg-[hsl(0_0%_5%)] px-4 py-2">
+        <span className="text-[hsl(var(--terminal-text)/0.85)]">
+          user@dungeon:
+          <span className="text-[hsl(var(--terminal-prompt))]">{state.cwd}</span>
+          $
         </span>
         <div className="relative flex-1">
           <input
@@ -129,11 +131,12 @@ export function Terminal({ state, onSubmit }: TerminalProps) {
             autoFocus
             spellCheck={false}
             autoComplete="off"
-            className="w-full bg-transparent text-zinc-100 outline-none caret-transparent disabled:opacity-60"
+            className="w-full bg-transparent text-[hsl(var(--terminal-prompt))] outline-none caret-transparent disabled:opacity-60"
+            style={{ textShadow: "0 0 6px hsl(38 100% 50% / 0.45)" }}
             aria-label="Terminal input"
           />
           <span
-            className="cursor-block pointer-events-none absolute top-1/2 -translate-y-1/2"
+            className="cursor-block ember-cursor pointer-events-none absolute top-1/2 -translate-y-1/2"
             style={{ left: `${input.length}ch` }}
             aria-hidden
           />
