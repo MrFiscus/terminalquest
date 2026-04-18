@@ -321,65 +321,31 @@ export function GameWorld({ state, onDismissPopup, headerRight }: GameWorldProps
             );
           })}
 
-          {/* Dynamic torchlight — follows the knight. Transparent + amber tint at center,
-              fades to deep charcoal at ~3 tile radius. */}
-          {(() => {
-            const playerCx = (state.player.x + 0.5) * tileW;
-            const playerCy = (state.player.y + 0.5) * tileH;
-            const innerR = TILE * 0.6;
-            const midR = TILE * 1.8;
-            const outerR = TILE * 3;
-            return (
-              <div
-                className="pointer-events-none absolute inset-0 light-flicker"
-                style={{
-                  background: `radial-gradient(circle at ${playerCx}px ${playerCy}px,
-                    rgba(255,150,50,0.05) 0px,
-                    rgba(255,150,50,0.04) ${innerR}px,
-                    rgba(10,8,6,0.55) ${midR}px,
-                    rgba(5,5,5,1) ${outerR}px)`,
-                  transition: "background 120ms linear",
-                  zIndex: 12,
-                }}
-                aria-hidden
-              />
-            );
-          })()}
-
-          {/* Warm torch wash — additive amber glow from torches and player (under the dark mask). */}
+          {/* Soft warm wash — torches add gentle amber light. No flicker, no darkness mask. */}
           {(() => {
             const torches = room.tiles.filter((t) => t.kind === "torch");
-            const playerCx = (state.player.x + 0.5) * tileW;
-            const playerCy = (state.player.y + 0.5) * tileH;
-            const playerR = TILE * 2.5;
-            const warmGlow = [
-              `radial-gradient(circle at ${playerCx}px ${playerCy}px, rgba(255,150,50,0.22) 0px, rgba(255,150,50,0.10) ${playerR * 0.55}px, rgba(255,150,50,0) ${playerR}px)`,
-              ...torches.map((t) => {
-                const cx = (t.x + 0.5) * tileW;
-                const cy = (t.y + 0.5) * tileH;
-                const r = TILE * 3.2;
-                return `radial-gradient(circle at ${cx}px ${cy}px, rgba(255,150,50,0.30) 0px, rgba(255,150,50,0.14) ${r * 0.5}px, rgba(255,150,50,0) ${r}px)`;
-              }),
-            ];
+            if (torches.length === 0) return null;
+            const warmGlow = torches.map((t) => {
+              const cx = (t.x + 0.5) * tileW;
+              const cy = (t.y + 0.5) * tileH;
+              const r = TILE * 3.2;
+              return `radial-gradient(circle at ${cx}px ${cy}px, rgba(255,170,80,0.18) 0px, rgba(255,170,80,0.08) ${r * 0.5}px, rgba(255,170,80,0) ${r}px)`;
+            });
             return (
               <div
-                className="pointer-events-none absolute inset-0 light-flicker mix-blend-screen"
-                style={{
-                  background: warmGlow.join(", "),
-                  transition: "background 240ms ease-out",
-                  zIndex: 11,
-                }}
+                className="pointer-events-none absolute inset-0 mix-blend-screen"
+                style={{ background: warmGlow.join(", "), zIndex: 11 }}
                 aria-hidden
               />
             );
           })()}
 
-          {/* Hard edge vignette — guarantees the outer rim of the map is pure black. */}
+          {/* Subtle edge vignette only — keeps the dungeon bright in the middle. */}
           <div
             className="pointer-events-none absolute inset-0"
             style={{
               background:
-                "radial-gradient(ellipse at center, transparent 55%, rgba(5,5,5,0.85) 85%, #050505 100%)",
+                "radial-gradient(ellipse at center, transparent 70%, rgba(0,0,0,0.35) 100%)",
               zIndex: 13,
             }}
             aria-hidden
