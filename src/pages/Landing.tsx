@@ -6,6 +6,7 @@ import tileFloor from "@/assets/tile-floor.png";
 import tileFloorAlt from "@/assets/tile-floor-alt.png";
 import tileTorch from "@/assets/tile-torch.png";
 import archwayDoor from "@/assets/archway-door.png";
+import terminalQuestLogo from "@/assets/terminal-quest-logo.png";
 
 const gif = (name: string) => new URL(`../../gifs/${name}`, import.meta.url).href;
 
