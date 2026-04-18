@@ -463,36 +463,95 @@
     cursor: not-allowed;
     filter: grayscale(0.5);
   }
-  /* Chest slot — heavy inner shadow + rusted iron border */
+  /* Inventory alcove — dark inset stone niche */
   .chest-slot {
-    background-color: hsl(25 18% 10%);
+    background-color: hsl(230 14% 5%);
     background-image:
-      radial-gradient(ellipse at center, hsl(25 25% 14%) 0%, hsl(25 18% 7%) 80%),
-      radial-gradient(hsl(0 0% 0% / 0.5) 1px, transparent 1.4px);
+      radial-gradient(ellipse at 50% 35%, hsl(230 14% 11%) 0%, hsl(230 16% 4%) 75%),
+      radial-gradient(hsl(0 0% 0% / 0.55) 1px, transparent 1.4px);
     background-size: 100% 100%, 6px 6px;
-    border: 2px solid hsl(20 35% 22%);
+    border: 1px solid hsl(230 18% 14%);
     border-radius: 3px;
     box-shadow:
-      inset 0 0 0 1px hsl(18 40% 14%),
-      inset 1px 1px 0 hsl(20 30% 28% / 0.6),
-      inset -1px -1px 0 hsl(0 0% 0% / 0.7),
-      inset 0 4px 10px hsl(0 0% 0% / 0.85),
-      inset 0 -3px 8px hsl(0 0% 0% / 0.65),
-      0 1px 0 hsl(0 0% 0% / 0.7),
-      0 2px 5px hsl(0 0% 0% / 0.6);
+      inset 0 0 0 1px hsl(0 0% 0% / 0.85),
+      inset 0 6px 12px hsl(0 0% 0% / 0.95),
+      inset 0 -3px 8px hsl(0 0% 0% / 0.7),
+      inset 2px 0 6px hsl(0 0% 0% / 0.7),
+      inset -2px 0 6px hsl(0 0% 0% / 0.7),
+      0 1px 0 hsl(230 14% 22% / 0.5);
   }
   .chest-slot-active {
-    border-color: hsl(33 100% 50%);
+    border-color: hsl(33 100% 50% / 0.7);
     box-shadow:
-      inset 0 0 0 1px hsl(33 100% 35%),
-      inset 0 4px 10px hsl(0 0% 0% / 0.85),
-      inset 0 0 18px hsl(33 100% 50% / 0.45),
-      0 0 14px hsl(33 100% 50% / 0.7);
+      inset 0 0 0 1px hsl(33 100% 35% / 0.5),
+      inset 0 6px 12px hsl(0 0% 0% / 0.85),
+      inset 0 0 14px hsl(33 100% 50% / 0.25),
+      0 0 12px hsl(33 100% 50% / 0.55),
+      0 0 22px hsl(33 100% 50% / 0.3);
   }
   .item-glow {
     background-image:
-      radial-gradient(ellipse at center, hsl(45 90% 55% / 0.22) 0%, hsl(33 100% 45% / 0.08) 55%, transparent 80%),
-      radial-gradient(ellipse at center, hsl(25 25% 14%) 0%, hsl(25 18% 7%) 80%);
+      radial-gradient(ellipse at center, hsl(45 90% 55% / 0.10) 0%, hsl(33 100% 45% / 0.04) 55%, transparent 80%),
+      radial-gradient(ellipse at 50% 35%, hsl(230 14% 11%) 0%, hsl(230 16% 4%) 75%);
+  }
+  /* Dark iron textured header bar */
+  .iron-header {
+    background-color: hsl(230 14% 7%);
+    background-image:
+      linear-gradient(180deg, hsl(230 14% 12%) 0%, hsl(230 16% 6%) 50%, hsl(230 18% 4%) 100%),
+      radial-gradient(hsl(0 0% 0% / 0.4) 1px, transparent 1.4px);
+    background-size: 100% 100%, 5px 5px;
+    box-shadow:
+      inset 0 1px 0 hsl(230 14% 22% / 0.6),
+      inset 0 -1px 0 hsl(0 0% 0% / 0.9),
+      0 2px 4px hsl(0 0% 0% / 0.6);
+  }
+  /* Carved stone toggle button (header difficulty) */
+  .stone-toggle {
+    font-family: 'Press Start 2P', system-ui, monospace;
+    font-size: 8px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: hsl(42 35% 70%);
+    padding: 4px 10px;
+    border-radius: 2px;
+    background-color: hsl(230 14% 9%);
+    background-image: linear-gradient(180deg, hsl(230 14% 14%), hsl(230 18% 6%));
+    border: 1px solid hsl(230 14% 4%);
+    text-shadow:
+      -1px -1px 0 hsl(0 0% 0% / 0.85),
+      1px 1px 0 hsl(0 0% 100% / 0.06);
+    box-shadow:
+      inset 0 1px 0 hsl(230 14% 24% / 0.55),
+      inset 0 -1px 0 hsl(0 0% 0% / 0.85),
+      0 1px 2px hsl(0 0% 0% / 0.6);
+    transition: color 140ms ease, box-shadow 140ms ease, transform 80ms ease;
+  }
+  .stone-toggle:hover:not(:disabled) {
+    color: hsl(33 100% 65%);
+    box-shadow:
+      inset 0 1px 0 hsl(33 100% 50% / 0.25),
+      inset 0 0 8px hsl(33 100% 50% / 0.18),
+      0 1px 2px hsl(0 0% 0% / 0.6);
+  }
+  .stone-toggle:active:not(:disabled) {
+    transform: translateY(1px);
+    box-shadow:
+      inset 0 2px 6px hsl(0 0% 0% / 0.85),
+      0 0 0 hsl(0 0% 0% / 0);
+  }
+  .stone-toggle:disabled {
+    opacity: 0.55;
+    cursor: not-allowed;
+  }
+  .stone-toggle-active {
+    color: hsl(45 100% 70%);
+    background-image: linear-gradient(180deg, hsl(33 50% 16%), hsl(25 50% 8%));
+    border-color: hsl(33 60% 25%);
+    box-shadow:
+      inset 0 1px 0 hsl(45 100% 60% / 0.4),
+      inset 0 0 10px hsl(33 100% 45% / 0.35),
+      0 0 8px hsl(33 100% 50% / 0.45);
   }
   /* Stone tile texture */
   .stone-tex {
