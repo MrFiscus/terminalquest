@@ -99,8 +99,15 @@ export function GameWorld({ state, onDismissPopup }: GameWorldProps) {
               <img
                 src={archwayDoor}
                 alt={door.target === ".." ? "exit archway" : `${door.target} archway`}
-                className="absolute inset-0 h-full w-full object-contain pointer-events-none"
-                style={{ imageRendering: "pixelated", transform: "scale(1.15)", transformOrigin: "center bottom" }}
+                className="absolute left-1/2 -translate-x-1/2 pointer-events-none"
+                style={{
+                  bottom: 0,
+                  width: "85%",
+                  height: "85%",
+                  objectFit: "contain",
+                  imageRendering: "pixelated",
+                  transformOrigin: "center bottom",
+                }}
               />
             )}
             {torch && (
