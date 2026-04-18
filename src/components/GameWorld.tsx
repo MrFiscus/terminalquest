@@ -91,10 +91,13 @@ export function GameWorld({ state, onDismissPopup }: GameWorldProps) {
               />
             )}
             {torch && (
-              <span
-                className="absolute inset-0 torch-tex torch-flicker"
-                aria-hidden
-              />
+              <>
+                <span className="ground-shadow" aria-hidden />
+                <span
+                  className="absolute inset-0 torch-tex torch-flicker"
+                  aria-hidden
+                />
+              </>
             )}
           </div>,
         );
@@ -272,13 +275,14 @@ export function GameWorld({ state, onDismissPopup }: GameWorldProps) {
                 }}
                 title={f.name}
               >
+                <span className="ground-shadow" aria-hidden />
                 <img
                   src={scrollItem}
                   alt={f.name}
-                  className="h-[80%] w-[80%] object-contain drop-shadow-[0_0_8px_hsl(var(--gold)/0.55)]"
+                  className="h-[80%] w-[80%] object-contain drop-shadow-[0_3px_3px_hsl(0_0%_0%/0.7)] drop-shadow-[0_0_8px_hsl(var(--gold)/0.55)]"
                   style={{ imageRendering: "pixelated" }}
                 />
-                <span className="absolute -bottom-1 left-1/2 -translate-x-1/2 font-pixel text-[7px] text-parchment whitespace-nowrap rounded bg-stone-slab-edge/80 px-1 py-0.5 border border-stone-light/30">
+                <span className="absolute -bottom-1 left-1/2 -translate-x-1/2 label-chip breathe text-[7px]">
                   {f.name}
                 </span>
               </div>
