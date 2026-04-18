@@ -595,7 +595,7 @@ export default function Landing() {
 
         {/* Hero content */}
         <div style={{ position: "relative", zIndex: 5, display: "flex", flexDirection: "column", alignItems: "center", padding: "72px 32px 70px", textAlign: "center" }}>
-          <h1 className="lp-silver-title lp-hero-in" data-text="TERMINAL QUEST" style={{
+          <h1 className="lp-molten-title lp-hero-in" data-text="TERMINAL QUEST" style={{
             fontSize: "clamp(56px,9vw,128px)", lineHeight: 1, margin: 0, animationDelay: "0ms",
           }}>
             TERMINAL QUEST
