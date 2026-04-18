@@ -864,67 +864,70 @@
   animation: lp-campfire-flicker 1.4s ease-in-out infinite alternate;
 }
 
-/* ─── Molten lava dungeon title ───────────────────────────────────────── */
+/* ─── God of War style gold-embossed stone title ─────────────────────── */
 .lp-molten-title {
-  font-family: 'Pirata One', 'MedievalSharp', 'Cinzel', serif;
-  font-weight: 400;
-  letter-spacing: 0.04em;
+  font-family: 'Cinzel', 'Pirata One', 'MedievalSharp', serif;
+  font-weight: 900;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
   position: relative;
   display: inline-block;
   color: transparent;
   background-image:
-    /* dark crack veins */
-    repeating-linear-gradient(118deg,
-      hsl(0 0% 0% / 0.55) 0 1px,
-      transparent 1px 5px),
-    repeating-linear-gradient(31deg,
-      hsl(0 0% 0% / 0.4) 0 1px,
-      transparent 1px 7px),
-    /* hot ember speckle */
-    radial-gradient(circle at 22% 30%, hsl(48 100% 70% / 0.55) 0 2px, transparent 3px),
-    radial-gradient(circle at 68% 65%, hsl(36 100% 60% / 0.5) 0 2px, transparent 3px),
-    radial-gradient(circle at 82% 22%, hsl(52 100% 75% / 0.45) 0 1.5px, transparent 2.5px),
-    /* bright core glow streak */
-    linear-gradient(95deg,
-      transparent 0%, hsl(48 100% 75% / 0.35) 20%, transparent 28%,
-      transparent 60%, hsl(40 100% 65% / 0.28) 66%, transparent 72%),
-    /* main lava gradient */
+    /* fine cracks */
+    repeating-linear-gradient(112deg,
+      hsl(30 40% 8% / 0.55) 0 1px,
+      transparent 1px 6px),
+    repeating-linear-gradient(28deg,
+      hsl(20 50% 6% / 0.45) 0 1px,
+      transparent 1px 9px),
+    /* stone pitting speckle */
+    radial-gradient(circle at 18% 32%, hsl(30 30% 10% / 0.5) 0 1.5px, transparent 2.5px),
+    radial-gradient(circle at 72% 68%, hsl(25 35% 12% / 0.45) 0 1.5px, transparent 2.5px),
+    radial-gradient(circle at 44% 18%, hsl(35 40% 14% / 0.4) 0 1px, transparent 2px),
+    radial-gradient(circle at 88% 44%, hsl(28 35% 10% / 0.5) 0 1.5px, transparent 2.5px),
+    /* polished highlight sweep */
+    linear-gradient(96deg,
+      transparent 0%, hsl(48 100% 88% / 0.4) 22%, transparent 30%,
+      transparent 62%, hsl(45 95% 80% / 0.32) 68%, transparent 75%),
+    /* main rich gold gradient */
     linear-gradient(180deg,
-      hsl(48 100% 72%) 0%,
-      hsl(38 100% 58%) 18%,
-      hsl(22 100% 48%) 38%,
-      hsl(8 92% 38%) 58%,
-      hsl(0 78% 26%) 78%,
-      hsl(20 70% 14%) 100%);
-  background-blend-mode: multiply, multiply, screen, screen, screen, overlay, normal;
+      hsl(48 90% 78%) 0%,
+      hsl(44 88% 62%) 18%,
+      hsl(38 85% 48%) 38%,
+      hsl(32 80% 36%) 58%,
+      hsl(26 70% 26%) 78%,
+      hsl(22 60% 18%) 100%);
+  background-blend-mode: multiply, multiply, multiply, multiply, multiply, multiply, screen, normal;
   -webkit-background-clip: text;
           background-clip: text;
   -webkit-text-fill-color: transparent;
   text-shadow: none;
-  /* sharp chiseled black outline + fiery outer glow */
+  /* deep chiseled stone bevel + warm glow */
   filter:
-    drop-shadow(0 0 1px hsl(0 0% 0%))
-    drop-shadow(1px 0 0 hsl(0 0% 0%))
-    drop-shadow(-1px 0 0 hsl(0 0% 0%))
-    drop-shadow(0 1px 0 hsl(0 0% 0%))
-    drop-shadow(0 2px 0 hsl(20 80% 8%))
-    drop-shadow(0 4px 6px hsl(0 0% 0% / 0.9))
-    drop-shadow(0 0 14px hsl(20 100% 45% / 0.55))
-    drop-shadow(0 0 28px hsl(10 100% 40% / 0.4));
+    drop-shadow(0 0 1px hsl(20 60% 6%))
+    drop-shadow(1px 0 0 hsl(20 60% 6%))
+    drop-shadow(-1px 0 0 hsl(20 60% 6%))
+    drop-shadow(0 1px 0 hsl(20 60% 4%))
+    drop-shadow(0 2px 0 hsl(22 55% 8%))
+    drop-shadow(0 3px 0 hsl(20 50% 6%))
+    drop-shadow(0 5px 8px hsl(0 0% 0% / 0.95))
+    drop-shadow(0 0 16px hsl(38 90% 40% / 0.45))
+    drop-shadow(0 0 30px hsl(28 80% 30% / 0.35));
   text-rendering: geometricPrecision;
 }
-/* bright top highlight + hot inner rim */
+/* top embossed highlight + bottom shadow rim */
 .lp-molten-title::after {
   content: attr(data-text);
   position: absolute;
   inset: 0;
   pointer-events: none;
   background: linear-gradient(180deg,
-    hsl(50 100% 88% / 0.7) 0%,
-    hsl(40 100% 70% / 0.15) 22%,
-    hsl(0 0% 0% / 0) 50%,
-    hsl(0 0% 0% / 0) 80%,
-    hsl(15 100% 55% / 0.35) 100%);
+    hsl(50 100% 92% / 0.65) 0%,
+    hsl(45 95% 75% / 0.18) 18%,
+    hsl(0 0% 0% / 0) 45%,
+    hsl(0 0% 0% / 0) 75%,
+    hsl(20 60% 8% / 0.45) 100%);
   -webkit-background-clip: text;
           background-clip: text;
   -webkit-text-fill-color: transparent;
