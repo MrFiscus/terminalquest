@@ -33,9 +33,7 @@ export const DifficultyMenu = ({ onConfirm, busy }: DifficultyMenuProps) => {
       e.preventDefault();
       setFromClientX(e.clientX);
     };
-    const onUp = () => {
-      draggingRef.current = false;
-    };
+    const onUp = () => { draggingRef.current = false; };
     window.addEventListener("pointermove", onMove);
     window.addEventListener("pointerup", onUp);
     return () => {
@@ -60,42 +58,72 @@ export const DifficultyMenu = ({ onConfirm, busy }: DifficultyMenuProps) => {
     if (busy || fading) return;
     console.log("[DifficultyMenu] dungeonDifficulty =", dungeonDifficulty);
     setFading(true);
-    window.setTimeout(() => {
-      onConfirm(tier.difficulty, dungeonDifficulty);
-    }, 1000);
+    window.setTimeout(() => onConfirm(tier.difficulty, dungeonDifficulty), 1000);
   };
 
+  // Engraved (intaglio) text style — light highlight on top, deep shadow inside
+  const engravedTextStyle = (size: number, color = "hsl(30 12% 22%)"): React.CSSProperties => ({
+    fontFamily: "'MedievalSharp', 'Cinzel', serif",
+    fontWeight: 700,
+    fontSize: size,
+    color,
+    letterSpacing: "0.04em",
+    textShadow: [
+      "0 -1px 0 hsl(0 0% 0% / 0.85)",
+      "0 1px 0 hsl(30 25% 55% / 0.55)",
+      "0 2px 1px hsl(30 25% 60% / 0.25)",
+      "inset 0 0 0 transparent",
+    ].join(", "),
+    filter: "drop-shadow(0 1px 0 hsl(30 25% 60% / 0.18))",
+  });
+
   return (
-    <div
-      className="fixed inset-0 m-0 p-0 overflow-hidden"
-      style={{ width: "100vw", height: "100vh", background: "#000", zIndex: 100 }}
-    >
-      {/* Honed slate background with central radial light */}
-      <div
-        className="absolute inset-0"
-        style={{
-          backgroundColor: "hsl(0 0% 9%)",
-          backgroundImage: `
-            radial-gradient(ellipse 70% 60% at 50% 45%,
-              hsl(0 0% 16%) 0%,
-              hsl(0 0% 11%) 40%,
-              hsl(0 0% 6%) 75%,
-              hsl(0 0% 3%) 100%),
-            repeating-linear-gradient(0deg, hsl(0 0% 100% / 0.014) 0 1px, transparent 1px 3px),
-            repeating-linear-gradient(90deg, hsl(0 0% 0% / 0.18) 0 1px, transparent 1px 4px)
-          `,
-          backgroundBlendMode: "normal, overlay, multiply",
-        }}
-        aria-hidden
-      />
-      <div
-        className="absolute inset-0 pointer-events-none"
-        style={{
-          background:
-            "radial-gradient(circle at 50% 38%, hsl(33 100% 50% / 0.10) 0%, transparent 45%)",
-        }}
-        aria-hidden
-      />
+    <div className="fixed inset-0 m-0 p-0 overflow-hidden"
+      style={{ width: "100vw", height: "100vh", background: "#000", zIndex: 100 }}>
+
+      {/* Stone wall background — large blocks, mortar lines, grain */}
+      <div className="absolute inset-0" aria-hidden style={{
+        backgroundColor: "hsl(30 8% 32%)",
+        backgroundImage: `
+          /* central torch wash */
+          radial-gradient(ellipse 75% 65% at 50% 42%,
+            hsl(33 30% 42%) 0%,
+            hsl(30 12% 30%) 35%,
+            hsl(28 10% 18%) 75%,
+            hsl(0 0% 4%) 100%),
+          /* fine pitted grain */
+          radial-gradient(hsl(0 0% 0% / 0.35) 1px, transparent 1.4px),
+          radial-gradient(hsl(0 0% 100% / 0.06) 1px, transparent 1.4px),
+          /* mortar — horizontal courses */
+          repeating-linear-gradient(0deg,
+            transparent 0 118px,
+            hsl(0 0% 0% / 0.85) 118px 122px,
+            hsl(30 14% 22% / 0.6) 122px 124px),
+          /* mortar — staggered verticals (course A) */
+          repeating-linear-gradient(90deg,
+            transparent 0 158px,
+            hsl(0 0% 0% / 0.75) 158px 162px)
+        `,
+        backgroundSize: "100% 100%, 5px 5px, 7px 7px, 100% 100%, 100% 244px",
+        backgroundPosition: "0 0, 0 0, 2px 3px, 0 0, 0 0",
+        backgroundBlendMode: "normal, multiply, overlay, normal, normal",
+      }} />
+      {/* Second mortar layer offset to fake brick stagger */}
+      <div className="absolute inset-0 pointer-events-none" aria-hidden style={{
+        backgroundImage: `repeating-linear-gradient(90deg,
+            transparent 0 158px,
+            hsl(0 0% 0% / 0.75) 158px 162px)`,
+        backgroundSize: "100% 244px",
+        backgroundPosition: "80px 122px",
+      }} />
+      {/* Vignette */}
+      <div className="absolute inset-0 pointer-events-none" aria-hidden style={{
+        background: "radial-gradient(ellipse at center, transparent 35%, hsl(0 0% 0% / 0.55) 80%, hsl(0 0% 0%) 100%)",
+      }} />
+      {/* Soft top torch glow */}
+      <div className="absolute inset-0 pointer-events-none" aria-hidden style={{
+        background: "radial-gradient(circle at 50% 18%, hsl(33 100% 50% / 0.18) 0%, transparent 40%)",
+      }} />
 
       {/* Title bar */}
       <div className="absolute top-0 left-0 right-0 carved-stone-tex border-b-2 border-stone-slab-edge px-4 py-2 flex items-center gap-3 z-10">
@@ -112,53 +140,41 @@ export const DifficultyMenu = ({ onConfirm, busy }: DifficultyMenuProps) => {
 
       {/* Content */}
       <div className="relative z-10 h-full flex flex-col items-center justify-center px-8 pt-16">
-        <h1
-          className="text-center"
-          style={{
-            fontFamily: "'Caveat', 'Kalam', cursive",
-            fontSize: "clamp(44px, 7vw, 96px)",
-            fontWeight: 700,
-            lineHeight: 1.05,
-            color: "hsl(45 95% 60%)",
-            textShadow: `
-              0 0 8px hsl(33 100% 50% / 0.7),
-              0 0 18px hsl(33 100% 50% / 0.45),
-              0 0 38px hsl(33 100% 45% / 0.35),
-              0 2px 0 hsl(0 0% 0% / 0.9)
-            `,
-            transform: "rotate(-1.5deg)",
-          }}
-        >
-          Dungeon Difficulty Level?
+        {/* Engraved title */}
+        <h1 className="text-center" style={engravedTextStyle(96)}>
+          Dungeon Difficulty
         </h1>
+        <div className="mt-2 text-center" style={engravedTextStyle(28, "hsl(30 12% 28%)")}>
+          ☩  choose thy peril  ☩
+        </div>
 
-        {/* Custom iron-rail slider */}
-        <div className="mt-16 w-full max-w-3xl select-none">
+        {/* Engraved slider — chiseled groove in the stone wall */}
+        <div className="mt-14 w-full max-w-3xl select-none">
           <div className="relative px-6 pt-20 pb-2">
-            {/* Floating value counter above the thumb */}
+            {/* Floating engraved counter above thumb */}
             <div
               className="absolute pointer-events-none transition-[left] duration-75"
               style={{
-                left: `calc(24px + (100% - 48px) * ${dungeonDifficulty / 100})`,
+                left: `calc(28px + (100% - 56px) * ${dungeonDifficulty / 100})`,
                 top: 0,
                 transform: "translateX(-50%)",
-                fontFamily: "'Press Start 2P', monospace",
-                fontSize: "32px",
-                color: "hsl(45 95% 62%)",
-                textShadow: `
-                  0 0 6px hsl(33 100% 50% / 0.9),
-                  0 0 16px hsl(33 100% 50% / 0.55),
-                  0 0 32px hsl(33 100% 45% / 0.35),
-                  0 2px 0 hsl(0 0% 0% / 0.95)
-                `,
-                letterSpacing: "0.05em",
+                fontFamily: "'MedievalSharp', 'Cinzel', serif",
+                fontWeight: 900,
+                fontSize: 56,
+                color: "hsl(30 14% 24%)",
+                letterSpacing: "0.04em",
+                textShadow: [
+                  "0 -1px 0 hsl(0 0% 0% / 0.9)",
+                  "0 1px 0 hsl(30 28% 58% / 0.6)",
+                  "0 2px 2px hsl(30 28% 60% / 0.25)",
+                ].join(", "),
               }}
               aria-hidden
             >
               {dungeonDifficulty}
             </div>
 
-            {/* Iron rail track with carved stone notches */}
+            {/* Engraved groove channel */}
             <div
               ref={trackRef}
               role="slider"
@@ -169,104 +185,98 @@ export const DifficultyMenu = ({ onConfirm, busy }: DifficultyMenuProps) => {
               aria-label="Dungeon difficulty"
               onPointerDown={onTrackPointerDown}
               onKeyDown={onKeyDown}
-              className="relative h-12 cursor-pointer outline-none focus-visible:ring-2 focus-visible:ring-[hsl(33_100%_50%/0.6)] rounded"
+              className="relative h-14 cursor-pointer outline-none focus-visible:ring-2 focus-visible:ring-[hsl(33_100%_50%/0.5)] rounded-sm"
             >
-              {/* Stone bed under the rail with carved notches */}
-              <div
-                className="absolute left-0 right-0 top-1/2 -translate-y-1/2 h-9 rounded"
-                style={{
-                  background: `
-                    repeating-linear-gradient(90deg,
-                      hsl(0 0% 0% / 0.55) 0 1px,
-                      transparent 1px 10%),
-                    linear-gradient(180deg, hsl(228 8% 22%) 0%, hsl(228 10% 12%) 50%, hsl(228 8% 18%) 100%)
-                  `,
-                  boxShadow:
-                    "inset 0 2px 0 hsl(228 12% 32% / 0.6), inset 0 -2px 0 hsl(0 0% 0% / 0.85), inset 0 0 18px hsl(0 0% 0% / 0.7), 0 2px 6px hsl(0 0% 0% / 0.7)",
-                  border: "2px solid hsl(0 0% 4%)",
-                }}
-              />
-              {/* Carved notch markers (every 10%) */}
+              {/* Carved channel — deep recessed groove in stone */}
+              <div className="absolute left-0 right-0 top-1/2 -translate-y-1/2 h-7 rounded-sm" style={{
+                background: "linear-gradient(180deg, hsl(0 0% 0% / 0.85) 0%, hsl(0 0% 0% / 0.55) 50%, hsl(30 18% 30% / 0.4) 100%)",
+                boxShadow: [
+                  "inset 0 3px 4px hsl(0 0% 0% / 0.95)",
+                  "inset 0 -2px 0 hsl(30 25% 55% / 0.5)",
+                  "inset 2px 0 3px hsl(0 0% 0% / 0.85)",
+                  "inset -2px 0 3px hsl(0 0% 0% / 0.85)",
+                  "0 1px 0 hsl(30 25% 58% / 0.55)",
+                  "0 -1px 0 hsl(0 0% 0% / 0.7)",
+                ].join(", "),
+                border: "1px solid hsl(0 0% 0% / 0.95)",
+              }} />
+
+              {/* Engraved chisel-mark notches inside groove */}
               {Array.from({ length: 11 }).map((_, i) => (
-                <div
-                  key={i}
-                  className="absolute top-1/2"
-                  style={{
-                    left: `${i * 10}%`,
-                    width: 2,
-                    height: i % 5 === 0 ? 18 : 12,
-                    transform: "translate(-50%, -50%)",
-                    background: "hsl(0 0% 0%)",
-                    boxShadow:
-                      "1px 0 0 hsl(228 14% 38% / 0.45), -1px 0 0 hsl(0 0% 0% / 0.9)",
-                    borderRadius: 1,
-                  }}
-                  aria-hidden
-                />
+                <div key={i} className="absolute top-1/2" aria-hidden style={{
+                  left: `${i * 10}%`,
+                  width: 2,
+                  height: i % 5 === 0 ? 22 : 14,
+                  transform: "translate(-50%, -50%)",
+                  background: "hsl(0 0% 0% / 0.95)",
+                  boxShadow: "1px 0 0 hsl(30 28% 58% / 0.45), -1px 0 0 hsl(0 0% 0% / 0.85)",
+                }} />
               ))}
 
-              {/* The iron rail itself */}
-              <div
-                className="absolute left-2 right-2 top-1/2 -translate-y-1/2 h-2 rounded-full"
+              {/* Ember-lit fill in the engraved channel (molten gold seeping into the carving) */}
+              <div className="absolute top-1/2 -translate-y-1/2 h-3 rounded-sm pointer-events-none"
                 style={{
-                  background:
-                    "linear-gradient(180deg, hsl(0 0% 32%) 0%, hsl(0 0% 18%) 35%, hsl(0 0% 8%) 65%, hsl(0 0% 22%) 100%)",
-                  boxShadow:
-                    "inset 0 1px 0 hsl(0 0% 45% / 0.7), inset 0 -1px 0 hsl(0 0% 0% / 0.9), 0 2px 4px hsl(0 0% 0% / 0.85), 0 0 10px hsl(0 0% 0% / 0.6)",
-                  border: "1px solid hsl(0 0% 3%)",
-                }}
-                aria-hidden
-              />
-              {/* Ember-lit filled portion */}
-              <div
-                className="absolute left-2 top-1/2 -translate-y-1/2 h-2 rounded-full pointer-events-none"
-                style={{
-                  width: `calc((100% - 16px) * ${dungeonDifficulty / 100})`,
-                  background:
-                    "linear-gradient(90deg, hsl(33 100% 35%) 0%, hsl(33 100% 50%) 60%, hsl(45 95% 65%) 100%)",
-                  boxShadow:
-                    "0 0 8px hsl(33 100% 50% / 0.85), 0 0 18px hsl(33 100% 45% / 0.55)",
-                }}
-                aria-hidden
-              />
+                  left: 6,
+                  width: `calc((100% - 12px) * ${dungeonDifficulty / 100})`,
+                  background: "linear-gradient(90deg, hsl(33 90% 30%) 0%, hsl(33 100% 50%) 60%, hsl(45 95% 70%) 100%)",
+                  boxShadow: "0 0 8px hsl(33 100% 50% / 0.85), 0 0 18px hsl(33 100% 45% / 0.55), inset 0 1px 0 hsl(45 100% 80% / 0.6), inset 0 -1px 0 hsl(20 90% 25%)",
+                }} aria-hidden />
 
-              {/* Iron Key + Torch sprite (thumb) */}
+              {/* Stone tablet thumb — looks like a chiseled slider stone embedded in the wall */}
               <div
                 className="absolute pointer-events-none"
                 style={{
-                  left: `calc(24px + (100% - 48px) * ${dungeonDifficulty / 100})`,
+                  left: `calc(28px + (100% - 56px) * ${dungeonDifficulty / 100})`,
                   top: "50%",
                   transform: "translate(-50%, -50%)",
-                  filter:
-                    "drop-shadow(0 0 8px hsl(33 100% 50% / 0.85)) drop-shadow(0 0 18px hsl(33 100% 45% / 0.5)) drop-shadow(0 2px 2px hsl(0 0% 0% / 0.85))",
                 }}
                 aria-hidden
               >
-                <KeyTorchSprite />
+                <div style={{
+                  width: 44,
+                  height: 56,
+                  borderRadius: 4,
+                  backgroundColor: "hsl(30 10% 38%)",
+                  backgroundImage: `
+                    linear-gradient(180deg, hsl(30 18% 52%) 0%, hsl(30 12% 38%) 45%, hsl(28 10% 24%) 100%),
+                    radial-gradient(hsl(0 0% 0% / 0.4) 1px, transparent 1.4px),
+                    radial-gradient(hsl(0 0% 100% / 0.07) 1px, transparent 1.4px)
+                  `,
+                  backgroundSize: "100% 100%, 5px 5px, 7px 7px",
+                  backgroundPosition: "0 0, 0 0, 2px 3px",
+                  border: "2px solid hsl(0 0% 4%)",
+                  boxShadow: [
+                    "inset 1px 1px 0 hsl(30 25% 65% / 0.6)",
+                    "inset -1px -1px 0 hsl(0 0% 0% / 0.85)",
+                    "inset 0 -3px 4px hsl(0 0% 0% / 0.55)",
+                    "0 3px 0 hsl(0 0% 0% / 0.8)",
+                    "0 6px 12px hsl(0 0% 0% / 0.7)",
+                    "0 0 16px hsl(33 100% 50% / 0.4)",
+                  ].join(", "),
+                  display: "grid",
+                  placeItems: "center",
+                }}>
+                  {/* Engraved rune on the stone */}
+                  <span style={{
+                    fontFamily: "'MedievalSharp', serif",
+                    fontSize: 26,
+                    fontWeight: 900,
+                    color: "hsl(30 14% 22%)",
+                    textShadow: "0 -1px 0 hsl(0 0% 0% / 0.9), 0 1px 0 hsl(30 28% 65% / 0.6)",
+                  }}>✦</span>
+                </div>
               </div>
             </div>
 
-            {/* End labels */}
-            <div className="mt-6 flex items-center justify-between font-pixel text-[10px] tracking-[0.2em] uppercase text-[hsl(0_0%_62%)]">
-              <span style={{ textShadow: "0 1px 0 hsl(0 0% 0% / 0.9)" }}>
-                0 — Novice's Path
-              </span>
-              <span style={{ textShadow: "0 1px 0 hsl(0 0% 0% / 0.9)" }}>
-                100 — Master's Challenge
-              </span>
+            {/* Engraved end labels */}
+            <div className="mt-7 flex items-center justify-between">
+              <span style={engravedTextStyle(20)}>0 — Novice's Path</span>
+              <span style={engravedTextStyle(20)}>100 — Master's Challenge</span>
             </div>
 
-            {/* Tier readout */}
-            <div className="mt-3 text-center font-pixel text-[11px] tracking-[0.25em] uppercase">
-              <span className="text-[hsl(0_0%_45%)]">Tier · </span>
-              <span
-                style={{
-                  color: "hsl(45 95% 65%)",
-                  textShadow: "0 0 6px hsl(33 100% 50% / 0.55)",
-                }}
-              >
-                {tier.label}
-              </span>
+            {/* Engraved tier readout */}
+            <div className="mt-3 text-center" style={engravedTextStyle(22, "hsl(30 14% 26%)")}>
+              ✦ Tier · {tier.label} ✦
             </div>
           </div>
         </div>
@@ -276,23 +286,25 @@ export const DifficultyMenu = ({ onConfirm, busy }: DifficultyMenuProps) => {
           type="button"
           disabled={busy || fading}
           onClick={handleManifest}
-          className="manifest-btn mt-12 font-pixel text-[14px] tracking-[0.18em] uppercase px-10 py-5"
+          className="manifest-btn mt-12 px-12 py-5"
+          style={{
+            fontFamily: "'MedievalSharp', 'Cinzel', serif",
+            fontSize: 22,
+            fontWeight: 700,
+            letterSpacing: "0.12em",
+          }}
         >
-          {busy || fading ? "Manifesting…" : "Manifest the Dungeon"}
+          {busy || fading ? "Manifesting…" : "⚔  Manifest the Dungeon  ⚔"}
         </button>
       </div>
 
       {/* Fade-to-black overlay */}
-      <div
-        className="absolute inset-0 pointer-events-none"
-        style={{
-          background: "#000",
-          opacity: fading ? 1 : 0,
-          transition: "opacity 1000ms ease-in",
-          zIndex: 50,
-        }}
-        aria-hidden
-      />
+      <div className="absolute inset-0 pointer-events-none" aria-hidden style={{
+        background: "#000",
+        opacity: fading ? 1 : 0,
+        transition: "opacity 1000ms ease-in",
+        zIndex: 50,
+      }} />
 
       <style>{`
         .manifest-btn {
@@ -323,73 +335,14 @@ export const DifficultyMenu = ({ onConfirm, busy }: DifficultyMenuProps) => {
           color: hsl(33 100% 75%);
           box-shadow:
             inset 0 0 0 1px hsl(33 100% 35%),
-            inset 1px 1px 0 hsl(228 12% 42% / 0.9),
-            inset -1px -1px 0 hsl(0 0% 0% / 0.8),
             inset 0 0 22px hsl(33 100% 50% / 0.45),
-            inset 0 2px 6px hsl(0 0% 0% / 0.6),
             0 0 18px hsl(33 100% 50% / 0.6),
             0 0 36px hsl(33 100% 45% / 0.4);
-          text-shadow:
-            0 0 6px hsl(33 100% 55% / 0.9),
-            0 0 14px hsl(33 100% 50% / 0.6),
-            0 1px 0 hsl(0 0% 0% / 0.95);
+          text-shadow: 0 0 6px hsl(33 100% 55% / 0.9), 0 0 14px hsl(33 100% 50% / 0.6), 0 1px 0 hsl(0 0% 0% / 0.95);
         }
-        .manifest-btn:active:not(:disabled) {
-          transform: translateY(2px);
-          box-shadow:
-            inset 0 3px 8px hsl(0 0% 0% / 0.85),
-            inset 0 0 16px hsl(33 100% 50% / 0.35);
-        }
+        .manifest-btn:active:not(:disabled) { transform: translateY(2px); }
         .manifest-btn:disabled { opacity: 0.6; cursor: not-allowed; }
-
-        @keyframes torch-flame {
-          0%, 100% { transform: scaleY(1) translateY(0); opacity: 0.95; }
-          50%      { transform: scaleY(1.12) translateY(-1px); opacity: 1; }
-        }
-        .torch-flame { transform-origin: 50% 100%; animation: torch-flame 0.45s infinite alternate ease-in-out; }
       `}</style>
     </div>
   );
 };
-
-/** Pixel-styled iron key with a torch-emblem hilt. */
-const KeyTorchSprite = () => (
-  <svg
-    width="56"
-    height="44"
-    viewBox="0 0 56 44"
-    style={{ imageRendering: "pixelated" as const, shapeRendering: "crispEdges" }}
-  >
-    {/* Key shaft (horizontal iron bar) */}
-    <rect x="20" y="20" width="22" height="4" fill="hsl(0 0% 18%)" />
-    <rect x="20" y="19" width="22" height="1" fill="hsl(0 0% 38%)" />
-    <rect x="20" y="24" width="22" height="1" fill="hsl(0 0% 6%)" />
-    {/* Key teeth */}
-    <rect x="36" y="24" width="2" height="4" fill="hsl(0 0% 14%)" />
-    <rect x="40" y="24" width="2" height="6" fill="hsl(0 0% 14%)" />
-    <rect x="36" y="28" width="2" height="1" fill="hsl(0 0% 4%)" />
-    <rect x="40" y="30" width="2" height="1" fill="hsl(0 0% 4%)" />
-
-    {/* Key bow (hilt) — circular iron */}
-    <circle cx="14" cy="22" r="9" fill="hsl(0 0% 12%)" />
-    <circle cx="14" cy="22" r="9" fill="none" stroke="hsl(0 0% 4%)" strokeWidth="1" />
-    <circle cx="14" cy="22" r="5" fill="hsl(0 0% 6%)" />
-    <circle cx="11" cy="19" r="1.4" fill="hsl(0 0% 35%)" opacity="0.7" />
-
-    {/* Torch emblem on the hilt */}
-    {/* Torch handle */}
-    <rect x="13" y="22" width="2" height="5" fill="hsl(28 55% 28%)" />
-    <rect x="13" y="22" width="1" height="5" fill="hsl(28 65% 40%)" />
-    {/* Torch cup */}
-    <rect x="11" y="20" width="6" height="2" fill="hsl(0 0% 22%)" />
-    <rect x="11" y="20" width="6" height="1" fill="hsl(0 0% 38%)" />
-    {/* Flame */}
-    <g className="torch-flame">
-      <path d="M14 11 L17 16 L15 16 L16 19 L14 17 L12 19 L13 16 L11 16 Z" fill="hsl(45 100% 60%)" />
-      <path d="M14 13 L16 17 L14 16 L12 17 Z" fill="hsl(20 100% 55%)" />
-      <rect x="13.5" y="14" width="1" height="2" fill="hsl(60 100% 80%)" />
-    </g>
-    {/* Flame glow */}
-    <circle cx="14" cy="15" r="6" fill="hsl(33 100% 50%)" opacity="0.18" />
-  </svg>
-);
