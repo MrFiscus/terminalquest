@@ -160,8 +160,8 @@ export function GameWorld({ state, onDismissPopup, headerRight }: GameWorldProps
       {/* Header — single dark-iron bar; difficulty toggles injected from parent via slot */}
       <div className="flex items-center justify-between gap-3 px-4 py-2 iron-header border-b-2 border-[hsl(var(--terminal-frame))] relative z-10">
         <div className="flex flex-col min-w-0">
-          <span className="font-pixel carved-gold text-[11px] truncate">{room.name}</span>
-          <span className="font-pixel text-[8px] text-parchment/70 mt-1 drop-shadow-[0_1px_0_hsl(0_0%_0%/0.8)] truncate">{room.path}</span>
+          <span className="font-pixel carved-gold text-[13px] truncate">{room.name}</span>
+          <span className="font-pixel text-[10px] text-parchment mt-1 truncate">{room.path}</span>
         </div>
         {headerRight}
       </div>
