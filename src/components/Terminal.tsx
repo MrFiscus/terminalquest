@@ -96,12 +96,22 @@ export function Terminal({ state, onSubmit }: TerminalProps) {
         ref={scrollRef}
         className="relative flex-1 overflow-y-auto px-4 py-3 font-mono-clean"
       >
-        {state.history.map((line) => (
-          <div key={line.id} className={cn("whitespace-pre-wrap", lineClass[line.kind])}>
-            {linePrefix(line.kind)}
-            {line.text}
-          </div>
-        ))}
+        {state.history.map((line, idx) => {
+          const isLast = idx === state.history.length - 1;
+          return (
+            <div
+              key={line.id}
+              className={cn(
+                "whitespace-pre-wrap transition-opacity",
+                lineClass[line.kind],
+                isLast ? "opacity-100" : "opacity-55",
+              )}
+            >
+              {linePrefix(line.kind)}
+              {line.text}
+            </div>
+          );
+        })}
       </div>
 
       {/* Input row */}
