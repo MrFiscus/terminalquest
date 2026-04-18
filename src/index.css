@@ -821,9 +821,9 @@
 
 /* ── More landing animations ───────────────────────────────────────── */
 @keyframes lp-tagline-fade {
-  0%, 18%   { opacity: 0; transform: translateY(6px); }
-  24%, 76%  { opacity: 1; transform: translateY(0); }
-  82%, 100% { opacity: 0; transform: translateY(-6px); }
+  0%, 4%    { opacity: 0; transform: translateY(6px); }
+  10%, 22%  { opacity: 1; transform: translateY(0); }
+  28%, 100% { opacity: 0; transform: translateY(-6px); }
 }
 .lp-tagline {
   animation: lp-tagline-fade 4s ease-in-out infinite;
