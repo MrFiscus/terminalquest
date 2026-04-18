@@ -77,7 +77,7 @@ export function Terminal({ state, onSubmit }: TerminalProps) {
 
   return (
     <div
-      className="relative flex h-full flex-col scriptorium-bg scriptorium-frame font-mono-clean"
+      className="relative flex h-full flex-col scriptorium-bg scriptorium-frame iron-rivets font-mono-clean"
       onClick={() => inputRef.current?.focus()}
     >
       {/* Title bar */}
@@ -118,7 +118,7 @@ export function Terminal({ state, onSubmit }: TerminalProps) {
       <div className="ember-glow flex items-center gap-2 border-t-2 scriptorium-divider bg-[hsl(0_0%_5%)] px-4 py-2">
         <span className="text-[hsl(var(--terminal-text)/0.85)]">
           user@dungeon:
-          <span className="text-[hsl(var(--terminal-prompt))]">{state.cwd}</span>
+          <span className="text-[hsl(var(--terminal-prompt))] ember-bloom">{state.cwd}</span>
           $
         </span>
         <div className="relative flex-1">
@@ -131,8 +131,7 @@ export function Terminal({ state, onSubmit }: TerminalProps) {
             autoFocus
             spellCheck={false}
             autoComplete="off"
-            className="w-full bg-transparent text-[hsl(var(--terminal-prompt))] outline-none caret-transparent disabled:opacity-60"
-            style={{ textShadow: "0 0 6px hsl(38 100% 50% / 0.45)" }}
+            className="w-full bg-transparent text-[hsl(var(--terminal-prompt))] outline-none caret-transparent disabled:opacity-60 ember-bloom"
             aria-label="Terminal input"
           />
           <span
