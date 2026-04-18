@@ -8,9 +8,7 @@ export default {
     container: {
       center: true,
       padding: "2rem",
-      screens: {
-        "2xl": "1400px",
-      },
+      screens: { "2xl": "1400px" },
     },
     extend: {
       colors: {
@@ -47,6 +45,38 @@ export default {
           DEFAULT: "hsl(var(--card))",
           foreground: "hsl(var(--card-foreground))",
         },
+        stone: {
+          DEFAULT: "hsl(var(--stone))",
+          light: "hsl(var(--stone-light))",
+          dark: "hsl(var(--stone-dark))",
+        },
+        floor: {
+          DEFAULT: "hsl(var(--floor))",
+          alt: "hsl(var(--floor-alt))",
+        },
+        wall: {
+          DEFAULT: "hsl(var(--wall))",
+          edge: "hsl(var(--wall-edge))",
+        },
+        torch: {
+          DEFAULT: "hsl(var(--torch))",
+          glow: "hsl(var(--torch-glow))",
+        },
+        parchment: "hsl(var(--parchment))",
+        door: {
+          DEFAULT: "hsl(var(--door))",
+          frame: "hsl(var(--door-frame))",
+        },
+        player: "hsl(var(--player))",
+        item: "hsl(var(--item))",
+        victory: "hsl(var(--victory))",
+        terminal: {
+          bg: "hsl(var(--terminal-bg))",
+          text: "hsl(var(--terminal-text))",
+          prompt: "hsl(var(--terminal-prompt))",
+          error: "hsl(var(--terminal-error))",
+          dm: "hsl(var(--terminal-dm))",
+        },
         sidebar: {
           DEFAULT: "hsl(var(--sidebar-background))",
           foreground: "hsl(var(--sidebar-foreground))",
@@ -64,26 +94,16 @@ export default {
         sm: "calc(var(--radius) - 4px)",
       },
       keyframes: {
-        "accordion-down": {
-          from: {
-            height: "0",
-          },
-          to: {
-            height: "var(--radix-accordion-content-height)",
-          },
-        },
-        "accordion-up": {
-          from: {
-            height: "var(--radix-accordion-content-height)",
-          },
-          to: {
-            height: "0",
-          },
-        },
+        "accordion-down": { from: { height: "0" }, to: { height: "var(--radix-accordion-content-height)" } },
+        "accordion-up": { from: { height: "var(--radix-accordion-content-height)" }, to: { height: "0" } },
+        "fade-in": { from: { opacity: "0" }, to: { opacity: "1" } },
+        "fade-out": { from: { opacity: "1" }, to: { opacity: "0" } },
       },
       animation: {
         "accordion-down": "accordion-down 0.2s ease-out",
         "accordion-up": "accordion-up 0.2s ease-out",
+        "fade-in": "fade-in 0.4s ease-out",
+        "fade-out": "fade-out 0.4s ease-out forwards",
       },
     },
   },
