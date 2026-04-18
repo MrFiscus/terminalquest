@@ -847,12 +847,14 @@
   transform: translateY(-6px) rotate(-1.4deg) scale(1.03);
 }
 @keyframes lp-quote-fade {
-  0%, 8%    { opacity: 0; transform: translateY(8px); }
-  14%, 86%  { opacity: 1; transform: translateY(0); }
-  92%, 100% { opacity: 0; transform: translateY(-8px); }
+  0%         { opacity: 0; transform: translateY(8px); }
+  3%, 17%    { opacity: 1; transform: translateY(0); }
+  20%, 100%  { opacity: 0; transform: translateY(-8px); }
 }
 .lp-quote {
-  animation: lp-quote-fade 7s ease-in-out infinite;
+  animation-name: lp-quote-fade;
+  animation-timing-function: ease-in-out;
+  animation-iteration-count: infinite;
 }
 @keyframes lp-campfire-flicker {
   0%, 100% { opacity: 0.85; filter: drop-shadow(0 0 6px hsl(33 100% 50% / 0.7)); }
