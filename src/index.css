@@ -933,3 +933,8 @@
   -webkit-text-fill-color: transparent;
   mix-blend-mode: screen;
 }
+
+@keyframes shimmer {
+  from { background-position: 0% 50%; }
+  to { background-position: 200% 50%; }
+}

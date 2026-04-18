@@ -595,9 +595,18 @@ export default function Landing() {
 
         {/* Hero content */}
         <div style={{ position: "relative", zIndex: 5, display: "flex", flexDirection: "column", alignItems: "center", padding: "72px 32px 70px", textAlign: "center" }}>
-          <h1 className="lp-molten-title lp-hero-in" data-text="TERMINAL QUEST" style={{
-            fontSize: "clamp(56px,9vw,128px)", lineHeight: 1, margin: 0, animationDelay: "0ms",
-          }}>
+          <h1
+            className="lp-hero-in bg-clip-text text-transparent bg-[linear-gradient(110deg,#64748b,35%,#f1f5f9,50%,#cbd5e1,65%,#64748b)] bg-[length:200%_100%] animate-[shimmer_3s_linear_infinite] [text-shadow:4px_4px_0_#000,6px_6px_12px_rgba(0,0,0,0.9)] drop-shadow-[0_4px_2px_rgba(0,0,0,0.85)] [-webkit-text-stroke:1px_rgba(15,23,42,0.6)]"
+            style={{
+              fontFamily: "'Cinzel', 'Pirata One', serif",
+              fontWeight: 900,
+              letterSpacing: "0.04em",
+              fontSize: "clamp(56px,9vw,128px)",
+              lineHeight: 1,
+              margin: 0,
+              animationDelay: "0ms",
+            }}
+          >
             TERMINAL QUEST
           </h1>
           <p className="lp-eng lp-hero-in" style={{ fontSize: "clamp(12px,1.8vw,18px)", letterSpacing: "0.32em", marginTop: 22, color: "hsl(0 0%26%)", fontWeight: 600, animationDelay: "220ms" }}>
