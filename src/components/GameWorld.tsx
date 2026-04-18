@@ -234,7 +234,7 @@ export function GameWorld({ state, onDismissPopup }: GameWorldProps) {
                 left: d.x * tileW + tileW / 2,
                 top: d.y * tileH - 16,
                 opacity: brightnessFor(edist(state.player.x, state.player.y, d.x, d.y)),
-                zIndex: 51,
+                zIndex: 30,
               }}
             >
               <span className="label-chip breathe text-[7px]">
@@ -255,7 +255,7 @@ export function GameWorld({ state, onDismissPopup }: GameWorldProps) {
                   top: t.y * tileH - 16,
                   transform: "translateX(-50%)",
                   opacity: brightnessFor(edist(state.player.x, state.player.y, t.x, t.y)),
-                  zIndex: 51,
+                  zIndex: 30,
                 }}
               >
                 <span className="label-chip breathe text-[7px]">torch</span>
@@ -275,7 +275,7 @@ export function GameWorld({ state, onDismissPopup }: GameWorldProps) {
                   width: tileW,
                   height: tileH,
                   opacity: b,
-                  zIndex: 50,
+                  zIndex: 20,
                 }}
                 title={f.name}
               >
@@ -293,15 +293,21 @@ export function GameWorld({ state, onDismissPopup }: GameWorldProps) {
             );
           })}
 
-          {/* Torchlit radial lighting — transparent center, deep charcoal at edges (no mask-composite). */}
+          {/* Vignette — transparent center, dark edges. Pointer-events disabled. */}
+          <div
+            className="pointer-events-none absolute inset-0 light-flicker"
+            style={{
+              background:
+                "radial-gradient(circle at center, transparent 0%, rgba(0,0,0,0.8) 80%)",
+              zIndex: 10,
+            }}
+            aria-hidden
+          />
           {(() => {
+            const torches = room.tiles.filter((t) => t.kind === "torch");
             const playerCx = (state.player.x + 0.5) * tileW;
             const playerCy = (state.player.y + 0.5) * tileH;
             const playerR = TILE * 3.5;
-
-            const torches = room.tiles.filter((t) => t.kind === "torch");
-
-            // Warm radial torchlight tint
             const warmGlow = [
               `radial-gradient(circle at ${playerCx}px ${playerCy}px, rgba(255,150,50,0.18) 0px, rgba(255,150,50,0.10) ${playerR * 0.55}px, rgba(255,150,50,0) ${playerR}px)`,
               ...torches.map((t) => {
@@ -311,41 +317,16 @@ export function GameWorld({ state, onDismissPopup }: GameWorldProps) {
                 return `radial-gradient(circle at ${cx}px ${cy}px, rgba(255,150,50,0.28) 0px, rgba(255,150,50,0.12) ${r * 0.5}px, rgba(255,150,50,0) ${r}px)`;
               }),
             ];
-
-            // Darkness: stack radial gradients that go FROM transparent (center, lit) TO charcoal (edges).
-            // Using "transparent" centers means lit areas remain visible — no mask-composite needed.
-            const playerDark = `radial-gradient(circle at ${playerCx}px ${playerCy}px, rgba(0,0,0,0) 0px, rgba(0,0,0,0) ${TILE * 2.4}px, rgba(10,10,10,0.55) ${TILE * 3.4}px, rgba(10,10,10,0.85) ${TILE * 5}px)`;
-            const torchDarks = torches.map((t) => {
-              const cx = (t.x + 0.5) * tileW;
-              const cy = (t.y + 0.5) * tileH;
-              return `radial-gradient(circle at ${cx}px ${cy}px, rgba(0,0,0,0) 0px, rgba(0,0,0,0) ${TILE * 2}px, rgba(10,10,10,0.4) ${TILE * 3}px, rgba(10,10,10,0) ${TILE * 4.5}px)`;
-            });
-            // Layer order: torch holes on TOP (so they punch through), player hole on BOTTOM as base darkness.
-            const darkness = [...torchDarks, playerDark].join(", ");
-
             return (
-              <>
-                {/* Darkness with light holes — transparent at light sources, charcoal at edges */}
-                <div
-                  className="pointer-events-none absolute inset-0 light-flicker"
-                  style={{
-                    background: darkness,
-                    transition: "background 240ms ease-out",
-                    zIndex: 40,
-                  }}
-                  aria-hidden
-                />
-                {/* Warm torch tint — soft orange wash over lit areas */}
-                <div
-                  className="pointer-events-none absolute inset-0 light-flicker mix-blend-screen"
-                  style={{
-                    background: warmGlow.join(", "),
-                    transition: "background 240ms ease-out",
-                    zIndex: 41,
-                  }}
-                  aria-hidden
-                />
-              </>
+              <div
+                className="pointer-events-none absolute inset-0 light-flicker mix-blend-screen"
+                style={{
+                  background: warmGlow.join(", "),
+                  transition: "background 240ms ease-out",
+                  zIndex: 11,
+                }}
+                aria-hidden
+              />
             );
           })()}
 
@@ -358,7 +339,7 @@ export function GameWorld({ state, onDismissPopup }: GameWorldProps) {
             style={{
               width: tileW,
               height: tileH,
-              zIndex: 50,
+              zIndex: 20,
             }}
           >
             <span className="ground-shadow" aria-hidden />
@@ -369,7 +350,7 @@ export function GameWorld({ state, onDismissPopup }: GameWorldProps) {
           {showMinimap && (
             <div
               className="pointer-events-none absolute right-2 top-2 animate-fade-in"
-              style={{ zIndex: 20 }}
+              style={{ zIndex: 30 }}
             >
               <div
                 className="grid gap-0.5 p-1 bg-stone-slab-edge/90 border border-stone-light/40"
