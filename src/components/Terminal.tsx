@@ -7,20 +7,30 @@ interface TerminalProps {
   onSubmit: (raw: string) => void;
 }
 
-// Colors map: ash white default, ember gold for prompt, soft accents elsewhere.
+// Linux-style coloring: directories bold blue, regular files off-white,
+// executables bold green/cyan. DM/system flavor is italic muted grey.
 const lineClass: Record<TerminalLine["kind"], string> = {
   input: "text-[hsl(var(--terminal-prompt))] ember-bloom",
-  output: "text-[hsl(var(--terminal-text))]",
-  error: "text-[hsl(0_0%_63%)] italic",
-  dm: "text-[hsl(0_0%_63%)] italic",
-  system: "text-[hsl(0_0%_63%)] italic",
-  victory: "text-[hsl(140_60%_60%)] font-semibold",
+  output: "text-[#f3f4f6]",
+  error: "text-[#f87171]",
+  dm: "text-[#9ca3af] italic",
+  system: "text-[#9ca3af] italic",
+  victory: "text-[#4ade80] font-semibold",
 };
 
-function linePrefix(kind: TerminalLine["kind"]): string {
-  if (kind === "output") return "✓ ";
-  if (kind === "error") return "! ";
-  return "";
+// Detect ls-style entries and assign Linux color conventions.
+function lsTokenClass(text: string): string | null {
+  const t = text.trim();
+  if (!t || t === "(empty)") return null;
+  // Directory: ends with "/"
+  if (/\/$/.test(t)) return "text-[#60a5fa] font-bold";
+  // Executable / special: shebang-y or .sh
+  if (/\.(sh|bin|exe|run)$/i.test(t)) return "text-[#4ade80] font-bold";
+  // Symlink-ish (.lnk) — cyan
+  if (/\.(lnk|link)$/i.test(t)) return "text-[#22d3ee] font-bold";
+  // Regular file
+  if (/^[A-Za-z0-9._-]+\.[A-Za-z0-9]+$/.test(t)) return "text-[#f3f4f6]";
+  return null;
 }
 
 export function Terminal({ state, onSubmit }: TerminalProps) {
