@@ -818,3 +818,46 @@
 .lp-floppy-tilt:hover {
   transform: rotate(-2deg) translateY(-2px);
 }
+
+/* ── More landing animations ───────────────────────────────────────── */
+@keyframes lp-tagline-fade {
+  0%, 18%   { opacity: 0; transform: translateY(6px); }
+  24%, 76%  { opacity: 1; transform: translateY(0); }
+  82%, 100% { opacity: 0; transform: translateY(-6px); }
+}
+.lp-tagline {
+  animation: lp-tagline-fade 4s ease-in-out infinite;
+}
+@keyframes lp-scroll-bounce {
+  0%, 100% { transform: translateY(0); opacity: 0.55; }
+  50%      { transform: translateY(6px); opacity: 1; }
+}
+.lp-scroll-cue {
+  animation: lp-scroll-bounce 1.8s ease-in-out infinite;
+}
+@keyframes lp-tablet-float {
+  0%, 100% { transform: translateY(0) rotate(0deg); }
+  50%      { transform: translateY(-4px) rotate(0.4deg); }
+}
+.lp-tablet {
+  animation: lp-tablet-float 4.5s ease-in-out infinite;
+  transition: transform 220ms cubic-bezier(0.2, 0.8, 0.2, 1), box-shadow 220ms ease;
+}
+.lp-tablet:hover {
+  transform: translateY(-6px) rotate(-1.4deg) scale(1.03);
+}
+@keyframes lp-quote-fade {
+  0%, 8%    { opacity: 0; transform: translateY(8px); }
+  14%, 86%  { opacity: 1; transform: translateY(0); }
+  92%, 100% { opacity: 0; transform: translateY(-8px); }
+}
+.lp-quote {
+  animation: lp-quote-fade 7s ease-in-out infinite;
+}
+@keyframes lp-campfire-flicker {
+  0%, 100% { opacity: 0.85; filter: drop-shadow(0 0 6px hsl(33 100% 50% / 0.7)); }
+  50%      { opacity: 1;    filter: drop-shadow(0 0 14px hsl(33 100% 55% / 0.95)); }
+}
+.lp-campfire {
+  animation: lp-campfire-flicker 1.4s ease-in-out infinite alternate;
+}
