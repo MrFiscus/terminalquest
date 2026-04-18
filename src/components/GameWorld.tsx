@@ -34,23 +34,17 @@ function vfxKindFor(vfx: VfxPulse[], x: number, y: number) {
 export function GameWorld({ state, onDismissPopup }: GameWorldProps) {
   const room = getRoom(state.rooms, state.cwd);
   const stageRef = useRef<HTMLDivElement>(null);
-  const [TILE, setTile] = useState(44);
+  const [tileW, setTileW] = useState(44);
+  const [tileH, setTileH] = useState(44);
 
-  // Measure available stage area and pick the largest square tile that fits.
+  // Measure stage and stretch tiles to fully fill it (no padding, no gaps).
   useEffect(() => {
     const el = stageRef.current;
     if (!el || !room) return;
     const compute = () => {
       const r = el.getBoundingClientRect();
-      // Small inset so the pit shadow has breathing room on all sides
-      const padding = 16;
-      const w = Math.max(0, r.width - padding * 2);
-      const h = Math.max(0, r.height - padding * 2);
-      const t = Math.max(
-        MIN_TILE,
-        Math.min(MAX_TILE, Math.floor(Math.min(w / room.width, h / room.height))),
-      );
-      setTile(t);
+      setTileW(Math.max(1, r.width / room.width));
+      setTileH(Math.max(1, r.height / room.height));
     };
     compute();
     const ro = new ResizeObserver(compute);
