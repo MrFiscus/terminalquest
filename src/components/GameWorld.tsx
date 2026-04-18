@@ -359,7 +359,7 @@ export function GameWorld({ state, onDismissPopup }: GameWorldProps) {
 
           {/* Player sprite (framer-motion tile movement) */}
           <motion.div
-            className="pointer-events-none absolute flex items-center justify-center"
+            className="pointer-events-none absolute"
             initial={false}
             animate={{ left: state.player.x * tileW, top: state.player.y * tileH }}
             transition={{ type: "tween", ease: "linear", duration: 0.1 }}
@@ -369,9 +369,15 @@ export function GameWorld({ state, onDismissPopup }: GameWorldProps) {
               zIndex: 20,
             }}
           >
+            {/* Soft ground shadow pinned to floor */}
             <span className="ground-shadow" aria-hidden />
-            <PlayerSprite anim={state.playerAnim} facing={state.playerFacing} size={Math.min(TILE, 48)} />
-
+            {/* Knight anchored so feet sit at the bottom of the tile */}
+            <div
+              className="absolute left-1/2 -translate-x-1/2 flex items-end justify-center"
+              style={{ bottom: 0, width: "100%", height: "100%" }}
+            >
+              <PlayerSprite anim={state.playerAnim} facing={state.playerFacing} size={Math.min(TILE, 48)} />
+            </div>
           </motion.div>
           {/* Mini-map (pwd flash) */}
           {showMinimap && (
