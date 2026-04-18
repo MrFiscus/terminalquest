@@ -17,6 +17,7 @@ dist-ssr
 env/
 supabase/.env.local
 supabase/.temp/
+/assets/
 
 # Editor directories and files
 .vscode/*

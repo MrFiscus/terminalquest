@@ -44,6 +44,12 @@ function vfxKindFor(vfx: VfxPulse[], x: number, y: number) {
   return null;
 }
 
+function tileSpriteFor(isEdge: boolean, hasDoor: boolean, x: number, y: number) {
+  if (hasDoor) return "/assets/dungeon/tiles/door-floor.png";
+  if (isEdge) return "/assets/dungeon/tiles/wall.png";
+  return (x + y) % 5 === 0 ? "/assets/dungeon/tiles/floor-alt.png" : "/assets/dungeon/tiles/floor.png";
+}
+
 export function GameWorld({ state, onDismissPopup }: GameWorldProps) {
   const room = getRoom(state.rooms, state.cwd);
   const stageRef = useRef<HTMLDivElement>(null);
@@ -73,16 +79,20 @@ export function GameWorld({ state, onDismissPopup }: GameWorldProps) {
         const isEdge = x === 0 || y === 0 || x === room.width - 1 || y === room.height - 1;
         const door = room.doors.find((d) => d.x === x && d.y === y);
         const torch = room.tiles.find((t) => t.x === x && t.y === y && t.kind === "torch");
+        const tileSprite = tileSpriteFor(isEdge, Boolean(door), x, y);
         cells.push(
           <div
             key={`${x}-${y}`}
-            className={cn(
-              "relative",
-              isEdge && !door ? "wall-tex wall-brick" : (x + y) % 2 === 0 ? "floor-tex-alt" : "floor-tex",
-              y === 0 && !door ? "wall-cast-shadow" : "",
-            )}
+            className={cn("relative overflow-hidden", y === 0 && !door ? "wall-cast-shadow" : "")}
             style={{ width: tileW, height: tileH }}
           >
+            <img
+              src={tileSprite}
+              alt=""
+              draggable={false}
+              className="absolute inset-0 h-full w-full object-cover"
+              style={{ imageRendering: "pixelated" }}
+            />
             {door && (
               <img
                 src={archwayDoor}
@@ -94,9 +104,12 @@ export function GameWorld({ state, onDismissPopup }: GameWorldProps) {
             {torch && (
               <>
                 <span className="ground-shadow" aria-hidden />
-                <span
-                  className="absolute inset-0 torch-tex torch-flicker"
-                  aria-hidden
+                <img
+                  src="/assets/dungeon/tiles/torch.png"
+                  alt=""
+                  draggable={false}
+                  className="absolute inset-0 h-full w-full object-contain pointer-events-none torch-flicker torch-glow"
+                  style={{ imageRendering: "pixelated" }}
                 />
               </>
             )}
