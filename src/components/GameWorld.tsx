@@ -356,7 +356,9 @@ export function GameWorld({ state, onDismissPopup }: GameWorldProps) {
               zIndex: 10,
             }}
           >
+            <span className="ground-shadow" aria-hidden />
             <PlayerSprite anim={state.playerAnim} facing={state.playerFacing} size={Math.min(TILE, 48)} />
+
           </motion.div>
           {/* Mini-map (pwd flash) */}
           {showMinimap && (
