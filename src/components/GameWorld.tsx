@@ -226,7 +226,7 @@ export function GameWorld({ state, onDismissPopup }: GameWorldProps) {
               style={{
                 left: d.x * tileW + tileW / 2,
                 top: d.y * tileH - 14,
-                opacity: brightnessFor(dist(state.player.x, state.player.y, d.x, d.y)),
+                opacity: brightnessFor(edist(state.player.x, state.player.y, d.x, d.y)),
                 zIndex: 9,
               }}
             >
@@ -238,7 +238,7 @@ export function GameWorld({ state, onDismissPopup }: GameWorldProps) {
 
           {/* Files (items) */}
           {room.files.map((f) => {
-            const b = brightnessFor(dist(state.player.x, state.player.y, f.x, f.y));
+            const b = brightnessFor(edist(state.player.x, state.player.y, f.x, f.y));
             return (
               <div
                 key={f.name}
