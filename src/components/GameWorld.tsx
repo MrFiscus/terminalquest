@@ -44,12 +44,6 @@ function vfxKindFor(vfx: VfxPulse[], x: number, y: number) {
   return null;
 }
 
-function tileSpriteFor(isEdge: boolean, hasDoor: boolean, x: number, y: number) {
-  if (hasDoor) return "/assets/dungeon/tiles/door-floor.png";
-  if (isEdge) return "/assets/dungeon/tiles/wall.png";
-  return (x + y) % 5 === 0 ? "/assets/dungeon/tiles/floor-alt.png" : "/assets/dungeon/tiles/floor.png";
-}
-
 export function GameWorld({ state, onDismissPopup }: GameWorldProps) {
   const room = getRoom(state.rooms, state.cwd);
   const stageRef = useRef<HTMLDivElement>(null);
@@ -79,20 +73,26 @@ export function GameWorld({ state, onDismissPopup }: GameWorldProps) {
         const isEdge = x === 0 || y === 0 || x === room.width - 1 || y === room.height - 1;
         const door = room.doors.find((d) => d.x === x && d.y === y);
         const torch = room.tiles.find((t) => t.x === x && t.y === y && t.kind === "torch");
-        const tileSprite = tileSpriteFor(isEdge, Boolean(door), x, y);
+        const isWall = isEdge && !door;
+        const isAltFloor = !isWall && (x * 7 + y * 13) % 6 === 0;
         cells.push(
           <div
             key={`${x}-${y}`}
             className={cn("relative overflow-hidden", y === 0 && !door ? "wall-cast-shadow" : "")}
-            style={{ width: tileW, height: tileH }}
+            style={{
+              width: tileW,
+              height: tileH,
+              backgroundImage: isWall
+                ? "url(/assets/dungeon/tiles/wall.png)"
+                : `url(/assets/dungeon/tiles/${isAltFloor ? "floor-alt.png" : "floor.png"})`,
+              backgroundSize: "100% 100%",
+              backgroundRepeat: "no-repeat",
+              imageRendering: "pixelated",
+              boxShadow: isWall
+                ? "inset 0 4px 0 hsl(0 0% 100% / 0.10), inset 0 -3px 0 hsl(0 0% 0% / 0.6), inset 0 0 0 1px hsl(0 0% 0% / 0.5)"
+                : "inset 0 0 0 1px hsl(0 0% 0% / 0.35)",
+            }}
           >
-            <img
-              src={tileSprite}
-              alt=""
-              draggable={false}
-              className="absolute inset-0 h-full w-full object-cover"
-              style={{ imageRendering: "pixelated" }}
-            />
             {door && (
               <img
                 src={archwayDoor}
