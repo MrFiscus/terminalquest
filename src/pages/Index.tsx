@@ -1,6 +1,7 @@
 import { GameWorld } from "@/components/GameWorld";
 import { InventoryBar } from "@/components/InventoryBar";
 import { Terminal } from "@/components/Terminal";
+import { BookOfSecrets } from "@/components/BookOfSecrets";
 import { VictoryOverlay } from "@/components/VictoryOverlay";
 import { DifficultyMenu } from "@/components/DifficultyMenu";
 import { WizardPopup } from "@/components/WizardPopup";
@@ -17,6 +18,7 @@ const Index = () => {
   const [activeDifficulty, setActiveDifficulty] = useState<Difficulty | null>(null);
   const [hasEntered, setHasEntered] = useState(false);
   const [linuxFamiliarity, setLinuxFamiliarity] = useState<number | undefined>(undefined);
+  const [bookOpen, setBookOpen] = useState(false);
 
   const loadAIDungeon = async (difficulty: Difficulty, familiarity = linuxFamiliarity) => {
     if (generating || state.animating) return;
@@ -68,6 +70,17 @@ const Index = () => {
           {generating === difficulty ? "..." : difficulty}
         </button>
       ))}
+
+      {/* Book of Secrets button */}
+      <button
+        type="button"
+        onClick={() => setBookOpen(true)}
+        className="stone-tablet-btn"
+        style={{ fontSize: 8, padding: "4px 10px", letterSpacing: "0.08em" }}
+        title="Open the Book of Secrets"
+      >
+        📖 BOOK OF SECRETS
+      </button>
     </div>
   );
 
@@ -97,6 +110,8 @@ const Index = () => {
         />
       )}
       <WizardPopup tip={teachingTip} onDismiss={dismissTeaching} />
+
+      {bookOpen && <BookOfSecrets onClose={() => setBookOpen(false)} />}
     </main>
   );
 };
