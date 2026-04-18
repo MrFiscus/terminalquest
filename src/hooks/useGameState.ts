@@ -36,6 +36,7 @@ function initialState(): GameState {
     commandHistory: [],
     won: false,
     animating: false,
+    transitioning: false,
     vfx: [],
     popup: null,
   };
