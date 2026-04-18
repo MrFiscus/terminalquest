@@ -417,14 +417,57 @@ export default function Landing() {
         </div>
 
         {/* Hero content */}
-        <div style={{ position: "relative", zIndex: 5, display: "flex", flexDirection: "column", alignItems: "center", padding: "80px 32px 88px", textAlign: "center" }}>
+        <div style={{ position: "relative", zIndex: 5, display: "flex", flexDirection: "column", alignItems: "center", padding: "72px 32px 70px", textAlign: "center" }}>
           <h1 className="lp-eng lp-hero-in" style={{ fontSize: "clamp(44px,7.5vw,100px)", lineHeight: 1.05, margin: 0, animationDelay: "0ms" }}>
             TERMINAL QUEST
           </h1>
           <p className="lp-eng lp-hero-in" style={{ fontSize: "clamp(12px,1.8vw,18px)", letterSpacing: "0.32em", marginTop: 22, color: "hsl(0 0%26%)", fontWeight: 600, animationDelay: "220ms" }}>
             ☩ DON'T JUST PLAY THE GAME. WRITE THE REALITY. ☩
           </p>
+
+          {/* Tagline rotator */}
+          <div className="lp-hero-in" style={{ height: 28, marginTop: 18, position: "relative", width: "100%", maxWidth: 560, animationDelay: "420ms" }}>
+            {TAGLINES.map((t, i) => (
+              <span
+                key={i}
+                className="lp-tagline lp-eng"
+                style={{
+                  position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center",
+                  fontSize: "clamp(11px,1.4vw,15px)", letterSpacing: "0.2em",
+                  color: "hsl(38 70% 52%)", fontWeight: 600,
+                  textShadow: "0 0 10px hsl(33 100% 45% / 0.35), 0 1px 0 hsl(0 0% 0% / 0.8)",
+                  animationDelay: `${i * 4}s`,
+                  animationDuration: `${TAGLINES.length * 4}s`,
+                  opacity: 0,
+                }}
+              >
+                {t}
+              </span>
+            ))}
+          </div>
+
+          {/* Hero CTA */}
+          <Link
+            to="/play"
+            className="lp-stone-btn lp-stone-btn-sweep lp-hero-in"
+            style={{ marginTop: 32, padding: "16px 40px", fontSize: "clamp(11px,1.5vw,15px)", animationDelay: "640ms" }}
+          >
+            <span className="lp-eng-glow">▶&nbsp;&nbsp;ENTER THE DUNGEON</span>
+          </Link>
+
+          {/* Scroll cue */}
+          <div className="lp-scroll-cue lp-eng" style={{ marginTop: 56, fontSize: 9, letterSpacing: "0.3em", color: "hsl(0 0% 26%)", fontWeight: 600, display: "flex", flexDirection: "column", alignItems: "center", gap: 4 }}>
+            <span>SCROLL TO PEEK INSIDE</span>
+            <span style={{ fontSize: 14, lineHeight: 1 }}>▼</span>
+          </div>
         </div>
+      </section>
+
+      {/* ══ STAT RIBBON ══════════════════════════════════════════════════════ */}
+      <StatRibbon />
+
+      {/* ══ FEATURED COMMANDS ════════════════════════════════════════════════ */}
+      <CommandsCarousel />
       </section>
 
       {/* ══ 2. DUAL MONITORS ══════════════════════════════════════════════════ */}
