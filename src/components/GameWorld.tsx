@@ -11,6 +11,7 @@ import type { GameState, VfxPulse } from "@/game/types";
 interface GameWorldProps {
   state: GameState;
   onDismissPopup: () => void;
+  headerRight?: React.ReactNode;
 }
 
 const MIN_TILE = 24;
