@@ -65,8 +65,7 @@ export function GameWorld({ state, onDismissPopup }: GameWorldProps) {
             key={`${x}-${y}`}
             className={cn(
               "relative",
-              isEdge && !door ? "wall-tex" : (x + y) % 2 === 0 ? "floor-tex-alt" : "floor-tex",
-              isEdge && !door && "shadow-[inset_0_-2px_0_hsl(var(--wall-edge))]",
+              isEdge && !door ? "wall-tex wall-brick" : (x + y) % 2 === 0 ? "floor-tex-alt" : "floor-tex",
             )}
             style={{ width: tileW, height: tileH }}
           >
