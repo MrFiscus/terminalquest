@@ -4,6 +4,8 @@ import { cn } from "@/lib/utils";
 import { getRoom } from "@/game/dungeon";
 import { PlayerSprite } from "@/components/PlayerSprite";
 import { ScrollPopup } from "@/components/ScrollPopup";
+import archwayDoor from "@/assets/archway-door.png";
+import scrollItem from "@/assets/scroll-item.png";
 import type { GameState, VfxPulse } from "@/game/types";
 
 interface GameWorldProps {
@@ -70,11 +72,12 @@ export function GameWorld({ state, onDismissPopup }: GameWorldProps) {
             style={{ width: tileW, height: tileH }}
           >
             {door && (
-              <div className="absolute inset-1 flex items-center justify-center bg-door border-2 border-door-frame">
-                <span className="font-pixel text-[8px] text-parchment/90">
-                  {door.target === ".." ? "◄" : "►"}
-                </span>
-              </div>
+              <img
+                src={archwayDoor}
+                alt={door.target === ".." ? "exit archway" : `${door.target} archway`}
+                className="absolute inset-0 h-full w-full object-contain pointer-events-none"
+                style={{ imageRendering: "pixelated", transform: "scale(1.15)", transformOrigin: "center bottom" }}
+              />
             )}
             {torch && (
               <span
@@ -239,10 +242,13 @@ export function GameWorld({ state, onDismissPopup }: GameWorldProps) {
                 }}
                 title={f.name}
               >
-                <span className="text-xl drop-shadow-[0_0_6px_hsl(var(--item)/0.6)]">
-                  {f.glyph ?? "▣"}
-                </span>
-                <span className="absolute -bottom-0.5 left-1/2 -translate-x-1/2 font-pixel text-[7px] text-item whitespace-nowrap">
+                <img
+                  src={scrollItem}
+                  alt={f.name}
+                  className="h-[80%] w-[80%] object-contain drop-shadow-[0_0_8px_hsl(var(--gold)/0.55)]"
+                  style={{ imageRendering: "pixelated" }}
+                />
+                <span className="absolute -bottom-1 left-1/2 -translate-x-1/2 font-pixel text-[7px] text-parchment whitespace-nowrap rounded bg-stone-slab-edge/80 px-1 py-0.5 border border-stone-light/30">
                   {f.name}
                 </span>
               </div>
