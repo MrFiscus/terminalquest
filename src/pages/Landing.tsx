@@ -420,10 +420,27 @@ export default function Landing() {
 
       {/* ══ 3. HOW WE PLAY ════════════════════════════════════════════════════ */}
       <StoneSection tint="radial-gradient(ellipse at 50% 0%,hsl(33 60%18%/0.22) 0%,transparent 60%),hsl(0 0%0%/0.22)">
-        <div style={{ padding: "54px 32px 62px", maxWidth: 880, margin: "0 auto" }}>
+        <div style={{ position: "relative", padding: "54px 32px 62px", maxWidth: 880, margin: "0 auto" }}>
+          {/* Ambient breathing glows */}
+          <div className="lp-breathe" style={{ position: "absolute", inset: 0, pointerEvents: "none", background: "radial-gradient(ellipse 60% 50% at 25% 50%,hsl(33 100%50%/0.12) 0%,transparent 60%)" }} />
+          <div className="lp-breathe" style={{ position: "absolute", inset: 0, pointerEvents: "none", background: "radial-gradient(ellipse 60% 50% at 80% 50%,hsl(33 80%45%/0.10) 0%,transparent 60%)", animationDelay: "2s" }} />
+          {/* Embers */}
+          {Array.from({ length: 5 }).map((_, i) => {
+            const left = 8 + (i * 21) % 84;
+            const dur = 7 + (i % 3) * 1.2;
+            const delay = (i * 1.3) % 6;
+            const drift = (i % 2 === 0 ? -1 : 1) * (5 + (i % 3) * 4);
+            return (
+              <span key={i} className="lp-ember" style={{
+                left: `${left}%`, bottom: `${10 + (i * 11) % 35}%`,
+                animationDuration: `${dur}s`, animationDelay: `${delay}s`,
+                ["--ember-drift" as never]: `${drift}px`,
+              }} />
+            );
+          })}
           <SectionTitle>✦ HOW WE PLAY ✦</SectionTitle>
 
-          <div style={{ display: "flex", gap: 36, alignItems: "center" }}>
+          <div style={{ position: "relative", zIndex: 1, display: "flex", gap: 36, alignItems: "center" }}>
             {/* Left: command input + floppy */}
             <div style={{ flex: 1 }}>
               <div className="lp-eng" style={{ fontSize: 10, letterSpacing: "0.22em", color: "hsl(0 0%28%)", fontWeight: 600, marginBottom: 10 }}>YOUR COMMAND</div>
