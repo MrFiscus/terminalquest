@@ -304,8 +304,14 @@ export function GameWorld({ state, onDismissPopup }: GameWorldProps) {
                 <img
                   src={scrollItem}
                   alt={f.name}
-                  className="h-[80%] w-[80%] object-contain drop-shadow-[0_3px_3px_hsl(0_0%_0%/0.7)] drop-shadow-[0_0_8px_hsl(var(--gold)/0.55)]"
-                  style={{ imageRendering: "pixelated" }}
+                  className="object-contain drop-shadow-[0_2px_2px_hsl(0_0%_0%/0.6)] drop-shadow-[0_0_6px_hsl(var(--gold)/0.55)]"
+                  style={{
+                    width: "60%",
+                    height: "60%",
+                    imageRendering: "pixelated",
+                    position: "relative",
+                    zIndex: 1,
+                  }}
                 />
                 <span className="absolute -bottom-1 left-1/2 -translate-x-1/2 label-chip breathe text-[7px]">
                   {f.name}
