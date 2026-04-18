@@ -3,12 +3,15 @@ import { InventoryBar } from "@/components/InventoryBar";
 import { Terminal } from "@/components/Terminal";
 import { VictoryOverlay } from "@/components/VictoryOverlay";
 import { DifficultyMenu } from "@/components/DifficultyMenu";
+import { WizardPopup } from "@/components/WizardPopup";
+import { RoomFlavorSubtitle } from "@/components/RoomFlavorSubtitle";
 import { useGameState } from "@/hooks/useGameState";
 import { generateLevel, type Difficulty } from "@/game/aiLevelService";
+import { adaptationMessage, getWeakCommands } from "@/game/adaptiveDungeon";
 import { useState } from "react";
 
 const Index = () => {
-  const { state, submit, reset, dismissPopup, loadLevel } = useGameState();
+  const { state, submit, reset, dismissPopup, loadLevel, teachingTip, dismissTeaching, roomSubtitle } = useGameState();
   const [generating, setGenerating] = useState<Difficulty | null>(null);
   const [hasEntered, setHasEntered] = useState(false);
 
@@ -16,12 +19,13 @@ const Index = () => {
     if (generating || state.animating) return;
     setGenerating(difficulty);
     try {
+      const weakCommands = getWeakCommands(state.commandStats, 4);
       const level = await generateLevel({
         difficulty,
-        weakCommands: ["find", "mv"],
-        recentMistakes: [],
+        weakCommands,
+        recentMistakes: state.recentMistakes,
       });
-      loadLevel(level, `${difficulty} (${level.rooms.length} rooms)`);
+      loadLevel(level, `${difficulty} (${level.rooms.length} rooms)`, adaptationMessage(weakCommands));
     } finally {
       setGenerating(null);
     }
@@ -31,8 +35,9 @@ const Index = () => {
     return (
       <DifficultyMenu
         busy={Boolean(generating)}
-        onConfirm={() => {
+        onConfirm={(difficulty) => {
           setHasEntered(true);
+          void loadAIDungeon(difficulty);
         }}
       />
     );
@@ -48,7 +53,7 @@ const Index = () => {
 
       <div className="pillar-divider h-full" aria-hidden />
 
-      <section aria-label="Dungeon" className="flex h-full min-h-0 flex-col">
+      <section aria-label="Dungeon" className="relative flex h-full min-h-0 flex-col">
         <div className="flex shrink-0 items-center gap-2 carved-stone-tex border-b-2 border-stone-slab-edge px-3 py-2">
           <span className="font-pixel carved-gold text-[10px] tracking-wider">Claude Dungeon</span>
           {(["easy", "medium", "hard"] as Difficulty[]).map((difficulty) => (
@@ -66,10 +71,18 @@ const Index = () => {
         <div className="min-h-0 flex-1">
           <GameWorld state={state} onDismissPopup={dismissPopup} />
         </div>
+        <RoomFlavorSubtitle text={roomSubtitle} />
         <InventoryBar items={state.inventory} slots={5} />
       </section>
 
-      {state.won && <VictoryOverlay onReset={reset} targetFile={state.targetFile} />}
+      {state.won && (
+        <VictoryOverlay
+          onReset={reset}
+          targetFile={state.targetFile}
+          completionMessage={state.completionMessage}
+        />
+      )}
+      <WizardPopup tip={teachingTip} onDismiss={dismissTeaching} />
     </main>
   );
 };

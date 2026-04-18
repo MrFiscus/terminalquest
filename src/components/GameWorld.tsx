@@ -50,15 +50,14 @@ export function GameWorld({ state, onDismissPopup }: GameWorldProps) {
   const [tileW, setTileW] = useState(44);
   const [tileH, setTileH] = useState(44);
 
-  // Measure stage and fit a SQUARE dungeon centered within available space.
+  // Measure stage and fill the available dungeon panel.
   useEffect(() => {
     const el = stageRef.current;
     if (!el || !room) return;
     const compute = () => {
       const r = el.getBoundingClientRect();
-      const side = Math.max(1, Math.min(r.width, r.height));
-      setTileW(side / room.width);
-      setTileH(side / room.height);
+      setTileW(Math.max(1, r.width / room.width));
+      setTileH(Math.max(1, r.height / room.height));
     };
     compute();
     const ro = new ResizeObserver(compute);
@@ -121,7 +120,7 @@ export function GameWorld({ state, onDismissPopup }: GameWorldProps) {
   const showMinimap = state.vfx.some((v) => v.kind === "pwd");
 
   return (
-    <div className="relative flex h-full flex-col bg-background floor-tex">
+    <div className="relative flex h-full flex-col bg-background stone-tex">
       {/* cd-teleport fade overlay */}
       <AnimatePresence>
         {state.transitioning && (

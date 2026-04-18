@@ -1,4 +1,5 @@
 import { supabase } from "@/integrations/supabase/client";
+import { flavorfulDoorName } from "./dynamicDoorNames";
 
 export interface RoomBlueprintItem {
   name: string;
@@ -69,11 +70,17 @@ function sanitizeBlueprint(value: unknown, fallbackName: string): RoomBlueprint 
       })
     : [];
 
+  const used = new Set<string>();
+  const flavorfulExits = exits.map((exit) => ({
+    ...exit,
+    name: flavorfulDoorName(exit.name, used),
+  }));
+
   return {
     roomName: cleanName(data.roomName, fallbackName),
     goal: typeof data.goal === "string" ? data.goal.slice(0, 80) : "inspect the room",
     visibleItems: items,
-    visibleExits: exits,
+    visibleExits: flavorfulExits,
     requiredCommands: Array.isArray(data.requiredCommands)
       ? data.requiredCommands.filter((cmd): cmd is string => typeof cmd === "string").slice(0, 4)
       : ["ls"],

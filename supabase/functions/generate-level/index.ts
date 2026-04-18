@@ -54,6 +54,11 @@ CONSTRAINTS:
 LEARNING RULES:
 - required must include weak commands
 - goal must involve finding or moving a file
+- adapt visibly to weak commands
+- weak cd: more branching exits
+- weak mv: item movement is central
+- weak ls: rooms reward listing contents
+- weak mkdir: include folder creation in required/hint
 
 OPTIMIZATION:
 - reuse room ids in exits

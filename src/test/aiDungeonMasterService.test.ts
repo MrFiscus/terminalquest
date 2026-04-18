@@ -1,7 +1,9 @@
 import { describe, expect, it } from "vitest";
 import {
+  buildGoalClarifierReply,
   classifyTerminalInput,
   fallbackDungeonMasterReply,
+  isGoalClarifier,
 } from "@/game/aiDungeonMasterService";
 
 describe("aiDungeonMasterService", () => {
@@ -25,5 +27,20 @@ describe("aiDungeonMasterService", () => {
     expect(reply).toContain("ls");
     expect(reply).toContain("cd");
     expect(reply).toContain("mv");
+  });
+
+  it("builds local goal clarifier replies from current objective", () => {
+    expect(isGoalClarifier("what do i do")).toBe(true);
+    expect(isGoalClarifier("what is my goal")).toBe(true);
+
+    const reply = buildGoalClarifierReply({
+      goal: "Find relic.txt and move it into your inventory.",
+      requiredCommands: ["ls", "cd", "mv"],
+      winCondition: "mv relic.txt ~/inventory",
+      currentRoom: "Crypt",
+    });
+
+    expect(reply).toContain("relic.txt");
+    expect(reply).toContain("mv relic.txt ~/inventory");
   });
 });

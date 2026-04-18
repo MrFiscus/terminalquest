@@ -29,6 +29,25 @@ const targetFromWinCondition = (winCondition?: string) => {
 const isLinuxBasicsQuestion = (input: string) =>
   /\b(new|beginner|learn|linux|terminal|command|commands|work|works|explain|how does this)\b/.test(input);
 
+export function isGoalClarifier(input: string): boolean {
+  const normalized = normalizeInput(input);
+  return /\b(what do i do|what now|what is my goal|my goal|goal|objective|quest|win|finish|complete|help)\b/.test(normalized);
+}
+
+export function buildGoalClarifierReply(context: DungeonMasterContext = {}): string {
+  const goal = context.goal || "Find the goal item and move it into your inventory.";
+  const commands = context.requiredCommands ?? [];
+  const target = targetFromWinCondition(context.winCondition);
+
+  if (context.winCondition) {
+    return `Your goal is to move ${target} into your inventory. Seek it, then use \`${context.winCondition}\`.`;
+  }
+
+  const useful = commands.filter((cmd) => ["find", "ls", "cd", "mv", "mkdir"].includes(cmd)).slice(0, 3);
+  const commandText = useful.length ? ` Useful commands: ${useful.join(", ")}.` : "";
+  return `Your goal is: ${goal}.${commandText}`;
+}
+
 export function classifyTerminalInput(input: string): "command-like" | "help-like" {
   const normalized = normalizeInput(input);
   const first = shortCommand(normalized);
@@ -97,6 +116,10 @@ export async function askDungeonMaster(input: string, context: DungeonMasterCont
   const mode: DungeonMasterMode =
     classifyTerminalInput(cleanInput) === "help-like" ? "help-tutor" : "unknown-command";
   const base = shortCommand(cleanInput);
+
+  if (mode === "help-tutor" && isGoalClarifier(cleanInput)) {
+    return buildGoalClarifierReply(context);
+  }
 
   if (mode === "unknown-command" && fallbackReplies[base]) {
     return fallbackReplies[base];

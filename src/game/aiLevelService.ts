@@ -1,10 +1,10 @@
 import { supabase } from "@/integrations/supabase/client";
 import { START_PATH } from "./dungeon";
 import { generateDungeon, type RoomSpec } from "./generator";
-import type { GameState, Room } from "./types";
+import { flavorLevelRoomIds } from "./dynamicDoorNames";
+import type { GameState, LinuxCommand, Room } from "./types";
 
 export type Difficulty = "easy" | "medium" | "hard";
-export type LinuxCommand = "ls" | "cd" | "mkdir" | "pwd" | "cat" | "mv" | "rm" | "find" | "file";
 
 export interface GenerateLevelInput {
   difficulty: Difficulty;
@@ -151,13 +151,14 @@ export function validateLevel(raw: unknown, input: GenerateLevelInput): Omit<Gen
   const goal = typeof data.goal === "string" ? data.goal.slice(0, 80) : "";
   if (!/\b(find|move|mv)\b/i.test(goal)) return null;
 
-  return {
+  const valid = {
     goal,
     required,
     rooms,
     start,
     hint: typeof data.hint === "string" ? data.hint.split(/\s+/).slice(0, 12).join(" ") : "Use ls, find, then mv.",
   };
+  return { ...valid, ...flavorLevelRoomIds(valid.rooms, valid.start) };
 }
 
 export function fallbackLevel(input: GenerateLevelInput): Omit<GeneratedLevel, "roomMap" | "targetFile"> {
@@ -165,8 +166,87 @@ export function fallbackLevel(input: GenerateLevelInput): Omit<GeneratedLevel, "
   const ids = fallbackIds.slice(0, count);
   const weak = input.weakCommands.filter((cmd): cmd is LinuxCommand => validCommands.has(cmd as LinuxCommand));
   const required = unique(["ls", "cd", "file", "find", "mv", ...weak] as LinuxCommand[]);
+  const mainWeak = weak[0];
 
-  return {
+  if (mainWeak === "cd") {
+    const level = {
+      goal: "find and move path-relic.txt",
+      required,
+      start: ids[0],
+      hint: "Choose doors carefully.",
+      rooms: ids.map((id, index) => {
+        if (index === 0) {
+          return {
+            id,
+            items: ["map.txt"],
+            exits: ids.slice(1, Math.min(count, 4)),
+          };
+        }
+        return {
+          id,
+          items: index === count - 1 ? ["path-relic.txt"] : [],
+          exits: unique([ids[0], ids[Math.min(count - 1, index + 1)]].filter((exit) => exit !== id)),
+        };
+      }),
+    };
+    return { ...level, ...flavorLevelRoomIds(level.rooms, level.start) };
+  }
+
+  if (mainWeak === "mv") {
+    const level = {
+      goal: "find and move cargo.txt",
+      required,
+      start: ids[0],
+      hint: "Use mv with ~/inventory.",
+      rooms: ids.map((id, index) => ({
+        id,
+        items: index === count - 1 ? ["cargo.txt"] : [`${id}.txt`],
+        exits: unique([
+          ids[(index + 1) % count],
+          index > 0 ? ids[index - 1] : ids[count - 1],
+        ]),
+      })),
+    };
+    return { ...level, ...flavorLevelRoomIds(level.rooms, level.start) };
+  }
+
+  if (mainWeak === "ls") {
+    const level = {
+      goal: "find and move hidden-note.txt",
+      required,
+      start: ids[0],
+      hint: "List each room first.",
+      rooms: ids.map((id, index) => ({
+        id,
+        items: index === count - 1 ? ["hidden-note.txt"] : [`${id}.scroll`, `${id}.txt`].slice(0, 2),
+        exits: unique([
+          ids[(index + 1) % count],
+          index + 2 < count ? ids[index + 2] : ids[0],
+        ].filter((exit) => exit !== id)),
+      })),
+    };
+    return { ...level, ...flavorLevelRoomIds(level.rooms, level.start) };
+  }
+
+  if (mainWeak === "mkdir") {
+    const level = {
+      goal: "find and move blueprint.txt",
+      required,
+      start: ids[0],
+      hint: "Create a folder if stuck.",
+      rooms: ids.map((id, index) => ({
+        id,
+        items: index === count - 1 ? ["blueprint.txt"] : [],
+        exits: unique([
+          ids[(index + 1) % count],
+          index === 0 && count > 2 ? ids[2] : ids[index > 0 ? index - 1 : count - 1],
+        ].filter((exit) => exit !== id)),
+      })),
+    };
+    return { ...level, ...flavorLevelRoomIds(level.rooms, level.start) };
+  }
+
+  const level = {
     goal: "find and move relic.txt",
     required,
     start: ids[0],
@@ -180,6 +260,7 @@ export function fallbackLevel(input: GenerateLevelInput): Omit<GeneratedLevel, "
       ]),
     })),
   };
+  return { ...level, ...flavorLevelRoomIds(level.rooms, level.start) };
 }
 
 const glyphFor = (name: string) => {
@@ -263,7 +344,7 @@ export async function generateLevel(input: GenerateLevelInput): Promise<Generate
 
 export function levelToStatePatch(level: GeneratedLevel): Pick<
   GameState,
-  "rooms" | "cwd" | "player" | "inventory" | "targetFile" | "goal" | "requiredCommands" | "winCondition" | "won"
+  "rooms" | "cwd" | "player" | "inventory" | "targetFile" | "goal" | "requiredCommands" | "winCondition" | "won" | "completionMessage"
 > {
   const startRoom = level.roomMap[START_PATH];
   return {
@@ -276,5 +357,6 @@ export function levelToStatePatch(level: GeneratedLevel): Pick<
     requiredCommands: level.required,
     winCondition: `mv ${level.targetFile} ~/inventory`,
     won: false,
+    completionMessage: null,
   };
 }

@@ -10,6 +10,8 @@ import {
   generateAIRoomBlueprint,
   glyphForBlueprintItem,
 } from "./aiRoomGeneration";
+import { getWeakCommands } from "./adaptiveDungeon";
+import { generateSmartHint } from "./smartHints";
 import type { CommandResult, GameState } from "./types";
 
 function out(text: string): CommandResult["lines"][number] {
@@ -50,11 +52,18 @@ export async function runCommand(raw: string, state: GameState): Promise<Command
           out("  mkdir <name>           manifest a directory"),
           out("  rm <name>              vanish a file"),
           out("  mv <file> ~/inventory  pick up a file"),
+          out("  hint                   get a contextual nudge"),
           out("  clear                  clear the terminal"),
           out("  help                   this list"),
           out(""),
           out(`Goal: ${state.winCondition}`),
+          dm(`Hint: ${generateSmartHint(state, "light")}`),
         ],
+      };
+
+    case "hint":
+      return {
+        lines: [dm(`Hint: ${generateSmartHint(state, "direct")}`)],
       };
 
     case "clear":
@@ -177,8 +186,8 @@ export async function runCommand(raw: string, state: GameState): Promise<Command
       const blueprint = await generateAIRoomBlueprint({
         roomName: name,
         currentPath: state.cwd,
-        weakCommands: ["ls", "cd", "cat"],
-        recentMistakes: [],
+        weakCommands: getWeakCommands(state.commandStats, 4),
+        recentMistakes: state.recentMistakes,
         difficulty: "normal",
       });
       const childRoom = generateRoom({

@@ -1,4 +1,5 @@
 export type TileKind = "wall" | "floor" | "door" | "torch";
+export type LinuxCommand = "ls" | "cd" | "mkdir" | "pwd" | "cat" | "mv" | "rm" | "find" | "file";
 
 export type Direction =
   | "north"
@@ -79,6 +80,8 @@ export interface GameState {
   playerFacing: PlayerFacing;
   history: TerminalLine[];
   commandHistory: string[];
+  commandStats: Record<LinuxCommand, { uses: number; mistakes: number }>;
+  recentMistakes: string[];
   won: boolean;
   animating: boolean;
   transitioning: boolean;
@@ -87,6 +90,7 @@ export interface GameState {
   goal: string;
   requiredCommands: string[];
   winCondition: string;
+  completionMessage: string | null;
 }
 
 export interface CommandResult {
