@@ -8,13 +8,16 @@ const Index = () => {
   const { state, submit, reset } = useGameState();
 
   return (
-    <main className="relative grid h-screen w-screen grid-cols-1 md:grid-cols-2 overflow-hidden bg-background">
+    <main className="relative grid h-screen w-screen grid-cols-[1fr_14px_1fr] overflow-hidden bg-background">
       <h1 className="sr-only">Terminal Quest — Linux Dungeon RPG</h1>
 
       {/* Left: Terminal */}
       <section aria-label="Terminal" className="h-full min-h-0">
         <Terminal state={state} onSubmit={submit} />
       </section>
+
+      {/* Stone pillar divider */}
+      <div className="pillar-divider h-full" aria-hidden />
 
       {/* Right: Game world + inventory */}
       <section aria-label="Dungeon" className="flex h-full min-h-0 flex-col">

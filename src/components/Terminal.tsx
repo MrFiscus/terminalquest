@@ -16,6 +16,12 @@ const lineClass: Record<TerminalLine["kind"], string> = {
   victory: "text-victory font-pixel text-xs",
 };
 
+function linePrefix(kind: TerminalLine["kind"]): string {
+  if (kind === "output") return "✓ ";
+  if (kind === "error") return "! ";
+  return "";
+}
+
 export function Terminal({ state, onSubmit }: TerminalProps) {
   const [input, setInput] = useState("");
   const [histIndex, setHistIndex] = useState<number | null>(null);
@@ -61,11 +67,16 @@ export function Terminal({ state, onSubmit }: TerminalProps) {
 
   return (
     <div
-      className="relative flex h-full flex-col bg-terminal-bg border-r-2 border-stone-dark"
+      className="relative flex h-full flex-col bg-terminal-bg"
+      style={{
+        border: "8px solid hsl(var(--stone-slab-edge))",
+        boxShadow:
+          "inset 0 0 0 2px hsl(var(--stone-slab)), inset 0 0 60px hsl(var(--torch-glow) / 0.08), inset 0 0 120px hsl(var(--torch-glow) / 0.04), 0 0 24px hsl(0 0% 0% / 0.6)",
+      }}
       onClick={() => inputRef.current?.focus()}
     >
       {/* Title bar */}
-      <div className="flex items-center justify-between px-3 py-2 bg-stone-dark border-b border-border">
+      <div className="flex items-center justify-between px-3 py-2 bg-stone-slab-edge border-b-2 border-stone-slab">
         <div className="flex items-center gap-2">
           <div className="h-3 w-3 rounded-full bg-destructive" />
           <div className="h-3 w-3 rounded-full bg-primary" />
@@ -84,13 +95,14 @@ export function Terminal({ state, onSubmit }: TerminalProps) {
       >
         {state.history.map((line) => (
           <div key={line.id} className={cn("whitespace-pre-wrap", lineClass[line.kind])}>
+            {linePrefix(line.kind)}
             {line.text}
           </div>
         ))}
       </div>
 
       {/* Input row */}
-      <div className="flex items-center gap-2 border-t border-border bg-terminal-bg px-4 py-2 font-mono-pixel">
+      <div className="flex items-center gap-2 border-t-2 border-stone-slab bg-terminal-bg px-4 py-2 font-mono-pixel">
         <span className="text-terminal-prompt">
           user@dungeon:<span className="text-primary">{state.cwd}</span>$
         </span>
@@ -103,10 +115,14 @@ export function Terminal({ state, onSubmit }: TerminalProps) {
           autoFocus
           spellCheck={false}
           autoComplete="off"
-          className="flex-1 bg-transparent text-terminal-text outline-none caret-primary disabled:opacity-60"
+          className="flex-1 bg-transparent text-terminal-text outline-none caret-transparent disabled:opacity-60"
           aria-label="Terminal input"
         />
-        <span className="h-4 w-2 animate-pulse bg-primary" aria-hidden />
+        <span
+          className="inline-block h-4 w-2.5 animate-pulse"
+          style={{ background: "hsl(var(--terminal-prompt))" }}
+          aria-hidden
+        />
       </div>
     </div>
   );
