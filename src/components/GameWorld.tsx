@@ -225,16 +225,35 @@ export function GameWorld({ state, onDismissPopup }: GameWorldProps) {
               className="pointer-events-none absolute label-float"
               style={{
                 left: d.x * tileW + tileW / 2,
-                top: d.y * tileH - 14,
+                top: d.y * tileH - 16,
                 opacity: brightnessFor(edist(state.player.x, state.player.y, d.x, d.y)),
                 zIndex: 9,
               }}
             >
-              <span className="font-pixel text-[7px] text-parchment whitespace-nowrap rounded bg-stone-slab-edge/85 px-1.5 py-0.5 border border-stone-light/30 shadow-[0_2px_4px_hsl(0_0%_0%/0.6)]">
+              <span className="label-chip breathe text-[7px]">
                 {d.target === ".." ? "../" : `${d.target}/`}
               </span>
             </div>
           ))}
+
+          {/* Torch labels */}
+          {room.tiles
+            .filter((t) => t.kind === "torch")
+            .map((t) => (
+              <div
+                key={`torch-label-${t.x}-${t.y}`}
+                className="pointer-events-none absolute label-float"
+                style={{
+                  left: t.x * tileW + tileW / 2,
+                  top: t.y * tileH - 16,
+                  transform: "translateX(-50%)",
+                  opacity: brightnessFor(edist(state.player.x, state.player.y, t.x, t.y)),
+                  zIndex: 9,
+                }}
+              >
+                <span className="label-chip breathe text-[7px]">torch</span>
+              </div>
+            ))}
 
           {/* Files (items) */}
           {room.files.map((f) => {
