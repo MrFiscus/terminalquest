@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { runCommand } from "@/game/commands";
 import { DEFAULT_ROOMS, INVENTORY_PATH, START_PATH, TARGET_FILE } from "@/game/dungeon";
 import { createCommandStats } from "@/game/adaptiveDungeon";
+import { RUNS_STORAGE_KEY } from "@/game/progressStats";
 import type { GameState } from "@/game/types";
 
 function state(): GameState {
@@ -36,7 +37,33 @@ describe("command registry", () => {
     expect((await runCommand("pwd", state())).lines[0].text).toBe(START_PATH);
     expect((await runCommand("echo hello dungeon", state())).lines[0].text).toBe("hello dungeon");
     expect((await runCommand("help", state())).lines.some((line) => line.text.includes("touch <file>"))).toBe(true);
+    expect((await runCommand("help", state())).lines.some((line) => line.text.includes("whoami"))).toBe(true);
     expect((await runCommand("man grep", state())).lines[1].text).toBe("usage: grep <text> [file]");
+  });
+
+  it("opens the profile with whoami", async () => {
+    localStorage.setItem(RUNS_STORAGE_KEY, JSON.stringify([
+      {
+        id: "run-1",
+        difficulty: "medium",
+        startedAt: 1,
+        completedAt: 121000,
+        durationMs: 120000,
+        totalCommands: 4,
+        commands: ["ls", "cd vault", "find relic", "mv relic.txt ~/inventory"],
+        commandCounts: { ls: 1, cd: 1, find: 1, mv: 1 },
+        mistakes: ["cd missing"],
+        roomsVisited: 3,
+        lockedDoorUnlocked: true,
+        lockedDoorsUnlocked: 1,
+        keysFound: 1,
+        targetFile: "relic.txt",
+      },
+    ]));
+
+    const result = await runCommand("whoami", state());
+    expect(result.lines[0].text).toBe("Opening your adventurer profile...");
+    expect(result.openProfile).toBe(true);
   });
 
   it("creates, reads, copies, and searches files", async () => {

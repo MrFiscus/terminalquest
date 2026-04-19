@@ -16,7 +16,8 @@ export type LinuxCommand =
   | "grep"
   | "help"
   | "hint"
-  | "man";
+  | "man"
+  | "whoami";
 
 export type Direction =
   | "north"
@@ -147,5 +148,6 @@ export interface CommandResult {
   clear?: boolean;
   vfx?: Omit<VfxPulse, "id" | "expiresAt"> & { durationMs?: number };
   popup?: { title: string; body: string };
+  openProfile?: boolean;
   unknown?: string;
 }

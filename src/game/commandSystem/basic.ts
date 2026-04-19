@@ -30,5 +30,13 @@ export const basicCommands: CommandDefinition[] = [
     usage: "hint",
     run: (_args, { state }) => ({ lines: [dm(`Hint: ${generateSmartHint(state, "direct")}`)] }),
   },
+  {
+    name: "whoami",
+    description: "Show your adventurer profile and command mastery.",
+    usage: "whoami",
+    run: () => ({
+      lines: [out("Opening your adventurer profile...")],
+      openProfile: true,
+    }),
+  },
 ];
-

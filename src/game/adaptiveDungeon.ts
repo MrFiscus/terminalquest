@@ -18,6 +18,7 @@ const commands: LinuxCommand[] = [
   "help",
   "hint",
   "man",
+  "whoami",
 ];
 const commandSet = new Set(commands);
 
@@ -81,6 +82,7 @@ export function adaptationMessage(weakCommands: LinuxCommand[]): string | null {
     help: "The old manuals stir... ask for help when the command list fades.",
     hint: "The Dungeon Master leans closer... seek a hint when the trail grows cold.",
     man: "The manual stones awaken... read a command before casting it.",
+    whoami: "The mirror rune glows... inspect your progress to see what to practice next.",
   };
   return messages[main];
 }

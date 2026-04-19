@@ -2,6 +2,7 @@ import { GameWorld } from "@/components/GameWorld";
 import { InventoryBar } from "@/components/InventoryBar";
 import { Terminal } from "@/components/Terminal";
 import { BookOfSecrets } from "@/components/BookOfSecrets";
+import { ProfileModal } from "@/components/ProfileModal";
 import { VictoryOverlay } from "@/components/VictoryOverlay";
 import { DifficultyMenu } from "@/components/DifficultyMenu";
 import { WizardPopup } from "@/components/WizardPopup";
@@ -10,10 +11,15 @@ import { useGameState } from "@/hooks/useGameState";
 import { generateLevel, type Difficulty } from "@/game/aiLevelService";
 import { adaptationMessage, getWeakCommands } from "@/game/adaptiveDungeon";
 import { cn } from "@/lib/utils";
-import { useState } from "react";
+import { useCallback, useState } from "react";
+import { UserRound } from "lucide-react";
 
 const Index = () => {
-  const { state, submit, reset, dismissPopup, loadLevel, teachingTip, dismissTeaching, roomSubtitle } = useGameState();
+  const [profileOpen, setProfileOpen] = useState(false);
+  const openProfile = useCallback(() => setProfileOpen(true), []);
+  const { state, submit, reset, dismissPopup, loadLevel, teachingTip, dismissTeaching, roomSubtitle } = useGameState({
+    onOpenProfile: openProfile,
+  });
   const [generating, setGenerating] = useState<Difficulty | null>(null);
   const [activeDifficulty, setActiveDifficulty] = useState<Difficulty | null>(null);
   const [hasEntered, setHasEntered] = useState(false);
@@ -71,23 +77,34 @@ const Index = () => {
         </button>
       ))}
 
-      {/* Book of Secrets button */}
-      <button
-        type="button"
-        onClick={() => setBookOpen(true)}
-        className="stone-tablet-btn"
-        style={{ fontSize: 8, padding: "4px 10px", letterSpacing: "0.08em" }}
-        title="Open the Book of Secrets"
-      >
-        📖 BOOK OF SECRETS
-      </button>
+      <div className="flex items-center gap-2">
+        {/* Book of Secrets button */}
+        <button
+          type="button"
+          onClick={() => setBookOpen(true)}
+          className="stone-tablet-btn"
+          style={{ fontSize: 8, padding: "4px 10px", letterSpacing: "0.08em" }}
+          title="Open the Book of Secrets"
+        >
+          📖 BOOK OF SECRETS
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setProfileOpen(true)}
+          aria-label="Open profile"
+          title="Open profile"
+          className="z-[60] flex h-10 w-10 items-center justify-center rounded-full border border-amber-500 bg-gray-900 text-amber-300 shadow-[0_0_0_hsl(38_92%_50%/0)] transition hover:scale-105 hover:shadow-[0_0_18px_hsl(38_92%_50%/0.75)]"
+        >
+          <UserRound className="h-5 w-5" aria-hidden />
+        </button>
+      </div>
     </div>
   );
 
   return (
     <main className="relative grid h-screen w-screen grid-cols-[40vw_4px_60vw] overflow-hidden bg-background">
       <h1 className="sr-only">Terminal Quest - Linux Dungeon RPG</h1>
-
       <section aria-label="Terminal" className="h-full min-h-0">
         <Terminal state={state} onSubmit={submit} />
       </section>
@@ -112,6 +129,7 @@ const Index = () => {
       <WizardPopup tip={teachingTip} onDismiss={dismissTeaching} />
 
       {bookOpen && <BookOfSecrets onClose={() => setBookOpen(false)} />}
+      {profileOpen && <ProfileModal onClose={() => setProfileOpen(false)} />}
     </main>
   );
 };

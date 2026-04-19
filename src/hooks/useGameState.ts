@@ -20,6 +20,7 @@ import { teachingForCommandInput, type TeachingTip } from "@/game/commandTeachin
 import { magicLineForCommandInput } from "@/game/commandMagic";
 import { roomFlavor } from "@/game/roomFlavor";
 import { levelCompletionLine } from "@/game/levelCompletion";
+import { appendRun, baseCommand, countCommands, type RunRecord } from "@/game/progressStats";
 import {
   createPerformanceSummary,
   personalityReaction,
@@ -35,6 +36,34 @@ import type {
 
 const STEP_MS = 110;
 const PICKUP_MS = 520;
+
+interface RunTracker {
+  difficulty: string;
+  startedAt: number;
+  commands: string[];
+  mistakes: string[];
+  visitedRooms: Set<string>;
+  keysFound: number;
+  lockedDoorsUnlocked: number;
+  completed: boolean;
+}
+
+interface UseGameStateOptions {
+  onOpenProfile?: () => void;
+}
+
+function createRunTracker(difficulty = "default"): RunTracker {
+  return {
+    difficulty,
+    startedAt: Date.now(),
+    commands: [],
+    mistakes: [],
+    visitedRooms: new Set([START_PATH]),
+    keysFound: 0,
+    lockedDoorsUnlocked: 0,
+    completed: false,
+  };
+}
 
 function initialState(): GameState {
   const rooms = createDefaultRooms();
@@ -76,7 +105,8 @@ function facingFor(dx: number, dy: number): PlayerFacing | null {
   return dy > 0 ? "down" : "up";
 }
 
-export function useGameState() {
+export function useGameState(options: UseGameStateOptions = {}) {
+  const { onOpenProfile } = options;
   const [state, setState] = useState<GameState>(initialState);
   const [teachingTip, setTeachingTip] = useState<TeachingTip | null>(null);
   const [roomSubtitle, setRoomSubtitle] = useState<string | null>(null);
@@ -86,10 +116,35 @@ export function useGameState() {
   const magicCommandsRef = useRef(new Set<string>());
   const teachingTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const roomSubtitleTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const runTrackerRef = useRef<RunTracker>(createRunTracker());
   const stateRef = useRef(state);
   stateRef.current = state;
 
   const nextId = () => ++idRef.current;
+
+  const completeRun = useCallback((targetFile: string) => {
+    const tracker = runTrackerRef.current;
+    if (tracker.completed) return;
+    tracker.completed = true;
+    const completedAt = Date.now();
+    const run: RunRecord = {
+      id: `${completedAt}-${Math.random().toString(36).slice(2, 8)}`,
+      difficulty: tracker.difficulty,
+      startedAt: tracker.startedAt,
+      completedAt,
+      durationMs: completedAt - tracker.startedAt,
+      totalCommands: tracker.commands.length,
+      commands: [...tracker.commands],
+      commandCounts: countCommands(tracker.commands),
+      mistakes: [...tracker.mistakes],
+      roomsVisited: tracker.visitedRooms.size,
+      lockedDoorUnlocked: tracker.lockedDoorsUnlocked > 0,
+      lockedDoorsUnlocked: tracker.lockedDoorsUnlocked,
+      keysFound: tracker.keysFound,
+      targetFile,
+    };
+    appendRun(run);
+  }, []);
 
   const appendLines = useCallback((lines: Omit<TerminalLine, "id">[]) => {
     if (!lines.length) return;
@@ -208,9 +263,11 @@ export function useGameState() {
               console.warn(`[applyEffect enterRoom] blocked entry to "${effect.path}" — key "${effect.requiredKey}" not in inventory`);
               return s;
             }
+            runTrackerRef.current.lockedDoorsUnlocked += 1;
           }
 
           const spawn = effect.from === "child" && next.returnSpawn ? next.returnSpawn : next.spawn;
+          runTrackerRef.current.visitedRooms.add(next.path);
           return {
             ...s,
             cwd: next.path,
@@ -230,6 +287,7 @@ export function useGameState() {
           if (!room) return s;
           const file = room.files.find((f) => f.name === effect.fileName);
           if (!file) return s;
+          if (file.type === "key") runTrackerRef.current.keysFound += 1;
           const newRoom = { ...room, files: room.files.filter((f) => f.name !== effect.fileName) };
           return {
             ...s,
@@ -250,6 +308,7 @@ export function useGameState() {
           const file = room.files.find((f) => f.name === effect.fileName);
           if (!file) return s;
           if (file.type === "key") return s;
+          completeRun(effect.fileName);
           const newRoom = { ...room, files: room.files.filter((f) => f.name !== effect.fileName) };
           const completionMessage = levelCompletionLine(effect.fileName, s.goal);
           return {
@@ -271,7 +330,7 @@ export function useGameState() {
         return s;
       });
     },
-    [showRoomSubtitle],
+    [completeRun, showRoomSubtitle],
   );
 
   const submit = useCallback(
@@ -290,6 +349,11 @@ export function useGameState() {
 
       const result = await runCommand(raw, s);
       const failed = Boolean(result.unknown || result.lines.some((line) => line.kind === "error"));
+      const commandName = baseCommand(raw);
+      if (commandName) {
+        runTrackerRef.current.commands.push(raw.trim());
+        if (failed) runTrackerRef.current.mistakes.push(raw.trim());
+      }
       const shouldRememberMistake =
         failed &&
         (Boolean(commandFromInput(raw)) ||
@@ -361,6 +425,11 @@ export function useGameState() {
         ...(reaction.line ? [reaction.line] : []),
       ]);
 
+      if (result.openProfile) {
+        onOpenProfile?.();
+        return;
+      }
+
       if (result.walkTo) {
         setState((cur) => ({ ...cur, animating: true }));
         await animateWalk(result.walkTo);
@@ -383,7 +452,7 @@ export function useGameState() {
         applyEffect(result.effect);
       }
     },
-    [animateWalk, animatePickup, appendLines, applyEffect, triggerTeaching],
+    [animateWalk, animatePickup, appendLines, applyEffect, onOpenProfile, triggerTeaching],
   );
 
   const dismissPopup = useCallback(() => {
@@ -392,6 +461,7 @@ export function useGameState() {
 
   const reset = useCallback(() => {
     idRef.current = 100;
+    runTrackerRef.current = createRunTracker();
     performanceRef.current = createPerformanceSummary();
     taughtCommandsRef.current.clear();
     magicCommandsRef.current.clear();
@@ -403,6 +473,8 @@ export function useGameState() {
   const loadLevel = useCallback((level: GeneratedLevel, label: string, adaptation?: string | null) => {
     const patch = levelToStatePatch(level);
     idRef.current = 100;
+    const difficulty = label.split(/\s+/)[0]?.toLowerCase() || "default";
+    runTrackerRef.current = createRunTracker(difficulty);
     dismissRoomSubtitle();
     const intro: TerminalLine[] = adaptation
       ? [{ id: 1, kind: "dm", text: `Dungeon Master: ${adaptation}` }]
