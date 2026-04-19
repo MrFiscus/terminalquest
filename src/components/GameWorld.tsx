@@ -882,7 +882,6 @@ export function GameWorld({ state, onDismissPopup, headerRight }: GameWorldProps
           {/* ------- Interior wall openings (passable breaks, not command doors) ------- */}
           {interiorDoors.map((d) => {
             const cap = horizontalInteriorCapFor(d.x, d.y);
-            const useNormalDoor = (roomSeed + d.x * 7 + d.y * 11) % 3 === 0;
             return (
             <div
               key={`id-${d.x}-${d.y}`}
@@ -905,19 +904,11 @@ export function GameWorld({ state, onDismissPopup, headerRight }: GameWorldProps
                 }}
               />
               <img
-                src={useNormalDoor ? elementAsset("Door-Closed") : elementAsset("arch-gate")}
+                src={elementAsset("arch-gate")}
                 alt=""
                 draggable={false}
-                className={useNormalDoor ? "absolute object-contain" : "absolute inset-0 h-full w-full object-cover"}
+                className="absolute inset-0 h-full w-full object-cover"
                 style={{
-                  ...(useNormalDoor
-                    ? {
-                        left: "6%",
-                        top: "0%",
-                        width: "88%",
-                        height: "105%",
-                      }
-                    : {}),
                   imageRendering: "pixelated",
                   filter: "drop-shadow(0 4px 4px rgba(0,0,0,0.72))",
                 }}

@@ -20,6 +20,10 @@ type BrowserAudioContext = AudioContext & {
 let ctx: BrowserAudioContext | null = null;
 let master: GainNode | null = null;
 let lastStepAt = 0;
+let ambienceRequested = false;
+let ambienceGain: GainNode | null = null;
+let ambienceOscillators: OscillatorNode[] = [];
+let ambienceTimer: ReturnType<typeof setInterval> | null = null;
 
 function getAudioContext(): BrowserAudioContext | null {
   if (typeof window === "undefined") return null;
@@ -37,7 +41,86 @@ function getAudioContext(): BrowserAudioContext | null {
 export function unlockGameAudio() {
   const audio = getAudioContext();
   if (!audio || audio.state !== "suspended") return;
-  void audio.resume();
+  void audio.resume().then(() => {
+    if (ambienceRequested) ensureAmbience();
+  });
+}
+
+function ensureAmbience() {
+  const audio = getAudioContext();
+  if (!audio || !ambienceRequested || ambienceGain) return;
+
+  ambienceGain = audio.createGain();
+  ambienceGain.gain.setValueAtTime(0.0001, audio.currentTime);
+  ambienceGain.gain.exponentialRampToValueAtTime(0.055, audio.currentTime + 1.8);
+  ambienceGain.connect(master ?? audio.destination);
+
+  const filter = audio.createBiquadFilter();
+  filter.type = "lowpass";
+  filter.frequency.setValueAtTime(420, audio.currentTime);
+  filter.Q.setValueAtTime(0.8, audio.currentTime);
+  filter.connect(ambienceGain);
+
+  const voices: Array<{ frequency: number; type: OscillatorType; detune?: number }> = [
+    { frequency: 55, type: "sine" },
+    { frequency: 82.41, type: "triangle", detune: -8 },
+    { frequency: 110, type: "sine", detune: 6 },
+  ];
+
+  ambienceOscillators = voices.map((voice) => {
+    const osc = audio.createOscillator();
+    osc.type = voice.type;
+    osc.frequency.setValueAtTime(voice.frequency, audio.currentTime);
+    osc.detune.setValueAtTime(voice.detune ?? 0, audio.currentTime);
+    osc.connect(filter);
+    osc.start();
+    return osc;
+  });
+
+  ambienceTimer = setInterval(() => {
+    if (!ambienceRequested) return;
+    const roll = Math.random();
+    if (roll < 0.55) {
+      tone(146.83 + Math.random() * 18, 0.65, 0.025, "sine", -12);
+      tone(220 + Math.random() * 26, 0.9, 0.018, "triangle", 8, 0.16);
+    } else {
+      noise(0.9, 0.018, 260 + Math.random() * 180);
+    }
+  }, 6500);
+}
+
+export function startGameAmbience() {
+  ambienceRequested = true;
+  ensureAmbience();
+}
+
+export function stopGameAmbience() {
+  ambienceRequested = false;
+  const audio = getAudioContext();
+  if (ambienceTimer) {
+    clearInterval(ambienceTimer);
+    ambienceTimer = null;
+  }
+  if (audio && ambienceGain) {
+    ambienceGain.gain.cancelScheduledValues(audio.currentTime);
+    ambienceGain.gain.setValueAtTime(Math.max(0.0001, ambienceGain.gain.value), audio.currentTime);
+    ambienceGain.gain.exponentialRampToValueAtTime(0.0001, audio.currentTime + 0.6);
+  }
+  const oldOscillators = ambienceOscillators;
+  const oldGain = ambienceGain;
+  ambienceOscillators = [];
+  ambienceGain = null;
+  setTimeout(() => {
+    for (const osc of oldOscillators) {
+      try {
+        osc.stop();
+        osc.disconnect();
+      } catch {
+        // Already stopped or disconnected.
+      }
+    }
+    oldGain?.disconnect();
+  }, 700);
 }
 
 function connectGain(audio: AudioContext, start: number, duration: number, volume: number) {
