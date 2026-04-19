@@ -58,7 +58,7 @@ export function WizardDialog({ context, externalMessage }: WizardDialogProps) {
   }, [isChatting, isOpen, message]);
 
   return (
-    <div className="fixed bottom-[84px] right-0 z-40 pointer-events-none flex h-44 w-full max-w-4xl items-end justify-end gap-0 p-2">
+    <div className="fixed bottom-[84px] right-0 z-[80] pointer-events-none flex h-44 w-full max-w-4xl items-end justify-end gap-0 p-2">
       
       {/* Parchment Dialog Box */}
       <AnimatePresence>

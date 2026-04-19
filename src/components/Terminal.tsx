@@ -214,7 +214,7 @@ export function Terminal({ state, onSubmit }: TerminalProps) {
       {/* Title bar — iron plate with rune text */}
       <div className="dungeon-terminal-header">
         <span className="dungeon-terminal-header-text">
-          ⚔ <span style={{ letterSpacing: '0.12em' }}>DUNGEON CHRONICLE</span> ⚔
+          ⚔ <span style={{ letterSpacing: '0.12em' }}>TERMINAL QUEST</span> ⚔
         </span>
         <span className="dungeon-terminal-header-sub">rune·shell</span>
       </div>

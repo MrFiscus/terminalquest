@@ -5,7 +5,6 @@ import { BookOfSecrets } from "@/components/BookOfSecrets";
 import { ProfileModal } from "@/components/ProfileModal";
 import { VictoryOverlay } from "@/components/VictoryOverlay";
 import { DifficultyMenu } from "@/components/DifficultyMenu";
-import { RoomFlavorSubtitle } from "@/components/RoomFlavorSubtitle";
 import { MauQuizOverlay } from "@/components/MauQuizOverlay";
 import { ScrollModal } from "@/components/ScrollModal";
 import { WizardDialog } from "@/components/WizardDialog";
@@ -15,7 +14,6 @@ import { generateLevel, type Difficulty } from "@/game/aiLevelService";
 import { generateDifficultyMechanicLevel } from "@/game/difficultyMechanics";
 import { adaptationMessage, getWeakCommands, type CommandStats } from "@/game/adaptiveDungeon";
 import { startGameAmbience, stopGameAmbience } from "@/game/audio";
-import { cn } from "@/lib/utils";
 import { useCallback, useEffect, useState } from "react";
 import { UserRound } from "lucide-react";
 import { AnimatePresence } from "framer-motion";
@@ -70,6 +68,42 @@ function nextLevelWeakCommands(stats: CommandStats, report?: VictoryReport | nul
   ].filter(Boolean))).slice(0, 8) as LinuxCommand[];
 }
 
+const headerNounNotes: Record<string, string> = {
+  archive: "Dusty shelves lean over narrow paths, hiding clues between old records.",
+  cellar: "Damp stone and low vents make every footstep sound closer than it is.",
+  chamber: "A worked stone room waits in silence, marked by old travel and newer danger.",
+  crypt: "Cold graves and cracked floor tiles make the air feel heavy.",
+  forge: "Scorched brick and rusted tools hint at work abandoned in a hurry.",
+  foyer: "A threshold room opens into branching passages and watchful shadows.",
+  gallery: "Long walls carry banners, scratches, and signs of previous explorers.",
+  hall: "A broad passage pulls your attention toward every doorway at once.",
+  keep: "Reinforced stone and old storage crates make this room feel defended.",
+  library: "Broken stacks and scattered notes turn the room into a puzzle of paper.",
+  observatory: "Dark vents and old markings suggest someone studied the maze from here.",
+  sanctum: "Quiet symbols and candle-stained stone make the room feel deliberate.",
+  vault: "Heavy masonry and guarded corners make this chamber feel important.",
+};
+
+function fallbackRoomNote(roomName: string) {
+  const parts = roomName.split(/[._-]+/).filter(Boolean);
+  const noun = [...parts].reverse().find((part) => headerNounNotes[part]) ?? "chamber";
+  return headerNounNotes[noun];
+}
+
+function roomHeaderNote(room: ReturnType<typeof getRoom>, transientNote: string | null, fallback: string) {
+  if (!room) return fallback;
+  const escapedName = room.name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const escapedPathName = room.path.split("/").pop()?.replace(/[.*+?^${}()|[\]\\]/g, "\\$&") ?? escapedName;
+  const raw = transientNote || room.description || fallback;
+  const cleaned = raw
+    .replace(new RegExp(`^${escapedName}\\s*:\\s*`, "i"), "")
+    .replace(new RegExp(`^You enter\\s+${escapedName}\\.\\s*`, "i"), "")
+    .replace(new RegExp(`^A generated chamber named\\s+${escapedPathName}\\.?\\s*`, "i"), "")
+    .replace(new RegExp(`^A generated chamber named\\s+${escapedName}\\.?\\s*`, "i"), "")
+    .trim();
+  return cleaned || fallbackRoomNote(room.name) || fallback;
+}
+
 const Index = () => {
   const [profileOpen, setProfileOpen] = useState(false);
   const openProfile = useCallback(() => setProfileOpen(true), []);
@@ -97,7 +131,7 @@ const Index = () => {
     if (generating || state.animating) return false;
     setGenerating(difficulty);
     try {
-      const showcaseMode = familiarity === 50;
+      const showcaseMode = familiarity === 0;
       const weakCommands = showcaseMode
         ? ["mkdir", "cd", "ls", "mv"]
         : getWeakCommands(state.commandStats, 4);
@@ -192,7 +226,7 @@ const Index = () => {
   }
 
   const currentRoom = getRoom(state.rooms, state.cwd);
-  const isDemoMode = Boolean(state.showcaseMode || state.difficultyValue === 50);
+  const isDemoMode = Boolean(state.showcaseMode || state.difficultyValue === 0);
   const brokenDoor = currentRoom?.doors.find((door) => door.broken);
   const repairCommand = brokenDoor
     ? state.showcaseMode
@@ -205,39 +239,19 @@ const Index = () => {
           .filter((file) => file.contents && (file.name.endsWith(".txt") || file.name === "scroll"))
           .map((file) => file.name)
       : undefined;
-  const mapSubtitle = roomSubtitle || (
-    currentRoom ? `${currentRoom.name}: ${currentRoom.description}` : state.goal
-  );
+  const mapSubtitle = roomHeaderNote(currentRoom, roomSubtitle, state.goal);
 
-  const difficultyToggles = (
-    <div className="flex items-center gap-1.5">
-      {(["easy", "medium", "hard"] as Difficulty[]).map((difficulty) => (
-        <button
-          key={difficulty}
-          type="button"
-          onClick={() => loadAIDungeon(difficulty)}
-          disabled={Boolean(generating) || state.animating}
-          className={cn(
-            "stone-toggle",
-            activeDifficulty === difficulty && "stone-toggle-active",
-          )}
-          aria-pressed={activeDifficulty === difficulty}
-        >
-          {generating === difficulty ? "..." : difficulty}
-        </button>
-      ))}
-
-      <div className="flex items-center gap-2">
-        <button
-          type="button"
-          onClick={() => setProfileOpen(true)}
-          aria-label="Open profile"
-          title="Open profile"
-          className="z-[60] flex h-10 w-10 items-center justify-center rounded-full border border-amber-500 bg-gray-900 text-amber-300 shadow-[0_0_0_hsl(38_92%_50%/0)] transition hover:scale-105 hover:shadow-[0_0_18px_hsl(38_92%_50%/0.75)]"
-        >
-          <UserRound className="h-5 w-5" aria-hidden />
-        </button>
-      </div>
+  const headerActions = (
+    <div className="flex items-center gap-2">
+      <button
+        type="button"
+        onClick={() => setProfileOpen(true)}
+        aria-label="Open profile"
+        title="Open profile"
+        className="z-[60] flex h-10 w-10 items-center justify-center rounded-full border border-amber-500 bg-gray-900 text-amber-300 shadow-[0_0_0_hsl(38_92%_50%/0)] transition hover:scale-105 hover:shadow-[0_0_18px_hsl(38_92%_50%/0.75)]"
+      >
+        <UserRound className="h-5 w-5" aria-hidden />
+      </button>
     </div>
   );
 
@@ -252,9 +266,13 @@ const Index = () => {
 
       <section aria-label="Dungeon" className="relative flex h-full min-h-0 flex-col">
         <div className="min-h-0 flex-1">
-          <GameWorld state={state} onDismissPopup={dismissPopup} headerRight={difficultyToggles} />
+          <GameWorld
+            state={state}
+            onDismissPopup={dismissPopup}
+            headerRight={headerActions}
+            headerSubtitle={mapSubtitle}
+          />
         </div>
-        <RoomFlavorSubtitle text={mapSubtitle} />
         <InventoryBar items={state.inventory} slots={5} onOpenBook={() => setBookOpen(true)} />
       </section>
 

@@ -181,7 +181,7 @@ export const DifficultyMenu = ({ onConfirm, busy }: DifficultyMenuProps) => {
           </div>
 
           <div className="flex justify-between px-2 text-[#8c8273] font-bold uppercase tracking-widest text-[9px] md:mx-12 md:px-0 md:text-[10px]" style={{ textShadow: "0 1px 0 #000" }}>
-            <span>0<br/><span className="mt-1 block italic text-[#5a5349]">Novice</span></span>
+            <span>0<br/><span className="mt-1 block italic text-[#5a5349]">Demo</span></span>
             <span>100<br/><span className="mt-1 block italic text-[#5a5349]">Archmage</span></span>
           </div>
 

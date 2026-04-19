@@ -12,6 +12,7 @@ interface GameWorldProps {
   state: GameState;
   onDismissPopup: () => void;
   headerRight?: ReactNode;
+  headerSubtitle?: string | null;
 }
 
 const MIN_TILE = 24;
@@ -178,8 +179,10 @@ function pickWallSprite(
 // FLOOR TILE SELECTION
 // ------------------------------------------------------------------
 function floorSpriteFor(x: number, y: number, seed: number) {
-  const roll = (x * 5 + y * 13 + seed) % 41;
-  if (roll === 0) return elementAsset("Floor-Crack");
+  const roll = (x * 5 + y * 13 + seed) % 29;
+  const ventRoll = (x * 23 + y * 29 + seed * 3) % 53;
+  if (ventRoll === 11 || ventRoll === 37) return newAsset("vent-floor");
+  if (roll === 0 || roll === 9 || roll === 21) return elementAsset("Floor-Crack");
   if (roll === 17) return elementAsset("Inscribed-Floor");
   return elementAsset("Floor-Plain");
 }
@@ -214,6 +217,7 @@ function decorSpriteFor(kind: DecorKind, x: number, y: number, seed: number): st
     case "pillar":      return elementAsset("Pillar");
     case "banner":      return elementAsset("Banner");
     case "sack":        return "/assets/dungeon/props/sack.png";
+    case "skull":       return newAsset("skull");
     case "statue":      return elementAsset("Statue");
     default:            return `/assets/dungeon/props/${kind}.png`;
   }
@@ -227,6 +231,7 @@ function decorSizeClass(kind: DecorKind): string {
   if (kind === "chest" || kind === "chest-full" || kind === "chest-empty") return "h-[105%] w-[108%]";
   if (kind === "barrel")       return "h-[112%] w-[108%]";
   if (kind === "crate")        return "h-[105%] w-[102%]";
+  if (kind === "skull")        return "h-[62%] w-[62%]";
   return "h-[92%] w-[92%]";
 }
 
@@ -392,8 +397,28 @@ function horizontalBorderWallFaceStyle(
   };
 }
 
+function middleWallTorchStyle(
+  x: number,
+  y: number,
+  tileW: number,
+  tileH: number,
+): CSSProperties {
+  const width = Math.max(18, tileW * 0.38);
+  const height = Math.max(32, tileH * 0.86);
+  return {
+    position: "absolute",
+    width,
+    height,
+    left: x * tileW + tileW * 0.5 - width / 2,
+    top: y * tileH + tileH * 0.06,
+    zIndex: 27,
+    filter:
+      "brightness(0.72) saturate(0.82) drop-shadow(0 3px 3px rgba(0,0,0,0.62)) drop-shadow(0 0 5px rgba(255,128,32,0.16))",
+  };
+}
+
 // ------------------------------------------------------------------
-export function GameWorld({ state, onDismissPopup, headerRight }: GameWorldProps) {
+export function GameWorld({ state, onDismissPopup, headerRight, headerSubtitle }: GameWorldProps) {
   const room = getRoom(state.rooms, state.cwd);
   const stageRef = useRef<HTMLDivElement>(null);
   const [tileW, setTileW] = useState(44);
@@ -480,7 +505,7 @@ export function GameWorld({ state, onDismissPopup, headerRight }: GameWorldProps
                 src={newAsset("Engraved-Torch-Wall")}
                 alt=""
                 draggable={false}
-                className="absolute inset-0 h-full w-full object-cover torch-glow"
+                className="absolute inset-0 h-full w-full object-cover"
                 style={{
                   imageRendering: "pixelated",
                   transform:
@@ -534,6 +559,16 @@ export function GameWorld({ state, onDismissPopup, headerRight }: GameWorldProps
     const list = (room?.decor ?? []).filter((d) => d.kind === "pillar");
     return list.map((p, i) => ({ x: p.x, y: p.y, hasBanner: i % 2 === 0 }));
   }, [room]);
+
+  const topBannerBlockedColumns = useMemo(() => {
+    const blocked = new Set<number>();
+    for (const pillar of pillars) {
+      blocked.add(pillar.x - 1);
+      blocked.add(pillar.x);
+      blocked.add(pillar.x + 1);
+    }
+    return blocked;
+  }, [pillars]);
 
   const interiorWalls = useMemo(
     () => (room?.decor ?? []).filter((d) => d.kind === "interior-wall"),
@@ -633,6 +668,29 @@ export function GameWorld({ state, onDismissPopup, headerRight }: GameWorldProps
   const hasVerticalWallAt = (x: number, y: number) =>
     interiorRunSet.has(`${x},${y}`) && cellAxis(x, y) === "v";
 
+  const middleTorchCells = useMemo(() => {
+    const doors = new Set(interiorDoors.map((d) => `${d.x},${d.y}`));
+    const candidates = interiorWalls
+      .filter((w) => {
+        if (cellAxis(w.x, w.y) !== "h") return false;
+        if (doors.has(`${w.x},${w.y}`)) return false;
+        if (hasVerticalWallAt(w.x, w.y - 1) || hasVerticalWallAt(w.x, w.y + 1)) return false;
+        const bannerHere = (w.x * 23 + w.y * 29 + roomSeed * 11) % 19 === 4;
+        if (bannerHere) return false;
+        return true;
+      })
+      .map((w) => ({ x: w.x, y: w.y }));
+    if (candidates.length === 0) return [];
+    const offset = roomSeed % 3;
+    const picked = candidates.filter((w, index) => index % 3 === offset);
+    return picked.length > 0 ? picked : [candidates[roomSeed % candidates.length]];
+  }, [interiorDoors, interiorRunSet, interiorWalls, roomSeed]);
+
+  const middleTorchSet = useMemo(
+    () => new Set(middleTorchCells.map((t) => `${t.x},${t.y}`)),
+    [middleTorchCells],
+  );
+
   // topSoil overhang removed — outer ring now uses composite Top-Soil-Wall tiles.
 
   if (!room) {
@@ -642,6 +700,7 @@ export function GameWorld({ state, onDismissPopup, headerRight }: GameWorldProps
   const TILE = Math.min(tileW, tileH);
   const boardW = room.width * tileW;
   const boardH = room.height * tileH;
+  const lightingBleed = Math.max(18, TILE * 0.8);
 
   const showMinimap = state.vfx.some((v) => v.kind === "pwd");
 
@@ -661,12 +720,20 @@ export function GameWorld({ state, onDismissPopup, headerRight }: GameWorldProps
         )}
       </AnimatePresence>
 
-      <div className="flex items-center justify-between gap-3 px-4 py-2 iron-header border-b-2 border-[hsl(var(--terminal-frame))] relative z-10">
-        <div className="flex flex-col min-w-0">
+      <div className="relative z-10 flex items-center justify-between gap-3 overflow-hidden px-4 py-2 iron-header border-b-2 border-[hsl(var(--terminal-frame))]">
+        <div className="relative z-10 flex flex-col min-w-0">
           <span className="font-pixel carved-gold text-[13px] truncate">{room.name}</span>
           <span className="font-pixel text-[10px] text-parchment mt-1 truncate">{room.path}</span>
+          {headerSubtitle && (
+            <span
+              className="mt-1 max-w-[min(44rem,calc(100vw-22rem))] truncate font-mono-clean text-[12px] leading-tight text-parchment"
+              style={{ textShadow: "0 1px 2px rgba(0,0,0,0.95), 0 0 8px rgba(255,204,92,0.18)" }}
+            >
+              {headerSubtitle}
+            </span>
+          )}
         </div>
-        {headerRight}
+        <div className="relative z-10">{headerRight}</div>
       </div>
 
       <div ref={stageRef} className="relative flex-1 overflow-hidden grid place-items-center">
@@ -712,13 +779,21 @@ export function GameWorld({ state, onDismissPopup, headerRight }: GameWorldProps
               const y = side === "top" ? 0 : room.height - 1;
               if (doorByPos.has(`${x},${y}`)) return null;
               const hasTorch = torchSet.has(`${x},${y}`);
+              const fancyRoll = (x * 37 + y * 41 + roomSeed * 5) % 11;
+              const useFancy = !hasTorch && (fancyRoll === 2 || fancyRoll === 7);
               return (
                 <img
                   key={`border-face-${side}-${x}`}
-                  src={hasTorch ? newAsset("Engraved-Torch-Wall") : elementAsset("Normal-Wall")}
+                  src={
+                    hasTorch
+                      ? newAsset("Engraved-Torch-Wall")
+                      : useFancy
+                        ? elementAsset("Fancy-Wall")
+                        : elementAsset("Normal-Wall")
+                  }
                   alt=""
                   draggable={false}
-                  className={cn("pointer-events-none absolute object-cover", hasTorch && "torch-glow")}
+                  className="pointer-events-none absolute object-cover"
                   style={{
                     ...horizontalBorderWallFaceStyle(x, side, room.height, tileW, tileH),
                     imageRendering: "pixelated",
@@ -729,6 +804,34 @@ export function GameWorld({ state, onDismissPopup, headerRight }: GameWorldProps
               );
             }),
           )}
+
+          {/* Wall-hung banners: small cloth accents on top wall faces only. */}
+          {Array.from({ length: Math.max(0, room.width - 2) }, (_, i) => {
+            const x = i + 1;
+            const y = 0;
+            if (doorByPos.has(`${x},${y}`) || torchSet.has(`${x},${y}`)) return null;
+            if (topBannerBlockedColumns.has(x)) return null;
+            const showBanner = (x * 31 + roomSeed * 7) % 17 === 5;
+            if (!showBanner) return null;
+            return (
+              <img
+                key={`top-banner-${x}`}
+                src={elementAsset("Banner")}
+                alt=""
+                draggable={false}
+                className="pointer-events-none absolute object-contain"
+                style={{
+                  left: x * tileW + tileW * 0.2,
+                  top: tileH * 0.38,
+                  width: tileW * 0.6,
+                  height: tileH * 0.76,
+                  imageRendering: "pixelated",
+                  zIndex: 20,
+                  filter: "drop-shadow(0 3px 3px rgba(0,0,0,0.7))",
+                }}
+              />
+            );
+          })}
 
           {/* Bottom corner blocks need the same wall face as the bottom run. */}
           {[0, room.width - 1].map((x) => (
@@ -951,6 +1054,46 @@ export function GameWorld({ state, onDismissPopup, headerRight }: GameWorldProps
                   />
                 )}
               </div>
+            );
+          })}
+
+          {middleTorchCells.map((tile) => (
+            <img
+              key={`middle-torch-flame-${tile.x}-${tile.y}`}
+              src={elementAsset("torch-new")}
+              alt=""
+              draggable={false}
+              className="pointer-events-none absolute"
+              style={middleWallTorchStyle(tile.x, tile.y, tileW, tileH)}
+            />
+          ))}
+
+          {/* Small hanging banners on horizontal interior wall faces. */}
+          {interiorWalls.map((w) => {
+            if (cellAxis(w.x, w.y) !== "h") return null;
+            const joinsVerticalUp = hasVerticalWallAt(w.x, w.y - 1);
+            const joinsVerticalDown = hasVerticalWallAt(w.x, w.y + 1);
+            if (joinsVerticalUp || joinsVerticalDown) return null;
+            if (middleTorchSet.has(`${w.x},${w.y}`)) return null;
+            const showBanner = (w.x * 23 + w.y * 29 + roomSeed * 11) % 19 === 4;
+            if (!showBanner) return null;
+            return (
+              <img
+                key={`middle-banner-${w.x}-${w.y}`}
+                src={elementAsset("Banner")}
+                alt=""
+                draggable={false}
+                className="pointer-events-none absolute object-contain"
+                style={{
+                  left: w.x * tileW + tileW * 0.2,
+                  top: w.y * tileH + tileH * 0.08,
+                  width: tileW * 0.6,
+                  height: tileH * 0.72,
+                  imageRendering: "pixelated",
+                  zIndex: 25,
+                  filter: "drop-shadow(0 3px 3px rgba(0,0,0,0.72))",
+                }}
+              />
             );
           })}
 
@@ -1249,29 +1392,62 @@ export function GameWorld({ state, onDismissPopup, headerRight }: GameWorldProps
 
           {/* ------- Warm torch glow wash ------- */}
           {(() => {
-            const torches = room.tiles.filter((t) => t.kind === "torch");
+            const torches = [
+              ...room.tiles.filter((t) => t.kind === "torch").map((t) => ({ x: t.x, y: t.y, source: "edge" as const })),
+              ...middleTorchCells.map((t) => ({ x: t.x, y: t.y, source: "middle" as const })),
+            ];
             if (torches.length === 0) return null;
             const warmGlow = torches.map((t) => {
-              const cx = (t.x + 0.5) * tileW;
-              const cy = (t.y + 0.5) * tileH;
-              const r = TILE * 3.4;
-              return `radial-gradient(circle at ${cx}px ${cy}px, rgba(255,170,80,0.22) 0px, rgba(255,170,80,0.1) ${r * 0.5}px, rgba(255,170,80,0) ${r}px)`;
+              let cx = (t.x + 0.5) * tileW;
+              let cy = (t.y + 0.5) * tileH;
+              if (t.source === "middle") {
+                cy = (t.y + 0.5) * tileH;
+              } else if (t.y === 0) {
+                cy = tileH * 0.98;
+              } else if (t.y === room.height - 1) {
+                cy = (room.height - 1) * tileH + tileH * 0.62;
+              } else if (t.x === 0) {
+                cx = tileW * 0.72;
+              } else if (t.x === room.width - 1) {
+                cx = (room.width - 1) * tileW + tileW * 0.28;
+              }
+              const r = TILE * (t.source === "middle" ? 2.5 : 3);
+              return `radial-gradient(circle at ${cx}px ${cy}px, rgba(255,205,95,0.33) 0px, rgba(255,132,38,0.15) ${r * 0.38}px, rgba(255,170,80,0) ${r}px)`;
             });
             return (
               <div
-                className="pointer-events-none absolute inset-0 mix-blend-screen"
-                style={{ background: warmGlow.join(", "), zIndex: 11 }}
+                className="pointer-events-none absolute inset-0 mix-blend-screen light-flicker"
+                style={{
+                  background: warmGlow.join(", "),
+                  zIndex: 43,
+                  opacity: 0.8,
+                  bottom: -lightingBleed,
+                }}
                 aria-hidden
               />
             );
           })()}
 
+          {/* ------- Dungeon lighting grade ------- */}
+          <div
+            className="pointer-events-none absolute inset-0"
+            style={{
+              background:
+                "linear-gradient(180deg, rgba(10,12,18,0.34) 0%, rgba(12,10,8,0.1) 42%, rgba(0,0,0,0.3) 100%), radial-gradient(ellipse at 50% 45%, transparent 36%, rgba(0,0,0,0.34) 82%, rgba(0,0,0,0.62) 100%)",
+              boxShadow: "inset 0 0 80px rgba(0,0,0,0.42), inset 0 0 18px rgba(255,138,40,0.08)",
+              zIndex: 42,
+              bottom: -lightingBleed,
+            }}
+            aria-hidden
+          />
+
           {/* ------- Vignette ------- */}
           <div
             className="pointer-events-none absolute inset-0"
             style={{
-              background: "radial-gradient(ellipse at center, transparent 72%, rgba(0,0,0,0.38) 100%)",
-              zIndex: 13,
+              background: "radial-gradient(ellipse at center, transparent 64%, rgba(0,0,0,0.52) 100%)",
+              zIndex: 44,
+              bottom: -lightingBleed,
             }}
             aria-hidden
           />
@@ -1282,7 +1458,7 @@ export function GameWorld({ state, onDismissPopup, headerRight }: GameWorldProps
             initial={false}
             animate={{ left: state.player.x * tileW, top: state.player.y * tileH }}
             transition={{ type: "tween", ease: "linear", duration: 0.1 }}
-            style={{ width: tileW, height: tileH, zIndex: 20 }}
+            style={{ width: tileW, height: tileH, zIndex: 40 }}
           >
             <span className="ground-shadow" aria-hidden />
             <div
@@ -1306,7 +1482,7 @@ export function GameWorld({ state, onDismissPopup, headerRight }: GameWorldProps
                   top: npc.y * tileH,
                   width: tileW,
                   height: tileH,
-                  zIndex: 20,
+                  zIndex: 40,
                 }}
               >
                 <span className="ground-shadow" aria-hidden />
@@ -1331,7 +1507,7 @@ export function GameWorld({ state, onDismissPopup, headerRight }: GameWorldProps
 
           {/* ------- Mini-map ------- */}
           {showMinimap && (
-            <div className="pointer-events-none absolute right-2 top-2 animate-fade-in" style={{ zIndex: 30 }}>
+            <div className="pointer-events-none absolute right-2 top-2 animate-fade-in" style={{ zIndex: 50 }}>
               <div
                 className="grid gap-0.5 p-1 bg-stone-slab-edge/90 border border-stone-light/40"
                 style={{
