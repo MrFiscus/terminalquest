@@ -239,22 +239,10 @@ function Page({
   return (
     <div className="pl-[15px]" style={{
       flex: 1,
-      background: PARCH_BG,
       display: "flex", flexDirection: "column",
       overflow: "hidden", position: "relative",
-      boxShadow: side === "left"
-        ? "inset -14px 0 28px rgba(40,20,5,0.18)"
-        : "inset  14px 0 28px rgba(40,20,5,0.18)",
       ...extraStyle,
     }}>
-      <div style={{
-        position: "absolute", inset: 0, pointerEvents: "none",
-        backgroundImage: `repeating-linear-gradient(
-          0deg,
-          transparent 0, transparent 22px,
-          rgba(90,56,8,0.05) 22px, rgba(90,56,8,0.05) 23px
-        )`,
-      }} />
 
       {spells.length === 0 ? (
         <div style={{
