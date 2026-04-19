@@ -27,6 +27,14 @@ function spec(name: string): RoomSpec {
   };
 }
 
+function resolveDoorPath(path: string, door: DoorTile) {
+  return door.toPath ?? (
+    door.target === ".."
+      ? path.split("/").slice(0, -1).join("/") || "/"
+      : `${path}/${door.target}`
+  );
+}
+
 function dungeonSpecs(): RoomSpec[] {
   return [
     { ...spec("Root Hall"), path: "/home/user", hasParent: false, exits: ["storage-gallery", "vault-room"] },
@@ -37,7 +45,7 @@ function dungeonSpecs(): RoomSpec[] {
 }
 
 describe("generated room architecture", () => {
-  it("adds fuller interior wall layouts with passable inner doors", () => {
+  it("adds fuller interior wall layouts with passable inner openings", () => {
     const room = generateRoom(spec("Storage Gallery"), 3);
     const walls = room.decor?.filter((d) => d.kind === "interior-wall") ?? [];
     const innerDoors = room.decor?.filter((d) => d.kind === "interior-door") ?? [];
@@ -46,6 +54,26 @@ describe("generated room architecture", () => {
     expect(innerDoors.length).toBeGreaterThanOrEqual(2);
     for (const wall of walls) expect(isWalkable(room, wall.x, wall.y)).toBe(false);
     for (const door of innerDoors) expect(isWalkable(room, door.x, door.y)).toBe(true);
+  });
+
+  it("limits generated room exits to four commandable doors", () => {
+    const room = generateRoom({
+      ...spec("Busy Gallery"),
+      exits: ["north", "east", "south", "west", "hidden", "attic"],
+    });
+
+    expect(room.doors.length).toBeLessThanOrEqual(4);
+  });
+
+  it("keeps generated dungeon rooms between two and four useful doors", () => {
+    const rooms = generateDungeon(dungeonSpecs(), "/home/user", 4);
+    for (const room of Object.values(rooms)) {
+      expect(room.doors.length).toBeGreaterThanOrEqual(2);
+      expect(room.doors.length).toBeLessThanOrEqual(4);
+      for (const door of room.doors) {
+        expect(rooms[resolveDoorPath(room.path, door)]).toBeTruthy();
+      }
+    }
   });
 
   it("mixes horizontal and vertical interior wall runs", () => {

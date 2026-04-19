@@ -41,6 +41,7 @@ export interface Tile {
 export interface DoorTile extends Tile {
   kind: "door";
   target: string;
+  toPath?: string;
   locked?: boolean;
   requiredKey?: string;
   broken?: boolean;

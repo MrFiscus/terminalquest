@@ -14,8 +14,9 @@ import { getRoom } from "@/game/dungeon";
 import { type Difficulty } from "@/game/aiLevelService";
 import { generateDifficultyMechanicLevel } from "@/game/difficultyMechanics";
 import { adaptationMessage, getWeakCommands } from "@/game/adaptiveDungeon";
+import { startGameAmbience, stopGameAmbience } from "@/game/audio";
 import { cn } from "@/lib/utils";
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { UserRound } from "lucide-react";
 import { AnimatePresence } from "framer-motion";
 
@@ -34,6 +35,12 @@ const Index = () => {
   const [hasEntered, setHasEntered] = useState(false);
   const [linuxFamiliarity, setLinuxFamiliarity] = useState<number | undefined>(undefined);
   const [bookOpen, setBookOpen] = useState(false);
+
+  useEffect(() => {
+    if (!hasEntered) return;
+    startGameAmbience();
+    return () => stopGameAmbience();
+  }, [hasEntered]);
 
   const loadAIDungeon = async (difficulty: Difficulty, familiarity = linuxFamiliarity) => {
     if (generating || state.animating) return false;

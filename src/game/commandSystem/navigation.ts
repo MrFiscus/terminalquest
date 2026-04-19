@@ -12,12 +12,15 @@ function insideDoorStop(room: { width: number; height: number }, door: { x: numb
   return { x: door.x, y: door.y };
 }
 
-function brokenDoorStop(room: { width: number; height: number }, door: { x: number; y: number }) {
-  if (door.x === 0) return { x: 2, y: door.y };
-  if (door.x === room.width - 1) return { x: room.width - 3, y: door.y };
-  if (door.y === 0) return { x: door.x, y: 2 };
-  if (door.y === room.height - 1) return { x: door.x, y: room.height - 3 };
-  return insideDoorStop(room, door);
+function blockedDoorStop(room: Parameters<typeof isWalkable>[0], door: { x: number; y: number }) {
+  const inside = insideDoorStop(room, door);
+  const away = {
+    x: inside.x + Math.sign(inside.x - door.x),
+    y: inside.y + Math.sign(inside.y - door.y),
+  };
+  if (isWalkable(room, away.x, away.y)) return away;
+  if (isWalkable(room, inside.x, inside.y)) return inside;
+  return undefined;
 }
 
 export const navigationCommands: CommandDefinition[] = [
@@ -44,7 +47,7 @@ export const navigationCommands: CommandDefinition[] = [
       ];
       return {
         lines: entries.length ? entries.map(out) : [out("(empty)")],
-        vfx: { kind: "ls", cells, durationMs: 900 },
+        vfx: { kind: "ls", cells, durationMs: 5000 },
       };
     },
   },
@@ -71,7 +74,8 @@ export const navigationCommands: CommandDefinition[] = [
       if (!door) return { lines: [err(`cd: no such door: ${arg}`)] };
 
       const nextPath =
-        door.target === ".." ? state.cwd.split("/").slice(0, -1).join("/") || "/" : `${state.cwd}/${door.target}`;
+        door.toPath ??
+        (door.target === ".." ? state.cwd.split("/").slice(0, -1).join("/") || "/" : `${state.cwd}/${door.target}`);
       if (!getRoom(state.rooms, nextPath)) {
         return { lines: [err(`cd: the door is sealed: ${arg}`)] };
       }
@@ -91,15 +95,9 @@ export const navigationCommands: CommandDefinition[] = [
         }
       }
       if (liveDoor.broken) {
-        const stopAt = brokenDoorStop(room, liveDoor);
-        const fallbackStop = insideDoorStop(room, liveDoor);
         return {
           lines: [err("The door is broken. You need to repair it.")],
-          walkTo: isWalkable(room, stopAt.x, stopAt.y)
-            ? stopAt
-            : isWalkable(room, fallbackStop.x, fallbackStop.y)
-              ? fallbackStop
-              : undefined,
+          walkTo: blockedDoorStop(room, liveDoor),
         };
       }
       const mauBlocker = (room.npcs ?? []).find((npc) => npc.id === "mau" && npc.blocksDoorTarget === liveDoor.target);
@@ -119,10 +117,9 @@ export const navigationCommands: CommandDefinition[] = [
         const hasKey = state.inventory.some((f) => f.name === liveDoor.requiredKey);
         console.log(`[cd] lock check: hasKey=${hasKey}`);
         if (!hasKey) {
-          const lockedStop = insideDoorStop(room, liveDoor);
           return {
             lines: [err(`The door is locked. You need a key to enter.`)],
-            walkTo: isWalkable(room, lockedStop.x, lockedStop.y) ? lockedStop : undefined,
+            walkTo: blockedDoorStop(room, liveDoor),
           };
         }
         const liveRoom = state.rooms[state.cwd];

@@ -91,7 +91,7 @@ describe("command registry", () => {
     const blocked = await runCommand("cd vault", s);
     expect(blocked.effect).toBeUndefined();
     expect(blocked.lines[0].kind).toBe("error");
-    expect(blocked.walkTo).toEqual({ x: 7, y: 1 });
+    expect(blocked.walkTo).toEqual({ x: 7, y: 2 });
 
     const key = DEFAULT_ROOMS["/home/user/hallway"].files.find((file) => file.name === "skeleton.key");
     expect(key).toBeDefined();
@@ -105,6 +105,30 @@ describe("command registry", () => {
       requiredKey: "skeleton.key",
     });
     expect(unlocked.patch?.rooms?.["/home/user/hallway/antechamber"].doors.find((door) => door.target === "vault")?.locked).toBe(false);
+  });
+
+  it("stops back from broken doors instead of standing on them", async () => {
+    const room = DEFAULT_ROOMS["/home/user/hallway/antechamber"];
+    const brokenRoom = {
+      ...room,
+      doors: room.doors.map((door) =>
+        door.target === "vault" ? { ...door, broken: true, locked: false, requiredKey: undefined } : door,
+      ),
+    };
+    const s = {
+      ...state(),
+      cwd: "/home/user/hallway/antechamber",
+      rooms: {
+        ...DEFAULT_ROOMS,
+        "/home/user/hallway/antechamber": brokenRoom,
+      },
+      player: { ...room.spawn },
+    };
+
+    const blocked = await runCommand("cd vault", s);
+    expect(blocked.effect).toBeUndefined();
+    expect(blocked.lines[0].kind).toBe("error");
+    expect(blocked.walkTo).toEqual({ x: 7, y: 2 });
   });
 
   it("only treats relic.txt as the victory mv target", async () => {

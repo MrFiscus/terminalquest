@@ -34,6 +34,7 @@ import { detectCommandCombo } from "@/game/commandCombos";
 import { buildVictoryReport, liveMentorReaction } from "@/game/liveMentor";
 import { roomFlavor } from "@/game/roomFlavor";
 import { levelCompletionLine } from "@/game/levelCompletion";
+import { playCommandSound, playFootstep, playGameSound, unlockGameAudio } from "@/game/audio";
 import {
   appendRun,
   baseCommand,
@@ -309,6 +310,7 @@ export function useGameState(options: UseGameStateOptions = {}) {
             return resolve();
           }
           const tile = path[i++];
+          playFootstep(i);
           setState((cur) => {
             const dx = tile.x - cur.player.x;
             const dy = tile.y - cur.player.y;
@@ -329,6 +331,7 @@ export function useGameState(options: UseGameStateOptions = {}) {
 
   const animatePickup = useCallback((): Promise<void> => {
     return new Promise((resolve) => {
+      playGameSound("pickup");
       setState((cur) => ({ ...cur, playerAnim: "pickingUp" }));
       setTimeout(() => {
         setState((cur) => ({ ...cur, playerAnim: "idle" }));
@@ -521,6 +524,7 @@ export function useGameState(options: UseGameStateOptions = {}) {
     async (raw: string) => {
       const s = stateRef.current;
       if (s.animating || s.won) return;
+      unlockGameAudio();
 
       appendLines([{ kind: "input", text: `user@dungeon:${s.cwd}$ ${raw}` }]);
 
@@ -578,6 +582,7 @@ export function useGameState(options: UseGameStateOptions = {}) {
         saveActiveRun(activeRunFromTracker(runTrackerRef.current, s.targetFile));
       }
       const commandEffect = runCommandEffect(raw, result, failed);
+      playCommandSound(raw, result, failed);
       const currentRoom = getRoom(s.rooms, s.cwd);
       const brokenDoorFailure =
         failed &&
@@ -806,6 +811,7 @@ export function useGameState(options: UseGameStateOptions = {}) {
       ]);
 
       if (guided && shouldShowCombo) {
+        playGameSound("combo");
         const id = nextId();
         const cells = [{ x: s.player.x, y: s.player.y }];
         setState((cur) => ({ ...cur, vfx: [...cur.vfx, { id, kind: "combo", cells, expiresAt: Date.now() + 1500 }] }));
