@@ -49,16 +49,33 @@ m=${recentMistakes.join(",")}
 COMMANDS:
 ls, cd, mkdir, pwd, cat, mv, rm, find, file
 
-OUTPUT:
-{
-  "goal": "",
-  "required": [],
-  "rooms": [
-    {"id":"","items":[],"exits":[]}
-  ],
-  "start": "",
-  "hint": ""
-}
+	OUTPUT:
+	{
+	  "goal": "",
+	  "required": [],
+	  "rooms": [
+	    {
+	      "id": "",
+	      "items": [{"name": "", "type": "key"}],
+	      "exits": [{"target": "", "locked": true, "requiredKey": ""}]
+	    }
+	  ],
+	  "lockedRoom": "room-id-that-is-locked",
+	  "keyRoom": "room-id-that-has-the-key",
+	  "keyName": "skeleton.key",
+	  "start": "",
+	  "hint": ""
+	}
+	
+	LOCKED DOORS:
+	- One room must have a locked exit requiring a key item
+	- One room must contain a key item with type: "key"
+	- The key must be in a different room than the locked door
+	- The locked room must contain the target file
+	- Use keyName "skeleton.key" unless adapting names is essential
+	- Add "locked": true and "requiredKey": "skeleton.key" to the exit leading to lockedRoom
+	- lockedRoom is the room behind the locked exit
+	- keyRoom is the room containing keyName
 
 CONSTRAINTS:
 - exactly ${roomCount} rooms

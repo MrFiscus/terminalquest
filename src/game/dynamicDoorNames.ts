@@ -64,7 +64,8 @@ export function flavorLevelRoomIds(
   rooms: LevelRoom[],
   start: string,
   seedSalt = "",
-): { rooms: LevelRoom[]; start: string } {
+  metadata: { lockedRoom?: string; keyRoom?: string } = {},
+): { rooms: LevelRoom[]; start: string; lockedRoom?: string; keyRoom?: string } {
   const used = new Set<string>();
   const renamed = new Map<string, string>();
   for (const room of rooms) {
@@ -73,10 +74,16 @@ export function flavorLevelRoomIds(
 
   return {
     start: renamed.get(start) ?? start,
+    lockedRoom: metadata.lockedRoom ? renamed.get(metadata.lockedRoom) ?? metadata.lockedRoom : undefined,
+    keyRoom: metadata.keyRoom ? renamed.get(metadata.keyRoom) ?? metadata.keyRoom : undefined,
     rooms: rooms.map((room) => ({
       ...room,
       id: renamed.get(room.id) ?? room.id,
       exits: room.exits.map((exit) => renamed.get(exit) ?? exit),
+      lockedExits: room.lockedExits?.map((exit) => ({
+        ...exit,
+        target: renamed.get(exit.target) ?? exit.target,
+      })),
     })),
   };
 }

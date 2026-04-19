@@ -3,7 +3,7 @@ import { generateDungeon, type RoomSpec } from "./generator";
 
 export const START_PATH = "/home/user";
 export const INVENTORY_PATH = "/home/user/inventory";
-export const TARGET_FILE = "victory.jpg";
+export const TARGET_FILE = "relic.txt";
 
 const SPECS: RoomSpec[] = [
   {
@@ -17,7 +17,7 @@ const SPECS: RoomSpec[] = [
         name: "readme.txt",
         glyph: "📜",
         contents:
-          "Welcome, adventurer.\nThis dungeon obeys the laws of the shell.\nFolders are doors. Files are loot.\nFind victory.jpg and move it into ~/inventory:\n  mv victory.jpg ~/inventory",
+          "Welcome, adventurer.\nThis dungeon obeys the laws of the shell.\nFolders are doors. Files are loot.\nFind relic.txt and move it into ~/inventory:\n  mv relic.txt ~/inventory",
       },
       { name: "torch", glyph: "🔥", contents: "A wooden torch. Warm to the touch." },
     ],
@@ -25,31 +25,106 @@ const SPECS: RoomSpec[] = [
   {
     path: "/home/user/hallway",
     name: "Stone Hallway",
-    description: "A narrow corridor of mossy bricks. Two doors, two fates.",
+    description: "A narrow corridor of mossy bricks. Something glints on the floor.",
     hasParent: true,
-    exits: ["treasury"],
+    exits: ["antechamber"],
     files: [
+      {
+        name: "skeleton.key",
+        glyph: "🗝",
+        type: "key",
+        contents: "A worn iron key. It must open something nearby.",
+      },
       {
         name: "note.txt",
         glyph: "📜",
-        contents: "Scrawled in chalk: 'The treasury lies onward. Beware the dust.'",
+        contents: "Scrawled in chalk: 'Only the key-bearer may pass the vault door.'",
       },
     ],
   },
   {
-    path: "/home/user/hallway/treasury",
-    name: "Treasury",
-    description: "Gold dust hangs in the air. A single relic gleams.",
+    path: "/home/user/hallway/antechamber",
+    name: "Antechamber",
+    description: "A vaulted room. A heavy iron door bars the way forward.",
+    hasParent: true,
+    exits: ["vault"],
+    files: [
+      {
+        name: "warning.txt",
+        glyph: "📜",
+        contents: "This vault is sealed. Only those bearing the key may enter.",
+      },
+    ],
+  },
+  {
+    path: "/home/user/hallway/antechamber/vault",
+    name: "The Vault",
+    description: "Rows of ancient relics. The air tastes of centuries.",
     hasParent: true,
     exits: [],
     files: [
-      { name: "victory.jpg", glyph: "🏆", contents: "A radiant image of freedom. The way out." },
+      { name: "relic.txt", glyph: "🏆", contents: "A radiant text of legend. The way out." },
       { name: "dust", glyph: "✨", contents: "Just dust. Ancient and shimmering." },
     ],
   },
 ];
 
-export const DEFAULT_ROOMS: Record<string, Room> = generateDungeon(SPECS, START_PATH);
+export function markLockedDoors(
+  rooms: Record<string, Room>,
+  locks: { roomPath: string; target: string; requiredKey: string }[],
+): Record<string, Room> {
+  const result = { ...rooms };
+  for (const lock of locks) {
+    const room = result[lock.roomPath];
+    if (!room) {
+      console.warn(`[markLockedDoors] room not found: "${lock.roomPath}". Available paths:`, Object.keys(rooms));
+      continue;
+    }
+    const before = room.doors.map((d) => `${d.target}(locked=${d.locked})`);
+    result[lock.roomPath] = {
+      ...room,
+      doors: room.doors.map((d) =>
+        d.target === lock.target ? { ...d, locked: true, requiredKey: lock.requiredKey } : d,
+      ),
+    };
+    const after = result[lock.roomPath].doors.map((d) => `${d.target}(locked=${d.locked},key=${d.requiredKey})`);
+    console.log(`[markLockedDoors] ${lock.roomPath} doors BEFORE:`, before, "AFTER:", after);
+  }
+  return result;
+}
+
+const LOCK_SPECS = [
+  { roomPath: "/home/user/hallway/antechamber", target: "vault", requiredKey: "skeleton.key" },
+] as const;
+
+/** Called fresh inside initialState() so locks are applied at React init time, not at module load. */
+export function createDefaultRooms(): Record<string, Room> {
+  const rooms = markLockedDoors(generateDungeon(SPECS, START_PATH), [...LOCK_SPECS]);
+  console.log("[dungeon] all room paths:", Object.keys(rooms));
+
+  // Check 1: Stone Hallway files
+  const hallway = rooms["/home/user/hallway"];
+  console.log("[dungeon] Stone Hallway files[]:", JSON.stringify(hallway?.files));
+
+  // Check 2: Antechamber vault door — JSON.stringify confirms the actual object value, not just a string coercion
+  const antechamber = rooms["/home/user/hallway/antechamber"];
+  console.log("[dungeon] Antechamber doors[]:", JSON.stringify(antechamber?.doors));
+
+  // Check 3: Vault files
+  const vault = rooms["/home/user/hallway/antechamber/vault"];
+  console.log("[dungeon] Vault files[]:", JSON.stringify(vault?.files));
+  console.log("[dungeon] Vault doors[]:", JSON.stringify(vault?.doors));
+
+  const vaultDoorSources = Object.values(rooms)
+    .filter((room) => room.doors.some((door) => door.target === "vault"))
+    .map((room) => room.path);
+  console.log("[dungeon] Vault door sources[]:", JSON.stringify(vaultDoorSources));
+
+  return rooms;
+}
+
+// Kept for any legacy callers; initialState() now calls createDefaultRooms() directly.
+export const DEFAULT_ROOMS: Record<string, Room> = createDefaultRooms();
 
 /** Resolve a cd-style argument against cwd. Returns absolute path. */
 export function resolvePath(cwd: string, arg: string): string {

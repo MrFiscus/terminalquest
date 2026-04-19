@@ -1,4 +1,4 @@
-import { INVENTORY_PATH, findFile, resolvePath } from "../dungeon";
+import { INVENTORY_PATH, TARGET_FILE, findFile, resolvePath } from "../dungeon";
 import { addDoorToRoom } from "../generator";
 import type { Room } from "../types";
 import {
@@ -14,10 +14,12 @@ import {
 } from "./helpers";
 import type { CommandDefinition } from "./types";
 
-function describeFile(name: string) {
+function describeFile(name: string, fileType?: "key") {
+  if (fileType === "key") return "iron key, ancient and heavy";
   const ext = name.includes(".") ? name.split(".").pop() : "";
   if (ext === "jpg") return "JPEG image data, ancient";
   if (ext === "txt") return "ASCII text, scrawled";
+  if (ext === "key") return "iron key, ancient and heavy";
   return "data, mysterious";
 }
 
@@ -69,7 +71,7 @@ export const fileCommands: CommandDefinition[] = [
       const file = findFile(room, name);
       if (!file) return { lines: [err(`file: ${name}: not found`)] };
       return {
-        lines: [out(`${name}: ${describeFile(name)}`)],
+        lines: [out(`${name}: ${describeFile(name, file.type)}`)],
         vfx: { kind: "inspect", cells: [{ x: file.x, y: file.y }], durationMs: 1600 },
       };
     },
@@ -205,17 +207,29 @@ export const fileCommands: CommandDefinition[] = [
     run: (args, { state, room }) => {
       const fileArg = args[0];
       const dest = args[1];
+      console.log(`[mv] win check triggered by file="${fileArg ?? ""}"`);
       if (!fileArg || !dest) return { lines: [err("mv: usage: mv <file> ~/inventory")] };
       const destResolved = resolvePath(state.cwd, dest);
       if (destResolved !== INVENTORY_PATH) return { lines: [err("mv: only ~/inventory is a valid destination")] };
       const file = findFile(room, fileArg);
       if (!file) return { lines: [err(`mv: ${fileArg}: no such file`)] };
+      const pickupEffect = { type: "pickup" as const, fileName: fileArg };
+      if (file.name !== state.targetFile) {
+        console.log(`[mv] file="${fileArg}" targetFile="${state.targetFile}" type="${file.type}" isWin=false`);
+        return {
+          lines: [out(`You stride toward '${fileArg}'...`)],
+          walkTo: { x: file.x, y: file.y },
+          effect: pickupEffect,
+        };
+      }
+      // Key items must never trigger victory — they are tools, not relics.
+      const isWin = file.name === TARGET_FILE && state.targetFile === TARGET_FILE && file.type !== "key";
+      console.log(`[mv] file="${fileArg}" targetFile="${state.targetFile}" type="${file.type}" isWin=${isWin}`);
       return {
         lines: [out(`You stride toward '${fileArg}'...`)],
         walkTo: { x: file.x, y: file.y },
-        effect: fileArg === state.targetFile ? { type: "win" } : { type: "pickup", fileName: fileArg },
+        effect: isWin ? { type: "win", fileName: fileArg } : pickupEffect,
       };
     },
   },
 ];
-

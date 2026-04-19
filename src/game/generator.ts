@@ -36,7 +36,7 @@ export interface RoomSpec {
   /** Child folder names (become doors leading into child rooms). */
   exits: string[];
   /** Files placed on floor tiles. */
-  files: { name: string; glyph?: string; contents?: string }[];
+  files: { name: string; glyph?: string; contents?: string; type?: "key" }[];
   /** Whether this room has a parent (adds a `..` door). */
   hasParent: boolean;
   width?: number;
@@ -235,6 +235,7 @@ export function generateRoom(spec: RoomSpec): Room {
     name: f.name,
     glyph: f.glyph,
     contents: f.contents,
+    type: f.type,
     x: candidates[i].x,
     y: candidates[i].y,
   }));

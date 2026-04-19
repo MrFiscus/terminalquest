@@ -30,6 +30,24 @@ export function generateSmartHint(state: GameState, mode: HintMode = "light"): s
     return `You already carry ${targetName}. The quest should now be complete.`;
   }
 
+  // Guide player toward key when a locked door blocks progress
+  const lockedDoor = room.doors.find((d) => d.locked && d.requiredKey);
+  if (lockedDoor && lockedDoor.requiredKey) {
+    const hasKey = state.inventory.some((f) => f.name === lockedDoor.requiredKey);
+    if (!hasKey) {
+      const keyRoom = Object.values(state.rooms).find((r) =>
+        r.files.some((f) => f.name === lockedDoor.requiredKey),
+      );
+      if (keyRoom) {
+        const step = nextStepToward(state.cwd, keyRoom.path);
+        return mode === "direct"
+          ? `The ${lockedDoor.target} door is locked. Find ${lockedDoor.requiredKey} first. Use \`cd ${step ?? ".."}\` to search for it.`
+          : `A locked door bars entry to ${lockedDoor.target}. The key is somewhere in the dungeon.`;
+      }
+      return `The ${lockedDoor.target} door is locked. You need ${lockedDoor.requiredKey} in your inventory.`;
+    }
+  }
+
   if (targetHere) {
     return mode === "direct"
       ? `${targetName} is in ${room.name}. Use \`mv ${targetName} ~/inventory\` to carry it into your inventory.`

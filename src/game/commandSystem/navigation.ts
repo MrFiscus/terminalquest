@@ -2,6 +2,7 @@ import { findDoor, getRoom, resolvePath } from "../dungeon";
 import { out, relativePath } from "./helpers";
 import type { CommandDefinition } from "./types";
 import { err } from "./helpers";
+import type { CommandResult } from "../types";
 
 export const navigationCommands: CommandDefinition[] = [
   {
@@ -10,7 +11,9 @@ export const navigationCommands: CommandDefinition[] = [
     usage: "ls",
     run: (_args, { room }) => {
       const entries = [
-        ...room.doors.map((door) => `${door.target}/`),
+        ...room.doors.map((door) =>
+          door.locked ? `[locked] ${door.target}/` : `${door.target}/`,
+        ),
         ...room.files.map((file) => file.name),
       ];
       const cells = [
@@ -28,6 +31,10 @@ export const navigationCommands: CommandDefinition[] = [
     description: "Change directory by entering a door.",
     usage: "cd <directory>",
     run: (args, { state, room }) => {
+      console.log(
+        "[cd] current room doors:",
+        state.rooms[state.cwd]?.doors.map((d) => `${d.target}(locked=${d.locked})`),
+      );
       const arg = args[0];
       if (!arg) return { lines: [err("cd: missing argument")] };
       const targetPath = resolvePath(state.cwd, arg);
@@ -46,13 +53,56 @@ export const navigationCommands: CommandDefinition[] = [
       if (!getRoom(state.rooms, nextPath)) {
         return { lines: [err(`cd: the door is sealed: ${arg}`)] };
       }
+
+      // Re-read the door from live state.rooms so we never act on a stale room reference.
+      const liveDoor = state.rooms[state.cwd]?.doors.find((d) => d.target === door.target) ?? door;
+      console.log(`[cd] entering "${liveDoor.target}" | locked=${liveDoor.locked} | requiredKey=${liveDoor.requiredKey} | inventory=[${state.inventory.map((f) => f.name).join(",")}]`);
+
+      let unlockPatch: CommandResult["patch"];
+      if (liveDoor.locked && liveDoor.requiredKey) {
+        const hasKey = state.inventory.some((f) => f.name === liveDoor.requiredKey);
+        console.log(`[cd] lock check: hasKey=${hasKey}`);
+        if (!hasKey) {
+          return {
+            lines: [err(`The door is locked. You need a key to enter.`)],
+            walkTo: { x: liveDoor.x, y: liveDoor.y },
+          };
+        }
+        const liveRoom = state.rooms[state.cwd];
+        if (liveRoom) {
+          unlockPatch = {
+            rooms: {
+              ...state.rooms,
+              [state.cwd]: {
+                ...liveRoom,
+                doors: liveRoom.doors.map((d) =>
+                  d.target === liveDoor.target ? { ...d, locked: false } : d,
+                ),
+              },
+            },
+          };
+        }
+      }
+
+      const isUnlocking = !!(liveDoor.locked && liveDoor.requiredKey);
+      const approachText = isUnlocking
+        ? `You use the ${liveDoor.requiredKey}. The door creaks open...`
+        : `You approach the ${door.target === ".." ? "way back" : door.target} door...`;
+
+      console.log("[cd] isUnlocking=", isUnlocking);
+      console.log("[cd] liveDoor.locked=", liveDoor.locked);
+      console.log("[cd] liveDoor.requiredKey=", liveDoor.requiredKey);
+
       return {
-        lines: [out(`You approach the ${door.target === ".." ? "way back" : door.target} door...`)],
-        walkTo: { x: door.x, y: door.y },
+        lines: [out(approachText)],
+        walkTo: { x: liveDoor.x, y: liveDoor.y },
+        patch: unlockPatch,
         effect: {
           type: "enterRoom",
           path: nextPath,
           from: door.target === ".." ? "child" : "parent",
+          wasLocked: isUnlocking,
+          requiredKey: liveDoor.requiredKey,
         },
       };
     },
@@ -88,4 +138,3 @@ export const navigationCommands: CommandDefinition[] = [
     },
   },
 ];
-

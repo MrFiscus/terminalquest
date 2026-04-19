@@ -1,5 +1,5 @@
 import { supabase } from "@/integrations/supabase/client";
-import { START_PATH } from "./dungeon";
+import { START_PATH, markLockedDoors } from "./dungeon";
 import { generateDungeon, type RoomSpec } from "./generator";
 import { flavorLevelRoomIds } from "./dynamicDoorNames";
 import type { GameState, LinuxCommand, Room } from "./types";
@@ -16,8 +16,19 @@ export interface GenerateLevelInput {
 
 export interface LevelRoom {
   id: string;
-  items: string[];
+  items: Array<LevelItem | string>;
   exits: string[];
+  lockedExits?: LevelLockedExit[];
+}
+
+export interface LevelItem {
+  name: string;
+  type?: "key";
+}
+
+export interface LevelLockedExit {
+  target: string;
+  requiredKey: string;
 }
 
 export interface GeneratedLevel {
@@ -28,6 +39,9 @@ export interface GeneratedLevel {
   hint: string;
   roomMap: Record<string, Room>;
   targetFile: string;
+  lockedRoom?: string;
+  keyRoom?: string;
+  keyName?: string;
 }
 
 type RawLevel = {
@@ -36,6 +50,9 @@ type RawLevel = {
   rooms?: unknown;
   start?: unknown;
   hint?: unknown;
+  lockedRoom?: unknown;
+  keyRoom?: unknown;
+  keyName?: unknown;
 };
 
 const defaultFamiliarityByDifficulty: Record<Difficulty, number> = {
@@ -101,6 +118,35 @@ const cleanId = (value: unknown, fallback: string) => {
 
 const unique = <T,>(values: T[]) => Array.from(new Set(values));
 
+const itemName = (item: LevelItem | string) => typeof item === "string" ? item : item.name;
+
+const normalizeItem = (value: unknown, fallback: string): LevelItem | null => {
+  if (typeof value === "string") return { name: cleanId(value, fallback) };
+  if (!value || typeof value !== "object") return null;
+  const raw = value as Record<string, unknown>;
+  const name = cleanId(raw.name, fallback);
+  return {
+    name,
+    type: raw.type === "key" ? "key" : undefined,
+  };
+};
+
+const normalizeExit = (value: unknown): { target: string; locked?: boolean; requiredKey?: string } | null => {
+  if (typeof value === "string") {
+    const target = cleanId(value, "");
+    return target ? { target } : null;
+  }
+  if (!value || typeof value !== "object") return null;
+  const raw = value as Record<string, unknown>;
+  const target = cleanId(raw.target ?? raw.exit, "");
+  if (!target) return null;
+  return {
+    target,
+    locked: raw.locked === true,
+    requiredKey: typeof raw.requiredKey === "string" ? cleanId(raw.requiredKey, "skeleton.key") : undefined,
+  };
+};
+
 const commandList = (values: unknown): LinuxCommand[] => {
   if (!Array.isArray(values)) return [];
   return unique(values.filter((cmd): cmd is LinuxCommand => validCommands.has(cmd)));
@@ -158,15 +204,22 @@ export function validateLevel(raw: unknown, input: GenerateLevelInput): Omit<Gen
     used.add(id);
 
     const items = Array.isArray(rawRoom.items)
-      ? rawRoom.items.slice(0, 2).map((item, index) => cleanId(item, `item${index + 1}.txt`))
+      ? rawRoom.items.slice(0, 2).map((item, index) => normalizeItem(item, `item${index + 1}.txt`)).filter(Boolean) as LevelItem[]
       : [];
 
-    const exits = Array.isArray(rawRoom.exits)
-      ? unique(rawRoom.exits.map((exit) => cleanId(exit, "")).filter(Boolean)).filter((exit) => exit !== id)
+    const parsedExits = Array.isArray(rawRoom.exits)
+      ? rawRoom.exits.map(normalizeExit).filter(Boolean) as NonNullable<ReturnType<typeof normalizeExit>>[]
       : [];
+    const legacyLockedExits = Array.isArray(rawRoom.lockedExits)
+      ? rawRoom.lockedExits.map(normalizeExit).filter(Boolean) as NonNullable<ReturnType<typeof normalizeExit>>[]
+      : [];
+    const exits = unique(parsedExits.map((exit) => exit.target).filter(Boolean)).filter((exit) => exit !== id);
+    const lockedExits = [...parsedExits, ...legacyLockedExits]
+      .filter((exit) => exit.locked && exit.requiredKey && exit.target !== id)
+      .map((exit) => ({ target: exit.target, requiredKey: exit.requiredKey! }));
 
     if (!exits.length) return null;
-    rooms.push({ id, items, exits });
+    rooms.push({ id, items, exits, lockedExits: lockedExits.length ? lockedExits : undefined });
   }
 
   const ids = new Set(rooms.map((room) => room.id));
@@ -177,6 +230,30 @@ export function validateLevel(raw: unknown, input: GenerateLevelInput): Omit<Gen
   const start = cleanId(data.start, rooms[0].id);
   if (!ids.has(start)) return null;
   if (!hasConnectedRooms(rooms, start)) return null;
+
+  const keyName = cleanId(data.keyName, "skeleton.key");
+  const lockedExit = rooms.flatMap((room) => room.lockedExits ?? [])[0];
+  const lockedRoom = cleanId(data.lockedRoom, lockedExit?.target ?? "");
+  const keyRoom = cleanId(
+    data.keyRoom,
+    rooms.find((room) => room.items.some((item) => typeof item !== "string" && (item.name === keyName || item.type === "key")))?.id ?? "",
+  );
+  if (!ids.has(lockedRoom) || !ids.has(keyRoom)) return null;
+  if (lockedRoom === start || lockedRoom === keyRoom) return null;
+  const lockSourceRoom = rooms.find((room) => room.lockedExits?.some((exit) => exit.target === lockedRoom));
+  if (lockSourceRoom && lockSourceRoom.id === keyRoom) return null;
+  const keyHolder = rooms.find((room) => room.id === keyRoom);
+  if (!keyHolder) return null;
+  if (!keyHolder.items.some((item) => itemName(item) === keyName)) {
+    keyHolder.items = [...keyHolder.items.slice(0, 1), { name: keyName, type: "key" }];
+  } else {
+    keyHolder.items = keyHolder.items.map((item) =>
+      itemName(item) === keyName ? { ...(typeof item === "string" ? { name: item } : item), type: "key" } : item,
+    );
+  }
+  const targetName = targetNameFromLevel({ goal: typeof data.goal === "string" ? data.goal : "", rooms });
+  const targetHolder = rooms.find((room) => room.id === lockedRoom);
+  if (!targetHolder?.items.some((item) => itemName(item) === targetName)) return null;
 
   const weak = input.weakCommands.filter((cmd): cmd is LinuxCommand => validCommands.has(cmd as LinuxCommand));
   const required = unique([...commandList(data.required), ...weak]);
@@ -191,8 +268,63 @@ export function validateLevel(raw: unknown, input: GenerateLevelInput): Omit<Gen
     rooms,
     start,
     hint: typeof data.hint === "string" ? data.hint.split(/\s+/).slice(0, 12).join(" ") : "Use ls, find, then mv.",
+    lockedRoom,
+    keyRoom,
+    keyName,
   };
-  return { ...valid, ...flavorLevelRoomIds(valid.rooms, valid.start, input.generationSeed ?? input.difficulty) };
+  const flavored = flavorLevelRoomIds(valid.rooms, valid.start, input.generationSeed ?? input.difficulty, {
+    lockedRoom,
+    keyRoom,
+  });
+  return { ...valid, ...flavored };
+}
+
+function targetNameFromLevel(level: Pick<GeneratedLevel, "goal" | "rooms">) {
+  const items = level.rooms.flatMap((room) => room.items.map(itemName));
+  const goal = level.goal.toLowerCase();
+  return items.find((item) => goal.includes(item.toLowerCase())) ?? items[items.length - 1] ?? "victory.jpg";
+}
+
+function withFallbackLock<T extends Omit<GeneratedLevel, "roomMap" | "targetFile">>(level: T): T {
+  const lockedRoom = level.rooms.at(-1)?.id;
+  if (!lockedRoom) return level;
+  const lockSource = level.rooms.find((room) => room.id !== lockedRoom && room.exits.includes(lockedRoom)) ?? level.rooms[0];
+  const keyRoom =
+    level.rooms.find((room) => room.id !== lockedRoom && room.id !== lockSource.id)?.id ??
+    level.rooms.find((room) => room.id !== lockedRoom)?.id ??
+    level.start;
+  const keyName = "skeleton.key";
+  const targetFile = targetNameFromLevel(level);
+
+  return {
+    ...level,
+    lockedRoom,
+    keyRoom,
+    keyName,
+    rooms: level.rooms.map((room) => {
+      const keyItems =
+        room.id === keyRoom && !room.items.some((item) => itemName(item) === keyName)
+          ? [...room.items.slice(0, 1), { name: keyName, type: "key" as const }]
+          : room.items.map((item) =>
+              itemName(item) === keyName ? { ...(typeof item === "string" ? { name: item } : item), type: "key" as const } : item,
+            );
+      const targetItems =
+        room.id === lockedRoom && !keyItems.some((item) => itemName(item) === targetFile)
+          ? [...keyItems.slice(0, 1), targetFile]
+          : keyItems;
+      return {
+        ...room,
+        items: targetItems,
+        lockedExits:
+          room.id === lockSource.id
+            ? [
+                ...(room.lockedExits ?? []).filter((exit) => exit.target !== lockedRoom),
+                { target: lockedRoom, requiredKey: keyName },
+              ]
+            : room.lockedExits,
+      };
+    }),
+  };
 }
 
 export function fallbackLevel(input: GenerateLevelInput): Omit<GeneratedLevel, "roomMap" | "targetFile"> {
@@ -228,7 +360,7 @@ export function fallbackLevel(input: GenerateLevelInput): Omit<GeneratedLevel, "
         };
       }),
     };
-    return { ...level, ...flavorLevelRoomIds(level.rooms, level.start, seed) };
+    return withFallbackLock({ ...level, ...flavorLevelRoomIds(level.rooms, level.start, seed) });
   }
 
   if (mainWeak === "mv") {
@@ -246,7 +378,7 @@ export function fallbackLevel(input: GenerateLevelInput): Omit<GeneratedLevel, "
         ]),
       })),
     };
-    return { ...level, ...flavorLevelRoomIds(level.rooms, level.start, seed) };
+    return withFallbackLock({ ...level, ...flavorLevelRoomIds(level.rooms, level.start, seed) });
   }
 
   if (mainWeak === "ls") {
@@ -264,7 +396,7 @@ export function fallbackLevel(input: GenerateLevelInput): Omit<GeneratedLevel, "
         ].filter((exit) => exit !== id)),
       })),
     };
-    return { ...level, ...flavorLevelRoomIds(level.rooms, level.start, seed) };
+    return withFallbackLock({ ...level, ...flavorLevelRoomIds(level.rooms, level.start, seed) });
   }
 
   if (mainWeak === "mkdir") {
@@ -282,7 +414,7 @@ export function fallbackLevel(input: GenerateLevelInput): Omit<GeneratedLevel, "
         ].filter((exit) => exit !== id)),
       })),
     };
-    return { ...level, ...flavorLevelRoomIds(level.rooms, level.start, seed) };
+    return withFallbackLock({ ...level, ...flavorLevelRoomIds(level.rooms, level.start, seed) });
   }
 
   const level = {
@@ -299,7 +431,7 @@ export function fallbackLevel(input: GenerateLevelInput): Omit<GeneratedLevel, "
       ]),
     })),
   };
-  return { ...level, ...flavorLevelRoomIds(level.rooms, level.start, seed) };
+  return withFallbackLock({ ...level, ...flavorLevelRoomIds(level.rooms, level.start, seed) });
 }
 
 const glyphFor = (name: string) => {
@@ -341,21 +473,65 @@ export function levelToRooms(level: Omit<GeneratedLevel, "roomMap" | "targetFile
       description: `A generated chamber named ${room.id}.`,
       hasParent: room.id !== level.start,
       exits: children.get(room.id) ?? [],
-      files: room.items.map((name) => ({
-        name,
-        glyph: glyphFor(name),
-        contents: `${level.goal}\n\nHint: ${level.hint}`,
-      })),
+      files: room.items.map((item) => {
+        const name = itemName(item);
+        return {
+          name,
+          glyph: glyphFor(name),
+          type: typeof item === "string" ? undefined : item.type,
+          contents: `${level.goal}\n\nHint: ${level.hint}`,
+        };
+      }),
     };
   });
 
-  return generateDungeon(specs, START_PATH);
+  return markLevelLocks(level, generateDungeon(specs, START_PATH));
 }
 
 function targetFromLevel(level: Omit<GeneratedLevel, "roomMap" | "targetFile">) {
-  const items = level.rooms.flatMap((room) => room.items);
-  const goal = level.goal.toLowerCase();
-  return items.find((item) => goal.includes(item.toLowerCase())) ?? items[items.length - 1] ?? "victory.jpg";
+  return targetNameFromLevel(level);
+}
+
+function lockSpecsForLevel(level: Omit<GeneratedLevel, "roomMap" | "targetFile">) {
+  if (!level.lockedRoom || !level.keyName) return [];
+  const roomById = new Map(level.rooms.map((room) => [room.id, room]));
+  const parent = new Map<string, string | null>([[level.start, null]]);
+  const queue = [level.start];
+
+  while (queue.length) {
+    const id = queue.shift()!;
+    const room = roomById.get(id);
+    if (!room) continue;
+    for (const exit of room.exits) {
+      if (!roomById.has(exit) || parent.has(exit)) continue;
+      parent.set(exit, id);
+      queue.push(exit);
+    }
+  }
+
+  const sourceId = parent.get(level.lockedRoom);
+  if (!sourceId) return [];
+
+  const pathFor = (id: string): string => {
+    const p = parent.get(id);
+    if (!p) return START_PATH;
+    return `${pathFor(p)}/${id}`;
+  };
+
+  return [
+    {
+      roomPath: pathFor(sourceId),
+      target: level.lockedRoom,
+      requiredKey: level.keyName,
+    },
+  ];
+}
+
+function markLevelLocks(
+  level: Omit<GeneratedLevel, "roomMap" | "targetFile">,
+  rooms: Record<string, Room>,
+) {
+  return markLockedDoors(rooms, lockSpecsForLevel(level));
 }
 
 async function requestAILevel(input: GenerateLevelInput): Promise<unknown> {
@@ -385,9 +561,10 @@ export function levelToStatePatch(level: GeneratedLevel): Pick<
   GameState,
   "rooms" | "cwd" | "player" | "inventory" | "targetFile" | "goal" | "requiredCommands" | "winCondition" | "won" | "completionMessage"
 > {
-  const startRoom = level.roomMap[START_PATH];
+  const rooms = markLevelLocks(level, level.roomMap);
+  const startRoom = rooms[START_PATH];
   return {
-    rooms: level.roomMap,
+    rooms,
     cwd: START_PATH,
     player: { ...startRoom.spawn },
     inventory: [],

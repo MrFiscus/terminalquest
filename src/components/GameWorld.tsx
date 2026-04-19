@@ -145,19 +145,31 @@ export function GameWorld({ state, onDismissPopup, headerRight }: GameWorldProps
               />
             )}
             {door && (
-              <img
-                src={archwayDoor}
-                alt={door.target === ".." ? "exit archway" : `${door.target} archway`}
-                className="absolute left-1/2 -translate-x-1/2 pointer-events-none"
-                style={{
-                  bottom: 0,
-                  width: "85%",
-                  height: "85%",
-                  objectFit: "contain",
-                  imageRendering: "pixelated",
-                  transformOrigin: "center bottom",
-                }}
-              />
+              <>
+                <img
+                  src={archwayDoor}
+                  alt={door.target === ".." ? "exit archway" : `${door.target} archway`}
+                  className="absolute left-1/2 -translate-x-1/2 pointer-events-none"
+                  style={{
+                    bottom: 0,
+                    width: "85%",
+                    height: "85%",
+                    objectFit: "contain",
+                    imageRendering: "pixelated",
+                    transformOrigin: "center bottom",
+                    filter: door.locked ? "brightness(0.35) sepia(0.4)" : undefined,
+                  }}
+                />
+                {door.locked && (
+                  <span
+                    className="absolute left-1/2 -translate-x-1/2 pointer-events-none"
+                    style={{ bottom: "28%", fontSize: tileW * 0.38, lineHeight: 1, zIndex: 5 }}
+                    aria-label="locked"
+                  >
+                    🔒
+                  </span>
+                )}
+              </>
             )}
             {torch && (
               <>
@@ -364,7 +376,7 @@ export function GameWorld({ state, onDismissPopup, headerRight }: GameWorldProps
               }}
             >
               <span className="label-chip breathe text-[10px] font-bold whitespace-nowrap" style={{ transform: "translateX(-50%)", display: "inline-block" }}>
-                {d.target === ".." ? "../" : `${d.target}/`}
+                {d.target === ".." ? "../" : d.locked ? `[locked] ${d.target}/` : `${d.target}/`}
               </span>
             </div>
           ))}
@@ -372,6 +384,7 @@ export function GameWorld({ state, onDismissPopup, headerRight }: GameWorldProps
           {/* Files (items) */}
           {room.files.map((f) => {
             const b = brightnessFor(edist(state.player.x, state.player.y, f.x, f.y));
+            const isKey = f.type === "key";
             return (
               <div
                 key={f.name}
@@ -387,18 +400,33 @@ export function GameWorld({ state, onDismissPopup, headerRight }: GameWorldProps
                 title={f.name}
               >
                 <span className="ground-shadow" aria-hidden />
-                <img
-                  src={scrollItem}
-                  alt={f.name}
-                  className="object-contain drop-shadow-[0_2px_2px_hsl(0_0%_0%/0.6)] drop-shadow-[0_0_6px_hsl(var(--gold)/0.55)]"
-                  style={{
-                    width: "60%",
-                    height: "60%",
-                    imageRendering: "pixelated",
-                    position: "relative",
-                    zIndex: 1,
-                  }}
-                />
+                {isKey ? (
+                  <span
+                    style={{
+                      fontSize: tileW * 0.5,
+                      lineHeight: 1,
+                      filter: "drop-shadow(0 0 6px hsl(45 100% 60%))",
+                      position: "relative",
+                      zIndex: 1,
+                    }}
+                    aria-label={f.name}
+                  >
+                    🗝
+                  </span>
+                ) : (
+                  <img
+                    src={scrollItem}
+                    alt={f.name}
+                    className="object-contain drop-shadow-[0_2px_2px_hsl(0_0%_0%/0.6)] drop-shadow-[0_0_6px_hsl(var(--gold)/0.55)]"
+                    style={{
+                      width: "60%",
+                      height: "60%",
+                      imageRendering: "pixelated",
+                      position: "relative",
+                      zIndex: 1,
+                    }}
+                  />
+                )}
                 <span className="absolute -bottom-1 left-1/2 -translate-x-1/2 label-chip breathe text-[7px]">
                   {f.name}
                 </span>

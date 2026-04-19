@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { runCommand } from "@/game/commands";
 import {
-  DEFAULT_ROOMS,
+  createDefaultRooms,
   INVENTORY_PATH,
   START_PATH,
   TARGET_FILE,
@@ -37,10 +37,14 @@ const STEP_MS = 110;
 const PICKUP_MS = 520;
 
 function initialState(): GameState {
-  const startRoom = DEFAULT_ROOMS[START_PATH];
+  const rooms = createDefaultRooms();
+  const startRoom = rooms[START_PATH];
+  // Confirm lock is in the live React state, not just in the module-level constant
+  const antechamberDoor = rooms["/home/user/hallway/antechamber"]?.doors.find((d) => d.target === "vault");
+  console.log("[initialState] vault door in React state:", JSON.stringify(antechamberDoor));
   return {
     cwd: START_PATH,
-    rooms: DEFAULT_ROOMS,
+    rooms,
     inventory: [],
     inventoryPath: INVENTORY_PATH,
     targetFile: TARGET_FILE,
@@ -181,6 +185,7 @@ export function useGameState() {
 
   const applyEffect = useCallback(
     (effect: NonNullable<CommandResult["effect"]>) => {
+      console.log("[applyEffect] called with effect:", JSON.stringify(effect));
       if (effect.type === "enterRoom") {
         const next = getRoom(stateRef.current.rooms, effect.path);
         if (next) showRoomSubtitle(next);
@@ -190,6 +195,21 @@ export function useGameState() {
         if (effect.type === "enterRoom") {
           const next = getRoom(s.rooms, effect.path);
           if (!next) return s;
+
+          // Belt-and-suspenders: re-check locked door against live state.
+          const targetSegment = effect.path.split("/").pop() ?? "";
+          console.log("[applyEffect] effect.wasLocked=", effect.wasLocked);
+          console.log("[applyEffect] effect.requiredKey=", effect.requiredKey);
+          console.log("[applyEffect] inventory=", s.inventory.map((f) => f.name));
+          if (effect.wasLocked && effect.requiredKey) {
+            const hasKey = s.inventory.some((f) => f.name === effect.requiredKey);
+            console.log(`[applyEffect enterRoom] lock re-check for "${targetSegment}": hasKey=${hasKey}, inventory=[${s.inventory.map((f) => f.name).join(",")}]`);
+            if (!hasKey) {
+              console.warn(`[applyEffect enterRoom] blocked entry to "${effect.path}" — key "${effect.requiredKey}" not in inventory`);
+              return s;
+            }
+          }
+
           const spawn = effect.from === "child" && next.returnSpawn ? next.returnSpawn : next.spawn;
           return {
             ...s,
@@ -224,10 +244,14 @@ export function useGameState() {
         if (effect.type === "win") {
           const room = getRoom(s.rooms, s.cwd);
           if (!room) return s;
-          const file = room.files.find((f) => f.name === s.targetFile);
+          console.log(`[applyEffect win] triggeredBy="${effect.fileName}" targetFile="${s.targetFile}"`);
+          if (effect.fileName !== TARGET_FILE || s.targetFile !== TARGET_FILE) return s;
+          if (effect.fileName !== s.targetFile) return s;
+          const file = room.files.find((f) => f.name === effect.fileName);
           if (!file) return s;
-          const newRoom = { ...room, files: room.files.filter((f) => f.name !== s.targetFile) };
-          const completionMessage = levelCompletionLine(s.targetFile, s.goal);
+          if (file.type === "key") return s;
+          const newRoom = { ...room, files: room.files.filter((f) => f.name !== effect.fileName) };
+          const completionMessage = levelCompletionLine(effect.fileName, s.goal);
           return {
             ...s,
             rooms: { ...s.rooms, [room.path]: newRoom },
@@ -239,7 +263,7 @@ export function useGameState() {
               {
                 id: nextId(),
                 kind: "victory",
-                text: `You seize ${s.targetFile}. ${completionMessage}`,
+                text: `You seize ${effect.fileName}. ${completionMessage}`,
               },
             ],
           };

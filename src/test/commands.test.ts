@@ -52,5 +52,47 @@ describe("command registry", () => {
     const searched = await runCommand("grep adventurer readme.txt", s);
     expect(searched.lines[0].text).toContain("Welcome, adventurer");
   });
-});
 
+  it("blocks the locked vault door until skeleton.key is in inventory", async () => {
+    const s = {
+      ...state(),
+      cwd: "/home/user/hallway/antechamber",
+      player: { ...DEFAULT_ROOMS["/home/user/hallway/antechamber"].spawn },
+    };
+
+    const blocked = await runCommand("cd vault", s);
+    expect(blocked.effect).toBeUndefined();
+    expect(blocked.lines[0].kind).toBe("error");
+
+    const key = DEFAULT_ROOMS["/home/user/hallway"].files.find((file) => file.name === "skeleton.key");
+    expect(key).toBeDefined();
+
+    const unlocked = await runCommand("cd vault", { ...s, inventory: [key!] });
+    expect(unlocked.effect).toEqual({
+      type: "enterRoom",
+      path: "/home/user/hallway/antechamber/vault",
+      from: "parent",
+      wasLocked: true,
+      requiredKey: "skeleton.key",
+    });
+    expect(unlocked.patch?.rooms?.["/home/user/hallway/antechamber"].doors.find((door) => door.target === "vault")?.locked).toBe(false);
+  });
+
+  it("only treats relic.txt as the victory mv target", async () => {
+    const hallwayState = {
+      ...state(),
+      cwd: "/home/user/hallway",
+      player: { ...DEFAULT_ROOMS["/home/user/hallway"].spawn },
+    };
+    const keyMove = await runCommand("mv skeleton.key ~/inventory", hallwayState);
+    expect(keyMove.effect).toEqual({ type: "pickup", fileName: "skeleton.key" });
+
+    const vaultState = {
+      ...state(),
+      cwd: "/home/user/hallway/antechamber/vault",
+      player: { ...DEFAULT_ROOMS["/home/user/hallway/antechamber/vault"].spawn },
+    };
+    const relicMove = await runCommand("mv relic.txt ~/inventory", vaultState);
+    expect(relicMove.effect).toEqual({ type: "win", fileName: "relic.txt" });
+  });
+});

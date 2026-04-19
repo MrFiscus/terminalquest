@@ -67,6 +67,7 @@ export function cloneFile(file: FileItem, pos: { x: number; y: number }, name = 
     name,
     contents: file.contents,
     glyph: file.glyph,
+    type: file.type,
     x: pos.x,
     y: pos.y,
   };

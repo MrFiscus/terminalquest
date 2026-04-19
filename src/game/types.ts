@@ -39,6 +39,8 @@ export interface Tile {
 export interface DoorTile extends Tile {
   kind: "door";
   target: string;
+  locked?: boolean;
+  requiredKey?: string;
 }
 
 export interface FileItem {
@@ -47,6 +49,7 @@ export interface FileItem {
   x: number;
   y: number;
   glyph?: string;
+  type?: "key";
 }
 
 export type DecorKind =
@@ -132,9 +135,15 @@ export interface CommandResult {
   patch?: Partial<GameState>;
   walkTo?: { x: number; y: number };
   effect?:
-    | { type: "enterRoom"; path: string; from: "child" | "parent" }
+    | {
+        type: "enterRoom";
+        path: string;
+        from: "child" | "parent";
+        wasLocked?: boolean;
+        requiredKey?: string;
+      }
     | { type: "pickup"; fileName: string }
-    | { type: "win" };
+    | { type: "win"; fileName: string };
   clear?: boolean;
   vfx?: Omit<VfxPulse, "id" | "expiresAt"> & { durationMs?: number };
   popup?: { title: string; body: string };
