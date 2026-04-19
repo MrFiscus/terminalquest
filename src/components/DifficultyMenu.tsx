@@ -168,7 +168,7 @@ export const DifficultyMenu = ({ onConfirm, busy }: DifficultyMenuProps) => {
           <div className="relative px-6 pt-20 pb-2">
             {/* Floating engraved counter above thumb */}
             <div
-              className="absolute pointer-events-none transition-[left] duration-75 engraved engraved-hover"
+              className={`absolute pointer-events-none transition-[left] duration-75 engraved engraved-hover ${dragging ? "engraved-active" : ""}`}
               style={{
                 left: `calc(28px + (100% - 56px) * ${dungeonDifficulty / 100})`,
                 top: 0,
