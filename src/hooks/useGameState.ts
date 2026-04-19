@@ -802,11 +802,7 @@ export function useGameState(options: UseGameStateOptions = {}) {
           if (result.effect.type === "enterRoom") {
             const isDifferentRoom = result.effect.path !== s.cwd;
             if (isDifferentRoom) {
-              setState((cur) => ({ ...cur, transitioning: true }));
-              await delay(260);
               applyEffect(result.effect);
-              await delay(80);
-              setState((cur) => ({ ...cur, transitioning: false }));
             } else {
               applyEffect(result.effect);
             }
