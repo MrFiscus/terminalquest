@@ -45,18 +45,13 @@ const DIFF_OPTIONS: Array<DifficultyLevel | "all"> = ["all", "beginner", "interm
 const KEYFRAMES = `
 @import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=Pirata+One&display=swap');
 
-@keyframes bookFlipNext {
-  0%   { transform: rotateY(0deg);    }
-  100% { transform: rotateY(-180deg); }
+@keyframes pageFadeOut {
+  0%   { opacity: 1; transform: translateY(0) scale(1); }
+  100% { opacity: 0; transform: translateY(-6px) scale(0.99); }
 }
-@keyframes bookFlipPrev {
-  0%   { transform: rotateY(0deg);   }
-  100% { transform: rotateY(180deg); }
-}
-@keyframes pageShadowFadeIn {
-  0%   { opacity: 0; }
-  40%  { opacity: 1; }
-  100% { opacity: 0; }
+@keyframes pageFadeIn {
+  0%   { opacity: 0; transform: translateY(6px) scale(0.99); }
+  100% { opacity: 1; transform: translateY(0) scale(1); }
 }
 `;
 
