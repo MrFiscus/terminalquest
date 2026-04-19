@@ -223,10 +223,16 @@ export const DifficultyMenu = ({ onConfirm, busy }: DifficultyMenuProps) => {
               </div>
             </div>
 
-            {/* End labels */}
-            <div className="mt-7 flex items-center justify-between">
-              <span className="engraved engraved-hover" style={{ fontSize: 20 }}>0 — NOVICE'S PATH</span>
-              <span className="engraved engraved-hover" style={{ fontSize: 20 }}>100 — MASTER'S CHALLENGE</span>
+            {/* End labels: numbers at bar ends, descriptions beneath */}
+            <div className="mt-3 flex items-start justify-between px-1">
+              <div className="flex flex-col items-start">
+                <span className="engraved engraved-hover" style={{ fontSize: 24, fontWeight: 900 }}>0</span>
+                <span className="engraved engraved-hover mt-1" style={{ fontSize: 16, letterSpacing: "0.12em" }}>NOVICE'S PATH</span>
+              </div>
+              <div className="flex flex-col items-end">
+                <span className="engraved engraved-hover" style={{ fontSize: 24, fontWeight: 900 }}>100</span>
+                <span className="engraved engraved-hover mt-1" style={{ fontSize: 16, letterSpacing: "0.12em" }}>MASTER'S CHALLENGE</span>
+              </div>
             </div>
 
           </div>
