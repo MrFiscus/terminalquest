@@ -970,6 +970,11 @@ export function GameWorld({ state, onDismissPopup, headerRight }: GameWorldProps
               style={{
                 ...doorOverlayStyle(d.x, d.y, room.width, room.height, tileW, tileH),
                 zIndex: 19,
+                filter: d.broken
+                  ? "sepia(0.7) brightness(0.55) contrast(1.2) drop-shadow(0 6px 6px rgba(0,0,0,0.85))"
+                  : d.locked
+                    ? "sepia(0.8) brightness(0.65) drop-shadow(0 6px 6px rgba(0,0,0,0.85))"
+                    : undefined,
               }}
             />
           ))}
@@ -1113,18 +1118,30 @@ export function GameWorld({ state, onDismissPopup, headerRight }: GameWorldProps
                 title={f.name}
               >
                 <span className="ground-shadow" aria-hidden />
-                <img
-                  src={scrollItem}
-                  alt={f.name}
-                  className="object-contain drop-shadow-[0_2px_2px_hsl(0_0%_0%/0.6)] drop-shadow-[0_0_6px_hsl(var(--gold)/0.55)]"
-                  style={{
-                    width: "60%",
-                    height: "60%",
-                    imageRendering: "pixelated",
-                    position: "relative",
-                    zIndex: 1,
-                  }}
-                />
+                {f.type === "blocker" || f.type === "key" ? (
+                  <span
+                    className="relative z-[1] text-3xl"
+                    style={{
+                      filter: f.type === "key" ? "drop-shadow(0 0 8px hsl(var(--gold)))" : "drop-shadow(0 3px 3px rgba(0,0,0,0.7))",
+                    }}
+                    aria-hidden
+                  >
+                    {f.glyph ?? (f.type === "key" ? "🗝" : "🪨")}
+                  </span>
+                ) : (
+                  <img
+                    src={scrollItem}
+                    alt={f.name}
+                    className="object-contain drop-shadow-[0_2px_2px_hsl(0_0%_0%/0.6)] drop-shadow-[0_0_6px_hsl(var(--gold)/0.55)]"
+                    style={{
+                      width: "60%",
+                      height: "60%",
+                      imageRendering: "pixelated",
+                      position: "relative",
+                      zIndex: 1,
+                    }}
+                  />
+                )}
                 <span className="absolute -bottom-1 left-1/2 -translate-x-1/2 label-chip breathe text-[7px]">
                   {f.name}
                 </span>

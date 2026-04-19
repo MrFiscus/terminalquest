@@ -154,6 +154,7 @@ export function isWalkable(room: Room, x: number, y: number): boolean {
 
   // NPCs block movement
   if ((room.npcs || []).some(n => n.x === x && n.y === y)) return false;
+  if (room.files.some((file) => file.type === "blocker" && file.x === x && file.y === y)) return false;
 
   if (room.decor?.some((d) => d.x === x && d.y === y && (d.kind === "interior-wall" || d.kind === "pillar"))) {
     return false;

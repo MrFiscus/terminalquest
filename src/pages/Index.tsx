@@ -11,7 +11,8 @@ import { MauQuizOverlay } from "@/components/MauQuizOverlay";
 import { WizardDialog } from "@/components/WizardDialog";
 import { useGameState } from "@/hooks/useGameState";
 import { getRoom } from "@/game/dungeon";
-import { generateLevel, type Difficulty } from "@/game/aiLevelService";
+import { type Difficulty } from "@/game/aiLevelService";
+import { generateDifficultyMechanicLevel } from "@/game/difficultyMechanics";
 import { adaptationMessage, getWeakCommands } from "@/game/adaptiveDungeon";
 import { cn } from "@/lib/utils";
 import { useCallback, useState } from "react";
@@ -36,17 +37,10 @@ const Index = () => {
 
   const loadAIDungeon = async (difficulty: Difficulty, familiarity = linuxFamiliarity) => {
     if (generating || state.animating) return false;
-    const generationSeed = `${difficulty}-${familiarity ?? "tier"}-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
     setGenerating(difficulty);
     try {
       const weakCommands = getWeakCommands(state.commandStats, 4);
-      const level = await generateLevel({
-        difficulty,
-        familiarity,
-        generationSeed,
-        weakCommands,
-        recentMistakes: state.recentMistakes,
-      });
+      const level = generateDifficultyMechanicLevel(difficulty, familiarity);
       loadLevel(level, `${difficulty} (${level.rooms.length} rooms)`, adaptationMessage(weakCommands));
       setActiveDifficulty(difficulty);
       return true;

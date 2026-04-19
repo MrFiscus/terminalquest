@@ -12,7 +12,11 @@ export const navigationCommands: CommandDefinition[] = [
     run: (_args, { room }) => {
       const entries = [
         ...room.doors.map((door) =>
-          door.locked ? `[locked] ${door.target}/` : `${door.target}/`,
+          door.broken
+            ? `${door.target}/ (broken)`
+            : door.locked
+              ? `[locked] ${door.target}/`
+              : `${door.target}/`,
         ),
         ...room.files.map((file) => file.name),
         ...(room.npcs || []).map((npc) => npc.name),
@@ -61,6 +65,34 @@ export const navigationCommands: CommandDefinition[] = [
       console.log(`[cd] entering "${liveDoor.target}" | locked=${liveDoor.locked} | requiredKey=${liveDoor.requiredKey} | inventory=[${state.inventory.map((f) => f.name).join(",")}]`);
 
       let unlockPatch: CommandResult["patch"];
+      if (liveDoor.blockedBy) {
+        const blocker = room.files.find((file) => file.name === liveDoor.blockedBy && file.type === "blocker");
+        if (blocker) {
+          return {
+            lines: [err("A heavy stone blocks the way.")],
+            walkTo: { x: blocker.x, y: blocker.y },
+          };
+        }
+      }
+      if (liveDoor.broken) {
+        return {
+          lines: [err("The door is broken. You need to repair it.")],
+          walkTo: { x: liveDoor.x, y: liveDoor.y },
+        };
+      }
+      const mauBlocker = (room.npcs ?? []).find((npc) => npc.id === "mau" && npc.blocksDoorTarget === liveDoor.target);
+      if (mauBlocker) {
+        const stopAt = [
+          { x: mauBlocker.x, y: mauBlocker.y + 1 },
+          { x: mauBlocker.x - 1, y: mauBlocker.y },
+          { x: mauBlocker.x + 1, y: mauBlocker.y },
+          { x: mauBlocker.x, y: mauBlocker.y - 1 },
+        ].find((candidate) => isWalkable(room, candidate.x, candidate.y)) ?? { x: liveDoor.x, y: liveDoor.y };
+        return {
+          lines: [err("Mau blocks your path. Speak with Mau first.")],
+          walkTo: stopAt,
+        };
+      }
       if (liveDoor.locked && liveDoor.requiredKey) {
         const hasKey = state.inventory.some((f) => f.name === liveDoor.requiredKey);
         console.log(`[cd] lock check: hasKey=${hasKey}`);

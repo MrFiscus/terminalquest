@@ -2,7 +2,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { START_PATH, markLockedDoors } from "./dungeon";
 import { generateDungeon, type RoomSpec } from "./generator";
 import { flavorLevelRoomIds } from "./dynamicDoorNames";
-import type { GameState, LinuxCommand, Room } from "./types";
+import type { DifficultyMechanic, GameState, LinuxCommand, Room } from "./types";
 
 export type Difficulty = "easy" | "medium" | "hard";
 
@@ -42,6 +42,9 @@ export interface GeneratedLevel {
   lockedRoom?: string;
   keyRoom?: string;
   keyName?: string;
+  difficultyValue?: number;
+  mechanic?: DifficultyMechanic;
+  lockedCommands?: LinuxCommand[];
 }
 
 type RawLevel = {
@@ -65,6 +68,7 @@ const validCommands = new Set<LinuxCommand>([
   "ls",
   "cd",
   "mkdir",
+  "chmod",
   "pwd",
   "cat",
   "mv",
@@ -559,7 +563,7 @@ export async function generateLevel(input: GenerateLevelInput): Promise<Generate
 
 export function levelToStatePatch(level: GeneratedLevel): Pick<
   GameState,
-  "rooms" | "cwd" | "player" | "inventory" | "targetFile" | "goal" | "requiredCommands" | "winCondition" | "won" | "completionMessage"
+  "rooms" | "cwd" | "player" | "inventory" | "targetFile" | "goal" | "requiredCommands" | "winCondition" | "won" | "completionMessage" | "difficultyValue" | "mechanic" | "lockedCommands" | "mauSecretKnown"
 > {
   const rooms = markLevelLocks(level, level.roomMap);
   const startRoom = rooms[START_PATH];
@@ -574,5 +578,9 @@ export function levelToStatePatch(level: GeneratedLevel): Pick<
     winCondition: `mv ${level.targetFile} ~/inventory`,
     won: false,
     completionMessage: null,
+    difficultyValue: level.difficultyValue,
+    mechanic: level.mechanic,
+    lockedCommands: level.lockedCommands ?? [],
+    mauSecretKnown: false,
   };
 }

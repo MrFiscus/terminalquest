@@ -16,7 +16,7 @@ export function WizardPopup({ tip, onDismiss }: WizardPopupProps) {
   if (!tip) return null;
 
   return (
-    <div className="pointer-events-none fixed bottom-24 right-5 z-40 flex max-w-xs items-end gap-2 animate-fade-in">
+    <div className="pointer-events-none fixed bottom-28 right-60 z-[130] flex max-w-xs items-end gap-2 animate-fade-in">
       <div className="rounded-md border-2 border-[hsl(var(--torch-glow)/0.8)] bg-[hsl(230_22%_6%/0.92)] px-3 py-2 text-parchment shadow-[0_6px_18px_hsl(0_0%_0%/0.75)]">
         <p className="font-mono-clean text-[12px] leading-snug">{tip.message}</p>
       </div>

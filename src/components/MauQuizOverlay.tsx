@@ -16,6 +16,7 @@ export function MauQuizOverlay({ quiz, onSubmit, onClose }: MauQuizOverlayProps)
     e?.preventDefault();
     if (quiz.type === "input" && inputValue.trim()) {
       onSubmit(inputValue.trim());
+      setInputValue("");
     }
   };
 
@@ -29,7 +30,7 @@ export function MauQuizOverlay({ quiz, onSubmit, onClose }: MauQuizOverlayProps)
 
   return (
     <motion.div
-      className="pointer-events-auto absolute inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm"
+      className="pointer-events-auto absolute inset-0 z-[120] flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm"
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
@@ -74,10 +75,20 @@ export function MauQuizOverlay({ quiz, onSubmit, onClose }: MauQuizOverlayProps)
 	        </h3>
 	
 	        <p className="font-pixel-text text-2xl leading-relaxed mb-6 text-center text-[#3b1f0a]">
-	          {quiz.question}
+	          {quiz.completedMessage ?? quiz.question}
 	        </p>
 
-        {quiz.type === "choice" ? (
+        {quiz.completedMessage ? (
+          <div className="flex justify-center">
+            <button
+              type="button"
+              onClick={onClose}
+              className="font-pixel py-2 px-6 bg-[#8b6914] text-[#fff1c7] hover:bg-[#6f5410] text-[10px]"
+            >
+              Continue
+            </button>
+          </div>
+        ) : quiz.type === "choice" ? (
           <div className="grid grid-cols-2 gap-3">
 	            {quiz.options?.map((opt) => (
 	              <button

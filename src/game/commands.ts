@@ -1,7 +1,7 @@
 import { commandRegistry } from "./commandSystem/registry";
 import { err } from "./commandSystem/helpers";
 import { getRoom } from "./dungeon";
-import type { CommandResult, GameState, MauQuiz } from "./types";
+import type { CommandResult, GameState, LinuxCommand, MauQuiz } from "./types";
 
 export interface RunCommandContext {
   startMauQuiz: (quiz: MauQuiz) => void;
@@ -24,6 +24,11 @@ export async function runCommand(
 
   const handler = commandRegistry.get(cmd);
   if (!handler) return { lines: [], unknown: trimmed };
+  if (state.lockedCommands?.includes(cmd as LinuxCommand)) {
+    return {
+      lines: [err(`${cmd}: command not yet learned. Speak with Mau first.`)],
+    };
+  }
 
   return handler.run(args, { 
     raw: trimmed, 

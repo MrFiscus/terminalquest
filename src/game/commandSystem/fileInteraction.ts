@@ -1,5 +1,6 @@
 import { INVENTORY_PATH, TARGET_FILE, findFile, resolvePath } from "../dungeon";
 import { addDoorToRoom } from "../generator";
+import { mauKeyQuizForDoor, mauQuizForMechanic } from "../difficultyMechanics";
 import type { Room } from "../types";
 import {
   baseName,
@@ -14,8 +15,9 @@ import {
 } from "./helpers";
 import type { CommandDefinition } from "./types";
 
-function describeFile(name: string, fileType?: "key") {
+function describeFile(name: string, fileType?: "key" | "blocker") {
   if (fileType === "key") return "iron key, ancient and heavy";
+  if (fileType === "blocker") return "stone blocker, heavy and immovable";
   const ext = name.includes(".") ? name.split(".").pop() : "";
   if (ext === "jpg") return "JPEG image data, ancient";
   if (ext === "txt") return "ASCII text, scrawled";
@@ -49,14 +51,19 @@ export const fileCommands: CommandDefinition[] = [
     name: "cat",
     description: "Display the contents of a file.",
     usage: "cat <file>",
-    run: (args, { state, room }) => {
+    run: (args, { state, room, startMauQuiz }) => {
       const name = args[0];
       if (!name) return { lines: [err("cat: missing file")] };
 
       // Mau Easter Egg
       if (name.toLowerCase() === "mau") {
-        const hasMau = (room.npcs || []).some(n => n.id === "mau");
-        if (hasMau) {
+        const mau = (room.npcs || []).find(n => n.id === "mau");
+        if (mau) {
+          if (state.mechanic === "chmod" && mau.blocksDoorTarget && state.mauSecretKnown) {
+            startMauQuiz(mauKeyQuizForDoor(mau.blocksDoorTarget));
+          } else if (state.mechanic) {
+            startMauQuiz(mauQuizForMechanic(state.mechanic));
+          }
           return {
             lines: [
               out("Mau purrs loudly as you attempt to read his contents."),
@@ -72,6 +79,9 @@ export const fileCommands: CommandDefinition[] = [
 
       const file = currentFile(state, room, name);
       if (!file) return { lines: [err(`cat: ${name}: no such file`)] };
+      if (file.permissions === "locked") {
+        return { lines: [err(`Permission denied. Use chmod +r ${file.name} to unlock.`)] };
+      }
       
       // Special win condition for Mau's Secret Vault
       if (file.name === "relic.txt" && room.name === "Mau's Secret Vault") {
@@ -85,6 +95,7 @@ export const fileCommands: CommandDefinition[] = [
       return {
         lines: body.split("\n").map(out),
         popup: { title: name, body },
+        patch: file.name === "scroll" && file.permissions === "readable" ? { mauSecretKnown: true } : undefined,
       };
     },
   },
@@ -92,7 +103,7 @@ export const fileCommands: CommandDefinition[] = [
     name: "file",
     description: "Inspect a file and show its type.",
     usage: "file <name>",
-    run: (args, { room }) => {
+    run: (args, { state, room }) => {
       const name = args[0];
       if (!name) return { lines: [err("file: missing name")] };
       const file = findFile(room, name);
@@ -223,6 +234,24 @@ export const fileCommands: CommandDefinition[] = [
         lines: [out(`You raise your hand toward '${name}'.`)],
         vfx: { kind: "rm", cells: [{ x: file.x, y: file.y }], durationMs: 1100 },
         effect: { type: "removeFile", fileName: name },
+      };
+    },
+  },
+  {
+    name: "chmod",
+    description: "Change file permissions.",
+    usage: "chmod +r <file>",
+    run: (args, { room }) => {
+      const [flag, name] = args;
+      if (!flag || !name) return { lines: [err("chmod: usage: chmod +r <file>")] };
+      if (flag !== "+r") return { lines: [err("chmod: only +r is useful here")] };
+      const file = findFile(room, name);
+      if (!file) return { lines: [err(`chmod: ${name}: no such file`)] };
+      if (file.permissions !== "locked") return { lines: [out(`${name} is already readable.`)] };
+      return {
+        lines: [out(`You grant read permission to ${name}.`)],
+        vfx: { kind: "inspect", cells: [{ x: file.x, y: file.y }], durationMs: 1200 },
+        effect: { type: "chmodFile", fileName: name },
       };
     },
   },

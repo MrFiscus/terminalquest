@@ -23,6 +23,7 @@ import { roomFlavor } from "@/game/roomFlavor";
 import { levelCompletionLine } from "@/game/levelCompletion";
 import { appendRun, baseCommand, countCommands, type RunRecord } from "@/game/progressStats";
 import { generateMauQuiz } from "@/game/mauQuizService";
+import { mauKeyQuizForDoor, mauQuizForMechanic } from "@/game/difficultyMechanics";
 import {
   createPerformanceSummary,
   personalityReaction,
@@ -32,6 +33,7 @@ import {
 import type {
   CommandResult,
   GameState,
+  LinuxCommand,
   PlayerFacing,
   TerminalLine,
 } from "@/game/types";
@@ -101,6 +103,8 @@ function initialState(): GameState {
     requiredCommands: ["ls", "cd", "find", "mv"],
     winCondition: `mv ${TARGET_FILE} ~/inventory`,
     completionMessage: null,
+    lockedCommands: [],
+    mauSecretKnown: false,
   };
 }
 
@@ -327,6 +331,71 @@ export function useGameState(options: UseGameStateOptions = {}) {
             rooms: { ...s.rooms, [room.path]: newRoom },
           };
         }
+        if (effect.type === "repairDoor") {
+          const room = getRoom(s.rooms, s.cwd);
+          if (!room) return s;
+          return {
+            ...s,
+            rooms: {
+              ...s.rooms,
+              [room.path]: {
+                ...room,
+                doors: room.doors.map((door) =>
+                  door.target === effect.target ? { ...door, broken: false } : door,
+                ),
+              },
+            },
+          };
+        }
+        if (effect.type === "chmodFile") {
+          const room = getRoom(s.rooms, s.cwd);
+          if (!room) return s;
+          return {
+            ...s,
+            rooms: {
+              ...s.rooms,
+              [room.path]: {
+                ...room,
+                files: room.files.map((file) =>
+                  file.name === effect.fileName ? { ...file, permissions: "readable" } : file,
+                ),
+              },
+            },
+          };
+        }
+        if (effect.type === "releaseMau") {
+          const room = getRoom(s.rooms, s.cwd);
+          if (!room) return s;
+          const mau = (room.npcs ?? []).find((npc) => npc.id === "mau" && npc.blocksDoorTarget === effect.target);
+          if (!mau) return s;
+          const candidates = [
+            { x: mau.x - 1, y: mau.y },
+            { x: mau.x + 1, y: mau.y },
+            { x: mau.x, y: mau.y + 1 },
+            { x: mau.x, y: mau.y - 1 },
+          ];
+          const open = candidates.find((candidate) => {
+            const tile = room.tiles.find((t) => t.x === candidate.x && t.y === candidate.y);
+            return (
+              tile?.kind === "floor" &&
+              !(s.player.x === candidate.x && s.player.y === candidate.y) &&
+              !room.files.some((file) => file.x === candidate.x && file.y === candidate.y) &&
+              !(room.npcs ?? []).some((npc) => npc.id !== "mau" && npc.x === candidate.x && npc.y === candidate.y)
+            );
+          }) ?? { x: mau.x, y: mau.y };
+          return {
+            ...s,
+            rooms: {
+              ...s.rooms,
+              [room.path]: {
+                ...room,
+                npcs: (room.npcs ?? []).map((npc) =>
+                  npc.id === "mau" ? { ...npc, x: open.x, y: open.y, blocksDoorTarget: undefined } : npc,
+                ),
+              },
+            },
+          };
+        }
         if (effect.type === "win") {
           const room = getRoom(s.rooms, s.cwd);
           if (!room) return s;
@@ -372,9 +441,26 @@ export function useGameState(options: UseGameStateOptions = {}) {
         const room = getRoom(s.rooms, s.cwd);
         const npc = (room?.npcs || []).find(n => n.id === "mau" && isNear(s.player, n));
         if (npc) {
+          if (s.mechanic === "chmod" && npc.blocksDoorTarget) {
+            if (s.mauSecretKnown) {
+              startMauQuiz(mauKeyQuizForDoor(npc.blocksDoorTarget));
+              appendLines([
+                { kind: "npc", text: "Mau studies the opened scroll in your paws." },
+                { kind: "npc", text: "Mau: \"Speak the key the scroll revealed.\"" },
+              ]);
+              return;
+            }
+            if (!(s.lockedCommands ?? []).includes("chmod")) {
+              appendLines([
+                { kind: "npc", text: "Mau guards the way." },
+                { kind: "npc", text: "Mau: \"Read the scroll, then tell me its key.\"" },
+              ]);
+              return;
+            }
+          }
           const depth = s.cwd.split("/").filter(Boolean).length;
           const dungeonDifficulty = Math.min(100, Math.max(0, depth * 20));
-          const quiz = await generateMauQuiz(dungeonDifficulty);
+          const quiz = s.mechanic ? mauQuizForMechanic(s.mechanic) : await generateMauQuiz(dungeonDifficulty);
           startMauQuiz(quiz);
           appendLines([
             { kind: "npc", text: "Mau's eyes glow with ancient knowledge." },
@@ -580,32 +666,45 @@ export function useGameState(options: UseGameStateOptions = {}) {
     const s = stateRef.current;
     if (!s.activeMauQuiz) return;
 
-    const isCorrect = answer.toLowerCase() === s.activeMauQuiz.answer.toLowerCase();
+    const isCorrect = answer.trim().toLowerCase() === s.activeMauQuiz.answer.toLowerCase();
     appendLines([{ kind: "input", text: `> ${answer}` }]);
     
     if (isCorrect) {
-      appendLines([{ kind: "npc", text: "Mau: \"Purrfect! You have learned well. Take this key—it opens the path to what you seek.\"" }]);
-      
-      // Reward the Vault Key
-      const keyItem: FileItem = {
-        name: "Vault Key",
-        glyph: "🗝",
-        type: "key",
-        x: s.player.x,
-        y: s.player.y,
-        contents: "The key to Mau's Secret Vault."
+      const reward = s.activeMauQuiz.rewardCommand;
+      const releaseMauTarget = s.activeMauQuiz.releaseMauTarget;
+      const successMessage =
+        s.activeMauQuiz.successMessage ??
+        (reward === "chmod"
+          ? "Mau: I grant you the power of chmod"
+          : `Mau: I grant you the power of ${reward ?? "wisdom"}`);
+      const nextLocked = reward
+        ? (s.lockedCommands ?? []).filter((command) => command !== reward)
+        : s.lockedCommands;
+      const mechanicMessages: Partial<Record<LinuxCommand, string>> = {
+        rm: "The stone blocking the vault can now be removed.",
+        mkdir: "You can now repair the broken door.",
+        chmod: "There is a scroll nearby. Use chmod +r scroll to read it.",
       };
-      
+
       setState(cur => ({
         ...cur,
-        inventory: [...cur.inventory, keyItem],
-        activeMauQuiz: undefined
+        lockedCommands: nextLocked,
+        activeMauQuiz: {
+          ...s.activeMauQuiz!,
+          completedMessage: successMessage,
+        }
       }));
-      
-      appendLines([{ kind: "output", text: "'Vault Key' has been added to your inventory." }]);
+
+      appendLines([
+        {
+          kind: "npc",
+          text: successMessage,
+        },
+        ...(reward ? [{ kind: "output" as const, text: mechanicMessages[reward] ?? `${reward} is now usable.` }] : []),
+      ]);
+      if (releaseMauTarget) applyEffect({ type: "releaseMau", target: releaseMauTarget });
       triggerScreenEffect("aware", 1200);
       
-      // Manifest VFX where the key "appears"
       const id = nextId();
       setState(cur => ({
         ...cur,
@@ -616,11 +715,10 @@ export function useGameState(options: UseGameStateOptions = {}) {
       }, 1500);
 
     } else {
-      appendLines([{ kind: "npc", text: `Mau: \"Not quite. The true wisdom was '${s.activeMauQuiz.answer}'. Return when you have meditated more.\"` }]);
+      appendLines([{ kind: "npc", text: "Mau: \"Not quite. Try again, little fox.\"" }]);
       triggerScreenEffect("error", 800);
-      closeMauQuiz();
     }
-  }, [appendLines, closeMauQuiz, triggerScreenEffect]);
+  }, [appendLines, triggerScreenEffect]);
 
   return { 
     state, 

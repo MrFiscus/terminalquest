@@ -3,6 +3,7 @@ export type LinuxCommand =
   | "ls"
   | "cd"
   | "mkdir"
+  | "chmod"
   | "pwd"
   | "cat"
   | "mv"
@@ -42,6 +43,9 @@ export interface DoorTile extends Tile {
   target: string;
   locked?: boolean;
   requiredKey?: string;
+  broken?: boolean;
+  blockedBy?: string;
+  blockedByMau?: boolean;
 }
 
 export interface FileItem {
@@ -50,7 +54,8 @@ export interface FileItem {
   x: number;
   y: number;
   glyph?: string;
-  type?: "key";
+  type?: "key" | "blocker";
+  permissions?: "locked" | "readable";
 }
 
 export type DecorKind =
@@ -84,6 +89,7 @@ export interface Npc {
   y: number;
   sprite: string;
   dialogue?: string[];
+  blocksDoorTarget?: string;
 }
 
 export interface Room {
@@ -135,7 +141,13 @@ export interface MauQuiz {
   type: "choice" | "input";
   options?: string[];
   answer: string;
+  rewardCommand?: LinuxCommand;
+  completedMessage?: string;
+  successMessage?: string;
+  releaseMauTarget?: string;
 }
+
+export type DifficultyMechanic = "rm" | "mkdir" | "chmod";
 
 export interface GameState {
   cwd: string;
@@ -161,6 +173,10 @@ export interface GameState {
   winCondition: string;
   completionMessage: string | null;
   activeMauQuiz?: MauQuiz;
+  difficultyValue?: number;
+  mechanic?: DifficultyMechanic;
+  lockedCommands?: LinuxCommand[];
+  mauSecretKnown?: boolean;
 }
 
 export interface CommandResult {
@@ -177,6 +193,9 @@ export interface CommandResult {
       }
     | { type: "pickup"; fileName: string }
     | { type: "removeFile"; fileName: string }
+    | { type: "repairDoor"; target: string }
+    | { type: "chmodFile"; fileName: string }
+    | { type: "releaseMau"; target: string }
     | { type: "win"; fileName: string };
   clear?: boolean;
   vfx?: Omit<VfxPulse, "id" | "expiresAt"> & { durationMs?: number };

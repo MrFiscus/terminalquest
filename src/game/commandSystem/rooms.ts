@@ -12,6 +12,14 @@ export const roomCommands: CommandDefinition[] = [
     run: async (args, { state, room }) => {
       const name = args[0];
       if (!name) return { lines: [err("mkdir: missing name")] };
+      const brokenDoor = room.doors.find((door) => door.broken);
+      if (state.mechanic === "mkdir" && brokenDoor && name === brokenDoor.target) {
+        return {
+          lines: [out("You rebuild the broken doorway. The path is open.")],
+          vfx: { kind: "manifest", cells: [{ x: brokenDoor.x, y: brokenDoor.y }], durationMs: 1400 },
+          effect: { type: "repairDoor", target: brokenDoor.target },
+        };
+      }
       if (!isSafeName(name)) return { lines: [err(`mkdir: invalid name '${name}'`)] };
       const childPath = `${state.cwd}/${name}`;
       if (state.rooms[childPath] || room.doors.some((door) => door.target === name)) {
@@ -70,4 +78,3 @@ export const roomCommands: CommandDefinition[] = [
     },
   },
 ];
-

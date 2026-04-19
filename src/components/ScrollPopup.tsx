@@ -22,7 +22,7 @@ export function ScrollPopup({ title, body, onDismiss }: ScrollPopupProps) {
 
   return (
 	    <div
-	      className="pointer-events-auto absolute left-1/2 top-1/2 z-30 -translate-x-1/2 -translate-y-1/2 animate-fade-in"
+	      className="pointer-events-auto absolute left-1/2 top-1/2 z-[120] -translate-x-1/2 -translate-y-1/2 animate-fade-in"
 	      onClick={onDismiss}
 	      role="dialog"
 	    >
