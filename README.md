@@ -2,7 +2,7 @@
 
 A React + TypeScript terminal dungeon RPG for learning beginner Linux commands. Rooms behave like directories, files behave like items, and doors behave like folders. The player types commands in the left terminal and sees the current dungeon room on the right.
 
-AI features use Claude through Supabase Edge Functions. Claude never runs directly in the browser.
+AI features use Claude through Supabase Edge Functions when an Anthropic key is available. Claude never runs directly in the browser. If the key is missing, expired, quota-limited, or the Edge Function is slow/unavailable, the app automatically falls back to deterministic local content so the game remains playable.
 
 ## Features
 
@@ -16,16 +16,18 @@ AI features use Claude through Supabase Edge Functions. Claude never runs direct
 - Door labels above exits
 - Player walks to doors/files before changing rooms or picking items up
 - Provided `door.png` and GIF assets used for doors and character animation
-- Claude Dungeon Master tutor for natural-language help and unknown commands
-- Claude-based AI level generation with deterministic fallback
-- Claude-based AI room generation for `mkdir` with deterministic fallback
+- Optional Claude Dungeon Master tutor for natural-language help and unknown commands
+- Optional Claude-based AI level generation with deterministic fallback
+- Optional Claude-based AI room generation for `mkdir` with deterministic fallback
+- Optional Claude-based Mau quizzes with deterministic fallback
+- AI calls time out and fall back quickly so expired API credits do not block gameplay
 
 ## Requirements
 
 - Node.js 18 or newer
 - npm
 - Supabase project
-- Anthropic API key for Claude
+- Anthropic API key for Claude, optional
 
 ## Local Setup
 
@@ -69,16 +71,30 @@ If you edit `.env`, restart Vite with `Ctrl + C`, then:
 npm run dev
 ```
 
-## Claude And Supabase
+## Optional Claude And Supabase
 
 Claude keys belong in Supabase secrets, not in `.env`.
 
-Set hosted secrets:
+The app works without a Claude key. Without `ANTHROPIC_API_KEY`, these systems fall back automatically:
+
+```text
+Dungeon Master chat      -> local tutor replies
+Command flavor text      -> command-specific fallback lines
+Run report feedback      -> locally generated coaching note
+Generated levels         -> deterministic adaptive dungeon generator
+Generated mkdir rooms    -> deterministic room blueprint
+Mau quizzes              -> deterministic quiz pools
+Profile summary          -> local profile summary
+```
+
+If you want AI-enhanced text/generation, set hosted secrets:
 
 ```bash
 npx supabase secrets set ANTHROPIC_API_KEY=your-anthropic-api-key --project-ref vtizdyjqkwcrygqblpcm
 npx supabase secrets set ANTHROPIC_MODEL=claude-3-haiku-20240307 --project-ref vtizdyjqkwcrygqblpcm
 ```
+
+If you stop paying for the key or remove it later, no code change is required. The Supabase functions and browser services both return fallback content.
 
 Deploy Edge Functions:
 
@@ -86,6 +102,7 @@ Deploy Edge Functions:
 npx supabase functions deploy dungeon-master --project-ref vtizdyjqkwcrygqblpcm --no-verify-jwt --use-api
 npx supabase functions deploy generate-level --project-ref vtizdyjqkwcrygqblpcm --use-api
 npx supabase functions deploy generate-room --project-ref vtizdyjqkwcrygqblpcm --use-api
+npx supabase functions deploy generate-quiz --project-ref vtizdyjqkwcrygqblpcm --use-api
 ```
 
 `dungeon-master` uses `--no-verify-jwt` so public browser calls using Supabase publishable keys work cleanly.
@@ -96,12 +113,40 @@ For local Supabase function testing, copy:
 cp supabase/.env.example supabase/.env.local
 ```
 
-Then fill in:
+Then fill in only if testing AI locally:
 
 ```env
 ANTHROPIC_API_KEY="your-anthropic-api-key"
 ANTHROPIC_MODEL="claude-3-haiku-20240307"
 ```
+
+## Fallback Behavior
+
+AI fallback is implemented in both places:
+
+```text
+Browser services: src/game/aiFallback.ts
+Supabase functions: supabase/functions/*
+```
+
+Browser calls time out after a short wait and continue with local fallback content. This protects the player experience if:
+
+```text
+ANTHROPIC_API_KEY is missing
+ANTHROPIC_API_KEY expires
+Anthropic quota is exceeded
+Supabase Edge Functions return an error
+Network calls hang or fail
+```
+
+To intentionally test no-AI mode, remove or rename the `ANTHROPIC_API_KEY` Supabase secret, redeploy the functions, and play normally. The app should still generate levels, rooms, quizzes, reports, and guidance.
+
+If you want to remove the hosted secret:
+
+```bash
+npx supabase secrets unset ANTHROPIC_API_KEY --project-ref vtizdyjqkwcrygqblpcm
+```
+
 
 ## Testing AI
 
@@ -127,11 +172,11 @@ what does mv do
 how do i win
 ```
 
-If every answer looks identical or generic, check:
+If every answer looks identical or generic, that usually means fallback mode is active. That is safe. For AI-enhanced mode, check:
 
 - `.env` points to the same Supabase project that has the functions
 - `VITE_SUPABASE_PUBLISHABLE_KEY` belongs to that project
-- `ANTHROPIC_API_KEY` is set as a Supabase secret
+- `ANTHROPIC_API_KEY` is set as a Supabase secret and still has credits/quota
 - Edge Functions were redeployed after code changes
 - Vite was restarted after `.env` changes
 
@@ -168,17 +213,16 @@ npm run build
 npm run preview
 ```
 
-## Vercel
+## Hosting
 
-Add these Vercel environment variables:
+For Vercel/Netlify/Cloudflare Pages, use:
 
-```env
-VITE_SUPABASE_PROJECT_ID=vtizdyjqkwcrygqblpcm
-VITE_SUPABASE_URL=https://vtizdyjqkwcrygqblpcm.supabase.co
-VITE_SUPABASE_PUBLISHABLE_KEY=your-supabase-publishable-key
+```text
+Build command: npm run build
+Output directory: dist
 ```
 
-Keep `ANTHROPIC_API_KEY` in Supabase secrets unless AI is moved to Vercel serverless functions later.
+Keep `ANTHROPIC_API_KEY` in Supabase secrets only if AI-enhanced mode is desired. Do not put Anthropic keys in frontend hosting environment variables.
 
 ## Git Safety
 

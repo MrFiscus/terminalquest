@@ -1,5 +1,6 @@
 import { supabase } from "@/integrations/supabase/client";
 import { flavorfulDoorName } from "./dynamicDoorNames";
+import { withAiFallback } from "./aiFallback";
 
 export interface RoomBlueprintItem {
   name: string;
@@ -89,17 +90,14 @@ function sanitizeBlueprint(value: unknown, fallbackName: string): RoomBlueprint 
 }
 
 export async function generateAIRoomBlueprint(input: GenerateRoomInput): Promise<RoomBlueprint> {
-  try {
+  return withAiFallback(async () => {
     const { data, error } = await supabase.functions.invoke("generate-room", {
       body: input,
     });
     if (error) throw error;
     const parsed = typeof data?.room === "string" ? JSON.parse(data.room) : data?.room;
     return sanitizeBlueprint(parsed, input.roomName);
-  } catch (error) {
-    console.warn("AI room generation failed, using fallback:", error);
-    return fallbackRoomBlueprint(input.roomName);
-  }
+  }, () => fallbackRoomBlueprint(input.roomName), "generate-room");
 }
 
 export function glyphForBlueprintItem(item: RoomBlueprintItem) {

@@ -1,6 +1,7 @@
 import { supabase } from "@/integrations/supabase/client";
 import { mauQuizForMechanic } from "./difficultyMechanics";
 import type { DifficultyMechanic, MauQuiz } from "./types";
+import { withAiFallback } from "./aiFallback";
 
 const askedQuestions: string[] = [];
 const askedAnswersByMechanic: Partial<Record<DifficultyMechanic, string[]>> = {};
@@ -121,7 +122,18 @@ export async function generateMauQuiz(
   difficulty: number,
   mechanic?: DifficultyMechanic,
 ): Promise<MauQuiz> {
-  try {
+  const fallback = () => {
+    if (!mechanic) return withQuestionMemory(fallbackMauQuiz(difficulty));
+    for (let i = 0; i < 8; i++) {
+      const quiz = fallbackMechanicQuiz(mechanic);
+      if (!askedQuestions.map(normalizeQuestion).includes(normalizeQuestion(quiz.question))) {
+        return withQuestionMemory(quiz, mechanic);
+      }
+    }
+    return withQuestionMemory(fallbackMechanicQuiz(mechanic), mechanic);
+  };
+
+  return withAiFallback(async () => {
     const { data, error } = await supabase.functions.invoke("generate-quiz", {
       body: {
         difficulty,
@@ -159,17 +171,7 @@ export async function generateMauQuiz(
       type: "input",
       rewardCommand: mechanic,
     }, mechanic);
-  } catch (err) {
-    console.error("[mauQuizService] AI generation failed, using fallback:", err);
-    if (!mechanic) return withQuestionMemory(fallbackMauQuiz(difficulty));
-    for (let i = 0; i < 8; i++) {
-      const quiz = fallbackMechanicQuiz(mechanic);
-      if (!askedQuestions.map(normalizeQuestion).includes(normalizeQuestion(quiz.question))) {
-        return withQuestionMemory(quiz, mechanic);
-      }
-    }
-    return withQuestionMemory(fallbackMechanicQuiz(mechanic), mechanic);
-  }
+  }, fallback, "generate-quiz");
 }
 
 function fallbackMauQuiz(difficulty: number): MauQuiz {

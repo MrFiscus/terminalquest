@@ -3,6 +3,7 @@ import { START_PATH, markLockedDoors } from "./dungeon";
 import { generateDungeon, type RoomSpec } from "./generator";
 import { flavorLevelRoomIds } from "./dynamicDoorNames";
 import type { DifficultyMechanic, GameState, LinuxCommand, Room } from "./types";
+import { withAiFallback } from "./aiFallback";
 
 export type Difficulty = "easy" | "medium" | "hard";
 
@@ -676,18 +677,19 @@ async function requestAILevel(input: GenerateLevelInput): Promise<unknown> {
 }
 
 export async function generateLevel(input: GenerateLevelInput): Promise<GeneratedLevel> {
-  try {
+  const buildFallback = () => {
+    const fallback = fallbackLevel(input);
+    return { ...fallback, targetFile: targetFromLevel(fallback), roomMap: levelToRooms(fallback, input.generationSeed) };
+  };
+
+  return withAiFallback(async () => {
     const parsed = await requestAILevel(input);
     const valid = validateLevel(parsed, input);
     if (valid) {
       return { ...valid, targetFile: targetFromLevel(valid), roomMap: levelToRooms(valid, input.generationSeed) };
     }
-  } catch (error) {
-    console.warn("AI level generation failed, using fallback:", error);
-  }
-
-  const fallback = fallbackLevel(input);
-  return { ...fallback, targetFile: targetFromLevel(fallback), roomMap: levelToRooms(fallback, input.generationSeed) };
+    return buildFallback();
+  }, buildFallback, "generate-level");
 }
 
 export function levelToStatePatch(level: GeneratedLevel): Pick<

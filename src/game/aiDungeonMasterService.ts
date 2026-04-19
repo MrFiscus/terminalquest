@@ -1,4 +1,5 @@
 import { supabase } from "@/integrations/supabase/client";
+import { withAiFallback } from "./aiFallback";
 
 export type DungeonMasterMode =
   | "unknown-command"
@@ -226,19 +227,18 @@ async function askDungeonMasterMode(
     return sanitizeDungeonMasterReply(fallbackDungeonMasterReply(cleanInput, mode, context));
   }
 
-  try {
+  const fallback = () => sanitizeDungeonMasterReply(fallbackDungeonMasterReply(cleanInput, mode, context));
+  const reply = await withAiFallback(async () => {
     const { data, error } = await supabase.functions.invoke("dungeon-master", {
       body: { input: cleanInput, mode, context },
     });
     if (error) throw error;
 
     const message = typeof data?.message === "string" ? data.message.trim() : "";
-    const reply = sanitizeDungeonMasterReply(message || fallbackDungeonMasterReply(cleanInput, mode, context));
-    replyCache.set(cacheKey, reply);
-    return reply;
-  } catch {
-    return sanitizeDungeonMasterReply(fallbackDungeonMasterReply(cleanInput, mode, context));
-  }
+    return sanitizeDungeonMasterReply(message || fallbackDungeonMasterReply(cleanInput, mode, context));
+  }, fallback, `dungeon-master:${mode}`);
+  replyCache.set(cacheKey, reply);
+  return reply;
 }
 
 export async function askDungeonMaster(input: string, context: DungeonMasterContext = {}): Promise<string> {
