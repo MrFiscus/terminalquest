@@ -420,7 +420,7 @@ export function useGameState() {
       commandHistory: [],
       history: [
         ...intro,
-        { id: offset + 1, kind: "system", text: `AI dungeon loaded: ${label}` },
+        { id: offset + 1, kind: "system", text: `Dungeon loaded: ${label}` },
         { id: offset + 2, kind: "system", text: `Goal: ${level.goal}` },
         { id: offset + 3, kind: "system", text: `Required: ${level.required.join(", ")}` },
         { id: offset + 4, kind: "system", text: `Win: mv ${level.targetFile} ~/inventory` },
