@@ -101,6 +101,105 @@ const ORNATE_STRIP: React.CSSProperties = {
   backgroundColor: "#16040200",
 };
 
+// ── Parchment background — cream with scattered stone pebbles ─────────────
+const PARCH_BG = `
+  radial-gradient(ellipse at 12% 18%, rgba(184,150,104,0.35) 0%, transparent 6%),
+  radial-gradient(ellipse at 78% 22%, rgba(184,150,104,0.30) 0%, transparent 5%),
+  radial-gradient(ellipse at 32% 62%, rgba(184,150,104,0.28) 0%, transparent 4%),
+  radial-gradient(ellipse at 64% 78%, rgba(184,150,104,0.32) 0%, transparent 5%),
+  radial-gradient(ellipse at 88% 52%, rgba(184,150,104,0.25) 0%, transparent 4%),
+  radial-gradient(ellipse at 22% 88%, rgba(184,150,104,0.28) 0%, transparent 4%),
+  radial-gradient(ellipse at 50% 35%, rgba(244,228,191,0.55) 0%, transparent 45%),
+  radial-gradient(ellipse at 18% 14%, rgba(255,245,210,0.40) 0%, transparent 52%),
+  radial-gradient(ellipse at 82% 88%, rgba(140,108,58,0.35)  0%, transparent 52%),
+  linear-gradient(175deg, #f0dcb0 0%, #e8d4a8 38%, #d4bc88 72%, #b89668 100%)
+`;
+
+// ── Ornate crosshatch strip ────────────────────────────────────────────────
+const ORNATE_STRIP: React.CSSProperties = {
+  backgroundImage: `
+    repeating-linear-gradient( 45deg, rgba(138,168,80,0.55) 0, rgba(138,168,80,0.55) 1.5px, transparent 0, transparent 50%),
+    repeating-linear-gradient(-45deg, rgba(138,168,80,0.55) 0, rgba(138,168,80,0.55) 1.5px, transparent 0, transparent 50%)
+  `,
+  backgroundSize:  "6px 6px",
+  backgroundColor: "#2a3a1800",
+};
+
+// ── Silver Corner Bracket ──────────────────────────────────────────────────
+function SilverCorner({ corner }: { corner: "tl" | "tr" | "bl" | "br" }) {
+  const size = 46;
+  const isTop = corner === "tl" || corner === "tr";
+  const isLeft = corner === "tl" || corner === "bl";
+  // Rotate so the L hugs the correct corner
+  const rotate = corner === "tl" ? 0 : corner === "tr" ? 90 : corner === "bl" ? 270 : 180;
+  return (
+    <div style={{
+      position: "absolute",
+      [isTop ? "top" : "bottom"]: -6,
+      [isLeft ? "left" : "right"]: -6,
+      width: size, height: size,
+      zIndex: 30,
+      pointerEvents: "none",
+      transform: `rotate(${rotate}deg)`,
+      filter: "drop-shadow(0 2px 3px rgba(0,0,0,0.65)) drop-shadow(0 0 1px rgba(0,0,0,0.8))",
+    }}>
+      {/* Horizontal arm of L */}
+      <div style={{
+        position: "absolute", top: 0, left: 0,
+        width: size, height: 14,
+        background: `linear-gradient(180deg, ${C.silverHigh} 0%, ${C.silverMid} 55%, ${C.silverDark} 100%)`,
+        borderRadius: "3px 3px 0 0",
+        border: `1px solid ${C.silverDark}`,
+        borderBottom: "none",
+      }} />
+      {/* Vertical arm of L */}
+      <div style={{
+        position: "absolute", top: 0, left: 0,
+        width: 14, height: size,
+        background: `linear-gradient(90deg, ${C.silverHigh} 0%, ${C.silverMid} 55%, ${C.silverDark} 100%)`,
+        borderRadius: "3px 0 0 3px",
+        border: `1px solid ${C.silverDark}`,
+        borderRight: "none",
+      }} />
+      {/* Rivets */}
+      <div style={{
+        position: "absolute", top: 4, left: 22,
+        width: 5, height: 5, borderRadius: "50%",
+        background: `radial-gradient(circle at 35% 30%, ${C.silverMid}, ${C.silverRivet} 70%)`,
+        boxShadow: `inset 0 0 1px rgba(0,0,0,0.8)`,
+      }} />
+      <div style={{
+        position: "absolute", top: 22, left: 4,
+        width: 5, height: 5, borderRadius: "50%",
+        background: `radial-gradient(circle at 35% 30%, ${C.silverMid}, ${C.silverRivet} 70%)`,
+        boxShadow: `inset 0 0 1px rgba(0,0,0,0.8)`,
+      }} />
+    </div>
+  );
+}
+
+// ── Wooden bookmark tab ────────────────────────────────────────────────────
+function WoodTab({ leftPct }: { leftPct: number }) {
+  return (
+    <div style={{
+      position: "absolute",
+      bottom: -14,
+      left: `${leftPct}%`,
+      transform: "translateX(-50%)",
+      width: 32, height: 20,
+      zIndex: 25,
+      background: `
+        repeating-linear-gradient(90deg, rgba(0,0,0,0.18) 0 1px, transparent 1px 4px),
+        linear-gradient(180deg, ${C.woodLight} 0%, ${C.woodDark} 100%)
+      `,
+      borderRadius: "2px 2px 5px 5px",
+      border: `1px solid ${C.bindRim}`,
+      borderTop: "none",
+      boxShadow: "0 3px 5px rgba(0,0,0,0.6), inset 0 -2px 3px rgba(0,0,0,0.4)",
+    }} />
+  );
+}
+
 // ── GrudgeDivider ──────────────────────────────────────────────────────────
 function GrudgeDivider({ label }: { label: string }) {
   return (
