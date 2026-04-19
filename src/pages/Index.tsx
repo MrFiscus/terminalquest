@@ -87,17 +87,6 @@ const Index = () => {
       ))}
 
       <div className="flex items-center gap-2">
-        {/* Book of Secrets button */}
-        <button
-          type="button"
-          onClick={() => setBookOpen(true)}
-          className="stone-tablet-btn"
-          style={{ fontSize: 8, padding: "4px 10px", letterSpacing: "0.08em" }}
-          title="Open the Book of Secrets"
-        >
-          📖 BOOK OF SECRETS
-        </button>
-
         <button
           type="button"
           onClick={() => setProfileOpen(true)}

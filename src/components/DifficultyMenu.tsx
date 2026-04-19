@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import type { Difficulty } from "@/game/aiLevelService";
 import slateTexture from "@/assets/slate-texture.jpg";
 import { FireBlazes } from "@/components/FireBlazes";
+import { RepelDots } from "@/components/RepelDots";
 
 interface DifficultyMenuProps {
   onConfirm: (difficulty: Difficulty, value: number) => void;
@@ -141,6 +142,7 @@ export const DifficultyMenu = ({ onConfirm, busy }: DifficultyMenuProps) => {
       <div className="absolute inset-0 pointer-events-none overflow-hidden" aria-hidden style={{ zIndex: 1 }}>
         <FireBlazes count={20} />
       </div>
+      <RepelDots count={80} />
 
       {/* Content */}
       <div className="relative z-10 h-full flex flex-col items-center justify-center px-8 pt-16">

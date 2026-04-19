@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { Link } from "react-router-dom";
 import { FireBlazes } from "@/components/FireBlazes";
+import { RepelDots } from "@/components/RepelDots";
 import slateTexture from "@/assets/slate-texture.jpg";
 import tileWall from "@/assets/tile-wall.png";
 import tileFloor from "@/assets/tile-floor.png";
@@ -573,6 +574,7 @@ export default function Landing() {
       <div style={{ position: "fixed", inset: 0, pointerEvents: "none", zIndex: 1, overflow: "hidden" }} aria-hidden>
         <FireBlazes count={22} />
       </div>
+      <RepelDots count={80} />
       <style>{`
         .lp-eng {
           font-family: 'Cinzel','MedievalSharp',serif; font-weight:700; color:hsl(0 0% 18%);

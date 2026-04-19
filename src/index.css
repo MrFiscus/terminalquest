@@ -783,6 +783,12 @@
   50%  { opacity: 1;    filter: drop-shadow(0 0 14px hsl(var(--torch-glow) / 0.9)); }
   100% { opacity: 0.9;  filter: drop-shadow(0 0 8px hsl(var(--torch-glow) / 0.7)); }
 }
+@keyframes dot-blink {
+  0%   { opacity: 0; }
+  10%  { opacity: 0.95; }
+  60%  { opacity: 0.7; }
+  100% { opacity: 0; }
+}
 @keyframes player-bob {
   from { transform: translateY(0); }
   to   { transform: translateY(-2px); }
@@ -982,4 +988,84 @@
   pointer-events: none;
   animation: fire-ember-rise linear infinite;
   will-change: transform, opacity;
+}
+
+/* Login page lamp ambience */
+.auth-lamp-wrap {
+  position: relative;
+  width: clamp(220px, 24vw, 360px);
+  transform-origin: 56% 88%;
+  animation: auth-lamp-sway 6.2s ease-in-out infinite;
+}
+
+.auth-lamp-sprite {
+  width: 100%;
+  height: auto;
+  image-rendering: pixelated;
+  animation: auth-lamp-flicker 1.7s steps(3, end) infinite;
+  filter:
+    drop-shadow(0 0 10px hsl(38 100% 56% / 0.55))
+    drop-shadow(0 0 24px hsl(33 100% 45% / 0.38));
+}
+
+.auth-lamp-glow {
+  position: absolute;
+  left: 50%;
+  bottom: 22%;
+  width: 58%;
+  aspect-ratio: 1 / 1;
+  transform: translateX(-50%);
+  border-radius: 9999px;
+  background: radial-gradient(circle, hsl(38 100% 58% / 0.42) 0%, hsl(33 100% 45% / 0.2) 35%, transparent 72%);
+  filter: blur(6px);
+  mix-blend-mode: screen;
+  animation: auth-lamp-glow 1.5s ease-in-out infinite;
+}
+
+.auth-lamp-halo {
+  position: absolute;
+  right: -24%;
+  bottom: 10%;
+  width: 180%;
+  height: 82%;
+  border-radius: 50%;
+  background: radial-gradient(ellipse at 22% 40%, hsl(33 100% 52% / 0.18) 0%, hsl(33 100% 45% / 0.08) 35%, transparent 70%);
+  filter: blur(16px);
+  animation: auth-lamp-halo 3.4s ease-in-out infinite;
+}
+
+@keyframes auth-lamp-sway {
+  0%,
+  100% { transform: rotate(-1.1deg) translateY(0); }
+  50% { transform: rotate(1.4deg) translateY(-3px); }
+}
+
+@keyframes auth-lamp-flicker {
+  0% { opacity: 0.94; }
+  7% { opacity: 0.88; }
+  12% { opacity: 0.96; }
+  26% { opacity: 0.9; }
+  39% { opacity: 1; }
+  55% { opacity: 0.91; }
+  73% { opacity: 0.98; }
+  88% { opacity: 0.9; }
+  100% { opacity: 0.95; }
+}
+
+@keyframes auth-lamp-glow {
+  0%,
+  100% {
+    opacity: 0.6;
+    transform: translateX(-50%) scale(0.96);
+  }
+  50% {
+    opacity: 0.92;
+    transform: translateX(-50%) scale(1.05);
+  }
+}
+
+@keyframes auth-lamp-halo {
+  0%,
+  100% { opacity: 0.55; }
+  50% { opacity: 0.82; }
 }

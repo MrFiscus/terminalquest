@@ -1,4 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
+import type { User } from "@supabase/supabase-js";
+import { supabase } from "@/integrations/supabase/client";
 import {
   Bar,
   BarChart,
@@ -44,7 +46,7 @@ const C = {
   chartInkDim: "rgba(31, 19, 8, 0.35)",
 };
 
-type ProfileTab = "stats" | "mastery" | "achievements" | "progress";
+type ProfileTab = "account" | "stats" | "mastery" | "achievements" | "progress";
 
 interface ProfileModalProps {
   onClose: () => void;
@@ -58,6 +60,7 @@ interface SpellCardProps {
 }
 
 const TAB_LABELS: Record<ProfileTab, string> = {
+  account: "Account",
   stats: "Stats",
   mastery: "Mastery",
   achievements: "Achievements",
@@ -260,7 +263,23 @@ function ChartShell({ title, children }: { title: string; children: React.ReactN
 export function ProfileModal({ onClose }: ProfileModalProps) {
   const runs = useMemo(() => readRuns(), []);
   const [name, setName] = useState(() => readPlayerName());
-  const [activeTab, setActiveTab] = useState<ProfileTab>("stats");
+  const [activeTab, setActiveTab] = useState<ProfileTab>("account");
+  const [user, setUser] = useState<User | null>(null);
+  const [editingUsername, setEditingUsername] = useState("");
+  const [usernameSaving, setUsernameSaving] = useState(false);
+  const [usernameSaved, setUsernameSaved] = useState(false);
+
+  const saveUsername = async () => {
+    const trimmed = editingUsername.trim();
+    if (!trimmed) return;
+    setUsernameSaving(true);
+    savePlayerName(trimmed);
+    setName(trimmed);
+    if (user) await supabase.auth.updateUser({ data: { username: trimmed } });
+    setUsernameSaving(false);
+    setUsernameSaved(true);
+    setTimeout(() => setUsernameSaved(false), 2000);
+  };
   const [revealed, setRevealed] = useState<Set<ProfileCommand>>(() => new Set());
   const summary = useMemo(() => summarizeProgress(runs, name), [runs, name]);
   const lastRun = runs.at(-1);
@@ -337,6 +356,14 @@ export function ProfileModal({ onClose }: ProfileModalProps) {
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [onClose]);
 
+  useEffect(() => {
+    supabase.auth.getUser().then(({ data }) => {
+      setUser(data.user);
+      const meta = data.user?.user_metadata;
+      setEditingUsername(meta?.username ?? meta?.full_name ?? meta?.name ?? readPlayerName());
+    });
+  }, []);
+
   const renderMasteryCard = (cmd: ProfileCommand, index: number) => {
     const uses = summary.commandTotals[cmd] ?? 0;
     const level = masteryLabel(uses).toUpperCase();
@@ -388,6 +415,126 @@ export function ProfileModal({ onClose }: ProfileModalProps) {
   };
 
   const renderTabContent = () => {
+    if (activeTab === "account") {
+      const displayName = user?.user_metadata?.username ?? user?.user_metadata?.full_name ?? user?.user_metadata?.name ?? null;
+      const email = user?.email ?? null;
+      const avatarUrl = user?.user_metadata?.avatar_url ?? null;
+      const provider = user?.app_metadata?.provider ?? "email";
+      const createdAt = user?.created_at ? new Date(user.created_at).toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" }) : null;
+      const initials = (editingUsername || displayName || email || "?").slice(0, 2).toUpperCase();
+
+      const row =(label: string, value: string) => (
+        <div style={{ display: "flex", alignItems: "baseline", gap: 12, padding: "8px 0", borderBottom: `1px solid ${C.sep}` }}>
+          <span style={{ fontFamily: "'Cinzel', Georgia, serif", fontSize: 10, letterSpacing: "0.12em", textTransform: "uppercase", color: C.goldDark, minWidth: 120 }}>{label}</span>
+          <span style={{ fontFamily: "Georgia, serif", fontSize: 14, color: C.ink }}>{value}</span>
+        </div>
+      );
+
+      return (
+        <div style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", gap: 24, padding: "12px 24px" }}>
+          {/* Avatar */}
+          <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 10 }}>
+            {avatarUrl ? (
+              <img
+                src={avatarUrl}
+                alt={displayName ?? "avatar"}
+                style={{ width: 80, height: 80, borderRadius: "50%", border: `2px solid ${C.gold}`, objectFit: "cover", boxShadow: `0 0 16px rgba(200,145,58,0.4)` }}
+              />
+            ) : (
+              <div style={{
+                width: 80, height: 80, borderRadius: "50%",
+                border: `2px solid ${C.gold}`,
+                background: C.dark,
+                display: "grid", placeItems: "center",
+                fontFamily: "'Cinzel', Georgia, serif",
+                fontSize: 28, fontWeight: 700,
+                color: C.goldBright,
+                boxShadow: `0 0 16px rgba(200,145,58,0.4)`,
+              }}>
+                {initials}
+              </div>
+            )}
+            {/* Editable username */}
+            <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 4 }}>
+              <input
+                aria-label="Username"
+                value={editingUsername}
+                onChange={e => { setEditingUsername(e.target.value); setUsernameSaved(false); }}
+                onKeyDown={e => { if (e.key === "Enter") saveUsername(); }}
+                placeholder="Enter username"
+                style={{
+                  border: 0,
+                  borderBottom: `2px solid ${C.goldDark}`,
+                  background: "transparent",
+                  outline: "none",
+                  textAlign: "center",
+                  fontFamily: "'Pirata One', 'Cinzel', Georgia, serif",
+                  fontSize: 20,
+                  color: C.ink,
+                  width: 200,
+                }}
+              />
+              <button
+                type="button"
+                onClick={saveUsername}
+                disabled={usernameSaving}
+                style={{
+                  fontFamily: "'Cinzel', Georgia, serif",
+                  fontSize: 9,
+                  letterSpacing: "0.1em",
+                  textTransform: "uppercase",
+                  padding: "3px 10px",
+                  border: `1px solid ${C.goldDark}`,
+                  background: usernameSaved ? C.gold : C.dark,
+                  color: usernameSaved ? C.ink : C.goldBright,
+                  cursor: "pointer",
+                  borderRadius: 3,
+                  transition: "all 0.2s",
+                }}
+              >
+                {usernameSaving ? "..." : usernameSaved ? "Saved ✓" : "Save"}
+              </button>
+            </div>
+          </div>
+
+          {/* Details */}
+          <div style={{ width: "100%", maxWidth: 480, border: `1px solid ${C.sep}`, background: C.card, padding: "6px 18px", boxShadow: `inset 0 0 18px rgba(139,105,20,0.08)` }}>
+            {email    && row("Email",    email)}
+            {provider && row("Signed in via", provider === "google" ? "Google" : "Email & Password")}
+            {createdAt && row("Member since", createdAt)}
+          </div>
+
+          {/* Sign out */}
+          {user && (
+            <button
+              type="button"
+              onClick={async () => { await supabase.auth.signOut(); onClose(); }}
+              style={{
+                fontFamily: "'Cinzel', Georgia, serif",
+                fontSize: 11,
+                letterSpacing: "0.12em",
+                textTransform: "uppercase",
+                padding: "6px 22px",
+                border: `1px solid ${C.goldDark}`,
+                background: C.dark,
+                color: C.goldBright,
+                cursor: "pointer",
+                borderRadius: 3,
+              }}
+            >
+              Sign Out
+            </button>
+          )}
+
+          {!user && (
+            <p style={{ fontFamily: "Georgia, serif", fontSize: 13, color: C.dim, textAlign: "center" }}>
+              Not signed in. Your progress is saved locally only.
+            </p>
+          )}
+        </div>
+      );
+    }
+
     if (activeTab === "stats") {
       return (
         <>
@@ -638,6 +785,7 @@ export function ProfileModal({ onClose }: ProfileModalProps) {
               bottom: "15%",
               left: "14%",
               right: "14%",
+              zIndex: 3,
               display: "flex",
               alignItems: "flex-start",
               gap: 42,
