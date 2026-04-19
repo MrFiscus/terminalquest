@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState, type KeyboardEvent } from "react";
 import { cn } from "@/lib/utils";
 import type { GameState, TerminalLine } from "@/game/types";
+import { commandDefinitions } from "@/game/commandSystem/registry";
 
 interface TerminalProps {
   state: GameState;
@@ -33,8 +34,55 @@ function lsTokenClass(text: string): string | null {
   return null;
 }
 
+const commandNames = commandDefinitions.flatMap((c) => [c.name, ...(c.aliases ?? [])]).sort();
+
+function commonPrefix(strs: string[]): string {
+  if (!strs.length) return "";
+  let prefix = strs[0];
+  for (const s of strs.slice(1)) {
+    while (!s.startsWith(prefix)) prefix = prefix.slice(0, -1);
+    if (!prefix) return "";
+  }
+  return prefix;
+}
+
+function getTabCompletion(input: string, state: GameState): string | null {
+  const endsWithSpace = input.endsWith(" ");
+  const tokens = input.trim().split(/\s+/).filter(Boolean);
+
+  // Complete command name when it's the only token and no trailing space
+  if (tokens.length <= 1 && !endsWithSpace) {
+    const partial = tokens[0] ?? "";
+    const matches = commandNames.filter((n) => n.startsWith(partial));
+    if (!matches.length) return null;
+    const completed = commonPrefix(matches);
+    return completed.length > partial.length ? completed : null;
+  }
+
+  // Complete file/directory argument
+  const partial = endsWithSpace ? "" : (tokens[tokens.length - 1] ?? "");
+  const prefix = endsWithSpace ? input : input.slice(0, input.lastIndexOf(partial));
+
+  const cmd = tokens[0]?.toLowerCase();
+  const room = state.rooms[state.cwd];
+  const candidates: string[] = [];
+
+  if (room) {
+    // cd only completes directories; other commands also include files
+    if (cmd !== "cd") candidates.push(...room.files.map((f) => f.name));
+    candidates.push(...room.doors.map((d) => d.target + "/"));
+  }
+
+  const matches = candidates.filter((c) => c.startsWith(partial));
+  if (!matches.length) return null;
+  if (matches.length === 1) return prefix + matches[0];
+  const completed = commonPrefix(matches);
+  return completed.length > partial.length ? prefix + completed : null;
+}
+
 export function Terminal({ state, onSubmit }: TerminalProps) {
   const [input, setInput] = useState("");
+  const [cursorPos, setCursorPos] = useState(0);
   const [histIndex, setHistIndex] = useState<number | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -61,6 +109,7 @@ export function Terminal({ state, onSubmit }: TerminalProps) {
       e.preventDefault();
       const value = input;
       setInput("");
+      setCursorPos(0);
       setHistIndex(null);
       onSubmit(value);
     } else if (e.key === "ArrowUp") {
@@ -70,6 +119,7 @@ export function Terminal({ state, onSubmit }: TerminalProps) {
       const idx = histIndex === null ? ch.length - 1 : Math.max(0, histIndex - 1);
       setHistIndex(idx);
       setInput(ch[idx]);
+      setCursorPos(ch[idx].length);
     } else if (e.key === "ArrowDown") {
       e.preventDefault();
       const ch = state.commandHistory;
@@ -78,9 +128,18 @@ export function Terminal({ state, onSubmit }: TerminalProps) {
       if (idx >= ch.length) {
         setHistIndex(null);
         setInput("");
+        setCursorPos(0);
       } else {
         setHistIndex(idx);
         setInput(ch[idx]);
+        setCursorPos(ch[idx].length);
+      }
+    } else if (e.key === "Tab") {
+      e.preventDefault();
+      const completed = getTabCompletion(input, state);
+      if (completed !== null) {
+        setInput(completed);
+        setCursorPos(completed.length);
       }
     }
   };
@@ -131,7 +190,11 @@ export function Terminal({ state, onSubmit }: TerminalProps) {
           <input
             ref={inputRef}
             value={input}
-            onChange={(e) => setInput(e.target.value)}
+            onChange={(e) => {
+              setInput(e.target.value);
+              setCursorPos(e.target.selectionStart ?? e.target.value.length);
+            }}
+            onSelect={(e) => setCursorPos(e.currentTarget.selectionStart ?? input.length)}
             onKeyDown={handleKey}
             disabled={state.animating || state.won}
             autoFocus
@@ -142,7 +205,7 @@ export function Terminal({ state, onSubmit }: TerminalProps) {
           />
           <span
             className="cursor-block ember-cursor pointer-events-none absolute top-1/2 -translate-y-1/2"
-            style={{ left: `${input.length}ch` }}
+            style={{ left: `${cursorPos}ch` }}
             aria-hidden
           />
         </div>
