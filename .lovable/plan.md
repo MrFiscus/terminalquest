@@ -1,61 +1,51 @@
 
 
 ## Goal
-Make the landing page feel more alive, immersive, and inviting — drawing visitors deeper without overwhelming the dungeon aesthetic.
+Reskin the **Book of Secrets** outer chrome (binding, frame, page edges) to match the reference: a chunky, cartoon-fantasy tome with **mossy green stone-leather binding, riveted silver metal corner brackets, ragged cream parchment pages with pebble/stone texture, and wooden bookmark tabs** at the bottom. Keep all functionality (flip animation, spell entries, filters, navigation) untouched.
 
-## Proposed enhancements
+## What changes visually
 
-### 1. Stronger hero hook
-- **Animated tagline rotator** under the title: cycle through 3-4 punchy lines like *"Learn Linux. Slay dragons."*, *"Your terminal is your sword."*, *"AI Dungeon Master included."* — each fades in/out every 3.5s.
-- **Visible CTA in hero** (currently the CTA is buried at the bottom): add a stone "▶ ENTER THE DUNGEON" button right under the tagline so first-paint shows a clear next action.
-- **Scroll cue**: a small bouncing "▼ scroll to peek inside" indicator at the bottom of the hero.
+### 1. Binding — mossy green stone-leather
+- Replace the dark brown/black leather frame with a **layered mossy green** material: base `#5a7a35`, dappled darker patches `#3d5a22`, brighter mossy highlights `#8aa850`.
+- Add subtle **stone-cracked texture** via `repeating-linear-gradient` + radial blotches so it reads as weathered, almost lichen-covered.
+- Soft inner glow + dark outer rim for that hand-painted, slightly rounded "cartoon volume" feel.
 
-### 2. Live, interactive terminal demo
-The current `TerminalDemo` plays once and stops. Make it:
-- **Loop continuously** so late scrollers still see motion.
-- **Add typewriter sound-style cursor jitter** (subtle scale pulse on each new char).
-- **Allow the visitor to type** into the demo terminal — accept `ls`, `cd`, `help` and respond with canned dungeon output. Turns the demo into a 10-second taste of the real game.
+### 2. Silver corner brackets (the standout feature)
+- Add **4 metallic silver L-shaped brackets** at each outer corner of the book (~46×46 px).
+- Pure CSS: layered linear-gradients (`#e8edf2 → #9aa4ad → #5d6770`) for brushed-steel look, plus 2 small dark "rivet" dots per bracket.
+- `drop-shadow` to lift them off the green binding.
 
-### 3. Stat ribbon (social proof / hook)
-A thin engraved-stone bar between hero and dual-monitor section showing rotating counters:
-`⚔ 47 COMMANDS · 🗝 12 DUNGEONS · 🤖 AI MENTOR · 🆓 FREE TO PLAY`
-Numbers count up on scroll-into-view.
+### 3. Parchment — cream with stone pebbles
+- Replace the warm yellow/gold `PARCH_BG` with a **cooler cream/tan** palette: base `#e8d4a8`, shadowed cracks `#b89668`, soft cream highlights `#f4e4bf`.
+- Overlay scattered **pebble blobs** using multiple `radial-gradient` ellipses of varying size/opacity to mimic the stone-fleck texture in the reference.
+- Keep faint horizontal ruling, but lighter brown so it sits on the new cream tone.
 
-### 4. "Featured commands" carousel
-New section before "How We Play": a horizontally-scrolling row of 6-8 stone tablets, each showing one Linux command (`ls`, `cat`, `grep`, `mkdir`, `chmod`, `find`) with a one-line dungeon flavor: *"grep — divine the secret runes hidden in any scroll"*. Tablets gently float and tilt on hover.
+### 4. Ragged page edges
+- Add a thin SVG-free **torn-edge mask** along the outer page borders using `clip-path: polygon(...)` with small zigzag points, so pages look hand-torn instead of perfectly straight.
 
-### 5. Testimonial / quote scroll
-A parchment scroll component (reuse `scriptorium-bg`) with rotating fictional player quotes:
-> *"I learned more sysadmin in 2 hours than my whole CS class." — apprentice_dev*
+### 5. Wooden bookmark tabs (bottom)
+- Two small **wooden plank tabs** poking out from the bottom of the book (~28×18 px each, positioned ~30% and ~70% from left).
+- Wood-grain via vertical `linear-gradient` with `repeating-linear-gradient` stripes (`#9b7340 → #6b4a22`).
+- Could double as **quick-jump anchors** (e.g., jump to Apprentice / Archmage sections) — optional, can stay decorative.
 
-Adds personality and warmth without needing real testimonials.
+### 6. Updated palette constants
+Refactor the `C = {...}` object in `BookOfSecrets.tsx`: rename `leather*` → `bind*` (green tones), add `silver*` and `wood*` groups, retune `parch*` to cream. Rank badges + text colors stay the same so legibility is preserved.
 
-### 6. Animated dungeon path preview
-Replace the static dual-monitor layout's right side with a **mini-loop**: player walks left→right across the room every ~6s, opens a door, screen briefly flashes "ROOM CLEARED ✓", resets. Already have walking GIFs — just needs a state loop.
+### 7. Rank badges & dividers — minor tonal sync
+- Adjust the thick horizontal separator between entries from brown to a **darker green-bronze** so it harmonizes with the new binding.
+- Number badges keep gold rim but on a slightly cooler dark-green core.
 
-### 7. Footer "campfire"
-Currently no real footer. Add a small final block:
-- Pixel campfire ASCII art with the existing ember particle effect concentrated above it
-- Links: GitHub · Discord · About · How it works
-- Tiny copyright line in engraved-stone style
-
-### 8. Polish details
-- **Cursor trail of embers** when moving the mouse over the hero (CSS-only, throttled, max 6 particles).
-- **Audio toggle** in the top nav: a 🔊/🔇 icon that plays a low ambient torch-crackle loop (muted by default, respects user choice via localStorage).
-- **First-time visitor "?" hint bubble** pointing to the CTA after 4s of inactivity.
-
-## Recommended priority (if not all)
-**High impact / low risk:** 1 (hero CTA + tagline rotator), 2 (interactive terminal), 4 (commands carousel), 6 (dungeon walk loop)
-**Nice to have:** 3 (stat ribbon), 5 (testimonial), 7 (campfire footer)
-**Optional flair:** 8 (cursor trail, audio)
+## What does NOT change
+- Page-flip animation, timing, and 3D logic
+- `SpellEntry` content layout, filter buttons, prev/next navigation, keyboard handlers
+- All command data and difficulty filtering
+- The `onClose` backdrop behavior
 
 ## Files to edit
-- `src/pages/Landing.tsx` — all new sections, hero CTA, interactive terminal state, walk-loop state
-- `src/index.css` — add float/tilt keyframes for tablets, count-up reveal animation, scroll-cue bounce, cursor-trail particle styles
-- *(optional)* `public/audio/torch-loop.mp3` if we add the audio toggle
+- `src/components/BookOfSecrets.tsx` — palette object, `PARCH_BG`, binding wrapper styles, add 4 corner brackets + 2 bottom wood tabs, ragged edge clip-path on `Page`. All-in-one file, no new dependencies.
 
-No new dependencies needed.
-
-## Question for you
-Which subset would you like? Reply with numbers (e.g. *"1, 2, 4, 6"*) or *"all"* and I'll build it in default mode.
+## Optional follow-ups (ask after approval)
+- Animate corner-bracket rivets with a faint glint
+- Make wood tabs clickable to jump to a difficulty section
+- Add a subtle parchment "bow" so pages curve slightly outward like the reference
 
