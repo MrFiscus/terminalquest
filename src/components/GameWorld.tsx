@@ -85,12 +85,15 @@ function pickWallSprite(
   // Deterministic per position; no RNG on edge tiles.
 
   if (isCorner) {
-    return { src: newAsset("Soil-1") };
+    if (isTopEdge && isLeftEdge) return { src: newAsset("Top-Corner-Wall") };
+    if (isTopEdge && isRightEdge) return { src: newAsset("Top-Corner-Wall"), transform: "scaleX(-1)" };
+    if (isBottomEdge && isLeftEdge) return { src: newAsset("Top-Corner-Wall") };
+    return { src: newAsset("Top-Corner-Wall"), transform: "scaleX(-1)" };
   }
   if (isTopEdge)    return { src: newAsset("Top-Soil-Wall") };
-  if (isBottomEdge) return { src: newAsset("Top-Soil-Wall"), transform: "rotate(180deg)" };
-  if (isLeftEdge)   return { src: newAsset("Top-Soil-Wall"), transform: "rotate(-90deg)" };
-  if (isRightEdge)  return { src: newAsset("Top-Soil-Wall"), transform: "rotate(90deg)" };
+  if (isBottomEdge) return { src: newAsset("Top-Soil-Wall") };
+  if (isLeftEdge)   return { src: newAsset("Top-Soil-Start"), transform: "scaleX(-1)" };
+  if (isRightEdge)  return { src: newAsset("Top-Soil-Start") };
 
   return { src: elementAsset("Normal-Wall") };
 }
@@ -251,7 +254,7 @@ function doorOverlayStyle(x: number, y: number, width: number, height: number, t
     return {
       ...base,
       left: x * tileW + tileW / 2,
-      top: y * tileH + tileH * 0.05,
+      top: y * tileH + tileH * 0.42,
       transform: "translateX(-50%)",
     };
   }
@@ -259,7 +262,7 @@ function doorOverlayStyle(x: number, y: number, width: number, height: number, t
     return {
       ...base,
       left: x * tileW + tileW / 2,
-      top: y * tileH - tileH * 0.05,
+      top: y * tileH + tileH * 0.42,
       transform: "translateX(-50%)",
     };
   }
@@ -295,6 +298,22 @@ function doorLabelTransform(x: number, y: number, width: number, height: number)
   if (side === "right") return "translate(-100%, -50%)";
   if (side === "bottom") return "translateX(-50%)";
   return "translateX(-50%)";
+}
+
+function horizontalBorderWallFaceStyle(
+  x: number,
+  side: "top" | "bottom",
+  roomHeight: number,
+  tileW: number,
+  tileH: number,
+): CSSProperties {
+  return {
+    left: x * tileW,
+    top: (side === "top" ? 0 : roomHeight - 1) * tileH + tileH * 0.55,
+    width: tileW,
+    height: tileH * 0.95,
+    zIndex: 4,
+  };
 }
 
 // ------------------------------------------------------------------
@@ -363,7 +382,7 @@ export function GameWorld({ state, onDismissPopup, headerRight }: GameWorldProps
             )}
 
             {/* Wall tile — doors replace the wall visually via an overlay. */}
-            {isEdge && !doorHere && !torchHere && (() => {
+            {isEdge && !doorHere && (() => {
               const pick = pickWallSprite(x, y, room.width, room.height, roomSeed);
               return (
                 <img
@@ -380,7 +399,7 @@ export function GameWorld({ state, onDismissPopup, headerRight }: GameWorldProps
             })()}
 
             {/* Torch alcove — Engraved-Torch-Wall replaces the wall tile here */}
-            {isEdge && torchHere && (
+            {isEdge && torchHere && (x === 0 || x === room.width - 1) && (
               <img
                 src={newAsset("Engraved-Torch-Wall")}
                 alt=""
@@ -401,24 +420,31 @@ export function GameWorld({ state, onDismissPopup, headerRight }: GameWorldProps
             )}
 
             {/* Base wall under door — keeps continuity so door sits against wall */}
-            {isEdge && doorHere && (
-              <>
-                <img
-                  src={elementAsset("Normal-Wall")}
-                  alt=""
-                  draggable={false}
-                  className="absolute inset-0 h-full w-full object-cover"
-                  style={{ imageRendering: "pixelated", opacity: 0.9 }}
-                />
-                <span
-                  className="absolute inset-0"
-                  style={{
-                    background:
-                      "radial-gradient(circle at 50% 70%, rgba(0,0,0,0.85) 0%, rgba(0,0,0,0.4) 55%, transparent 80%)",
-                  }}
-                />
-              </>
-            )}
+            {isEdge && doorHere && (() => {
+              const pick = pickWallSprite(x, y, room.width, room.height, roomSeed);
+              return (
+                <>
+                  <img
+                    src={pick.src}
+                    alt=""
+                    draggable={false}
+                    className="absolute inset-0 h-full w-full object-cover"
+                    style={{
+                      imageRendering: "pixelated",
+                      opacity: 0.92,
+                      transform: pick.transform,
+                    }}
+                  />
+                  <span
+                    className="absolute inset-0"
+                    style={{
+                      background:
+                        "radial-gradient(circle at 50% 70%, rgba(0,0,0,0.82) 0%, rgba(0,0,0,0.38) 55%, transparent 80%)",
+                    }}
+                  />
+                </>
+              );
+            })()}
           </div>,
         );
       }
@@ -529,6 +555,47 @@ export function GameWorld({ state, onDismissPopup, headerRight }: GameWorldProps
           </div>
 
           {/* (Top-wall soil overhang removed — outer ring tiles now use Top-Soil-Wall composites directly.) */}
+
+          {/* Horizontal borders get a stone face under the dirt lip for depth. */}
+          {(["top", "bottom"] as const).flatMap((side) =>
+            Array.from({ length: Math.max(0, room.width - 2) }, (_, i) => {
+              const x = i + 1;
+              const y = side === "top" ? 0 : room.height - 1;
+              if (doorByPos.has(`${x},${y}`)) return null;
+              const hasTorch = torchSet.has(`${x},${y}`);
+              return (
+                <img
+                  key={`border-face-${side}-${x}`}
+                  src={hasTorch ? newAsset("Engraved-Torch-Wall") : elementAsset("Normal-Wall")}
+                  alt=""
+                  draggable={false}
+                  className={cn("pointer-events-none absolute object-cover", hasTorch && "torch-glow")}
+                  style={{
+                    ...horizontalBorderWallFaceStyle(x, side, room.height, tileW, tileH),
+                    imageRendering: "pixelated",
+                    transform: side === "bottom" && hasTorch ? "scaleY(-1)" : undefined,
+                    filter: "drop-shadow(0 4px 5px rgba(0,0,0,0.55))",
+                  }}
+                />
+              );
+            }),
+          )}
+
+          {/* Bottom corner blocks need the same wall face as the bottom run. */}
+          {[0, room.width - 1].map((x) => (
+            <img
+              key={`border-face-bottom-corner-${x}`}
+              src={elementAsset("Normal-Wall")}
+              alt=""
+              draggable={false}
+              className="pointer-events-none absolute object-cover"
+              style={{
+                ...horizontalBorderWallFaceStyle(x, "bottom", room.height, tileW, tileH),
+                imageRendering: "pixelated",
+                filter: "drop-shadow(0 4px 5px rgba(0,0,0,0.55))",
+              }}
+            />
+          ))}
 
           {/* ------- Interior wall tiles (from generator decor: kind "interior-wall") ------- */}
           {interiorWalls.map((w) => {
@@ -653,10 +720,10 @@ export function GameWorld({ state, onDismissPopup, headerRight }: GameWorldProps
               draggable={false}
               className="pointer-events-none absolute object-contain"
               style={{
-                left: (p.x - 0.2) * tileW,
-                top: (p.y - 1.15) * tileH,
-                width: tileW * 1.4,
-                height: tileH * 2.1,
+                left: (p.x - 0.05) * tileW,
+                top: (p.y - 0.45) * tileH,
+                width: tileW * 1.1,
+                height: tileH * 1.58,
                 imageRendering: "pixelated",
                 zIndex: 17,
                 filter: "drop-shadow(0 6px 6px rgba(0,0,0,0.8))",
