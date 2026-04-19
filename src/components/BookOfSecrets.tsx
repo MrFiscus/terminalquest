@@ -22,10 +22,10 @@ const C = {
   sepDark:     "#2a1408",
   sepMid:      "#5a2a10",
 
-  // Rank colours
-  apprentice:  { text: "#1a5c2a", bg: "#d4f0da", border: "#2d7a3a" },
-  journeyman:  { text: "#5c3d00", bg: "#fff3cd", border: "#c8913a" },
-  archmage:    { text: "#6b0000", bg: "#ffd5d5", border: "#8b1a1a" },
+  // Rank colours — aged parchment style with subtle tints
+  apprentice:  { text: "#e8d89a", bg: "rgba(20,8,4,0.85)", border: "#5a7a38" },
+  journeyman:  { text: "#e8d89a", bg: "rgba(20,8,4,0.85)", border: "#7a5018" },
+  archmage:    { text: "#e8d89a", bg: "rgba(20,8,4,0.85)", border: "#7a1818" },
 } as const;
 
 const RANK: Record<DifficultyLevel, string> = {
