@@ -207,11 +207,6 @@ function MonitorFrame({ title, accent = "hsl(38 100% 50%)", children }: { title:
   return (
     <div className="scriptorium-frame" style={{ display: "flex", flexDirection: "column", overflow: "hidden" }}>
       <div style={{ background: "hsl(0 0% 5%)", borderBottom: `1px solid ${accent.replace(")", "/0.3)")}`, padding: "5px 10px", display: "flex", alignItems: "center", gap: 8, flexShrink: 0 }}>
-        <div style={{ display: "flex", gap: 5 }}>
-          {["hsl(0 70% 45%)", "hsl(45 90% 48%)", "hsl(130 50% 40%)"].map((c, i) => (
-            <div key={i} style={{ width: 9, height: 9, borderRadius: "50%", background: c, border: "1px solid hsl(0 0% 0%/0.6)", boxShadow: `0 0 4px ${c}` }} />
-          ))}
-        </div>
         <span style={{ flex: 1, textAlign: "center", fontFamily: "'Press Start 2P',monospace", fontSize: 7, color: accent, letterSpacing: "0.12em" }}>{title}</span>
       </div>
       <div style={{ flex: 1, minHeight: 0, overflow: "hidden" }}>{children}</div>
@@ -595,11 +590,6 @@ export default function Landing() {
 
         {/* Nav */}
         <div style={{ position: "relative", zIndex: 10, display: "flex", alignItems: "center", gap: 12, padding: "10px 20px", background: "hsl(0 0%0%/0.38)", borderBottom: "1px solid hsl(0 0%0%/0.5)", backdropFilter: "blur(2px)" }}>
-          <div style={{ display: "flex", gap: 6 }}>
-            {["hsl(0 70%45%)", "hsl(45 90%55%)", "hsl(140 50%45%)"].map((c, i) => (
-              <span key={i} style={{ width: 12, height: 12, borderRadius: "50%", background: c, border: "1px solid hsl(0 0%0%/0.6)", display: "inline-block" }} />
-            ))}
-          </div>
           <span className="lp-eng" style={{ fontSize: 13, letterSpacing: "0.2em" }}>Terminal Quest</span>
           <span className="lp-eng" style={{ marginLeft: "auto", fontSize: 10, letterSpacing: "0.25em", color: "hsl(0 0%25%)", fontWeight: 600 }}>Chamber of Origin</span>
         </div>
@@ -827,11 +817,6 @@ export default function Landing() {
 
             {/* Title bar */}
             <div style={{ position: "relative", zIndex: 2, background: "hsl(0 0%0%/0.55)", borderBottom: "1px solid hsl(280 30%20%/0.45)", padding: "7px 14px", display: "flex", alignItems: "center", gap: 10, backdropFilter: "blur(2px)" }}>
-              <div style={{ display: "flex", gap: 5 }}>
-                {["hsl(0 70%45%)", "hsl(45 90%48%)", "hsl(130 50%40%)"].map((c, i) => (
-                  <div key={i} style={{ width: 10, height: 10, borderRadius: "50%", background: c, border: "1px solid hsl(0 0%0%/0.6)", boxShadow: `0 0 4px ${c}` }} />
-                ))}
-              </div>
               <span className="lp-eng" style={{ flex: 1, textAlign: "center", fontSize: 11, letterSpacing: "0.2em" }}>
                 DUNGEON MASTER — AI TUTOR v2.1
               </span>
