@@ -111,6 +111,46 @@ function VfxCell({ kind, index }: { kind: VfxPulse["kind"]; index: number }) {
       </div>
     );
   }
+  if (kind === "shimmer") {
+    // whoami — golden aura around the player
+    return (
+      <div className="vfx-cell vfx-shimmer" style={style}>
+        <span className="vfx-shimmer-halo" />
+        <span className="vfx-shimmer-sparkle vfx-shimmer-sparkle-a">✦</span>
+        <span className="vfx-shimmer-sparkle vfx-shimmer-sparkle-b">✧</span>
+        <span className="vfx-shimmer-sparkle vfx-shimmer-sparkle-c">✦</span>
+      </div>
+    );
+  }
+  if (kind === "ripple") {
+    // echo — concentric rings rolling outward from the source cell
+    return (
+      <div className="vfx-cell vfx-ripple" style={style}>
+        <span className="vfx-ripple-ring vfx-ripple-ring-a" />
+        <span className="vfx-ripple-ring vfx-ripple-ring-b" />
+        <span className="vfx-ripple-ring vfx-ripple-ring-c" />
+      </div>
+    );
+  }
+  if (kind === "lockout") {
+    // locked / broken door attempt — red rune flicker on the door tile
+    return (
+      <div className="vfx-cell vfx-lockout" style={style}>
+        <span className="vfx-lockout-bar" />
+        <span className="vfx-rune-mark vfx-lockout-mark">✕</span>
+      </div>
+    );
+  }
+  if (kind === "keyPickup") {
+    // key item collected — bright twinkle with an upward sparkle trail
+    return (
+      <div className="vfx-cell vfx-keypickup" style={style}>
+        <span className="vfx-keypickup-burst" />
+        <span className="vfx-keypickup-trail">✦</span>
+        <span className="vfx-keypickup-trail vfx-keypickup-trail-b">✧</span>
+      </div>
+    );
+  }
   return null;
 }
 
@@ -749,6 +789,8 @@ export function GameWorld({ state, onDismissPopup, headerRight, headerSubtitle }
               state.screenEffect?.kind === "traverse" && "command-traverse-pulse",
               state.screenEffect?.kind === "track" && "command-track-pulse",
               state.screenEffect?.kind === "aware" && "command-aware-pulse",
+              state.screenEffect?.kind === "lockout" && "command-lockout-pulse",
+              state.screenEffect?.kind === "combo" && "command-combo-flash",
             )}
             style={{
               width: boardW,

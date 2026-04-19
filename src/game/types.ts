@@ -123,7 +123,19 @@ export type PlayerFacing = "down" | "up" | "left" | "right";
 export interface VfxPulse {
   id: number;
   cells: { x: number; y: number }[];
-  kind: "ls" | "find" | "rm" | "manifest" | "inspect" | "pwd" | "combo" | "ghost";
+  kind:
+    | "ls"
+    | "find"
+    | "rm"
+    | "manifest"
+    | "inspect"
+    | "pwd"
+    | "combo"
+    | "ghost"
+    | "shimmer"      // whoami — golden aura on the player
+    | "ripple"       // echo — concentric rings from the player
+    | "lockout"      // failed cd on locked / broken door — red rune on door tile
+    | "keyPickup";   // distinct visual when a KEY is collected
   expiresAt: number;
 }
 
@@ -135,7 +147,15 @@ export interface ScrollPopup {
 
 export interface ScreenEffect {
   id: number;
-  kind: "reveal" | "error" | "create" | "traverse" | "track" | "aware";
+  kind:
+    | "reveal"
+    | "error"
+    | "create"
+    | "traverse"
+    | "track"
+    | "aware"
+    | "lockout"    // locked / broken door attempt — red flicker + harder shake
+    | "combo";     // multi-command combo — gold fanfare flash
 }
 
 export type PlayMode = "guided" | "real";

@@ -8,6 +8,7 @@ import { DifficultyMenu } from "@/components/DifficultyMenu";
 import { MauQuizOverlay } from "@/components/MauQuizOverlay";
 import { ScrollModal } from "@/components/ScrollModal";
 import { WizardDialog } from "@/components/WizardDialog";
+import { AchievementToastQueue } from "@/components/AchievementToast";
 import { DEMO_CONTEXT, useGameState } from "@/hooks/useGameState";
 import { getRoom } from "@/game/dungeon";
 import { generateLevel, type Difficulty } from "@/game/aiLevelService";
@@ -107,10 +108,11 @@ function roomHeaderNote(room: ReturnType<typeof getRoom>, transientNote: string 
 const Index = () => {
   const [profileOpen, setProfileOpen] = useState(false);
   const openProfile = useCallback(() => setProfileOpen(true), []);
-  const { 
-    state, submit, dismissPopup, loadLevel, 
+  const {
+    state, submit, dismissPopup, loadLevel,
     teachingTip, dungeonMasterTip, roomSubtitle,
-    submitMauQuiz, closeMauQuiz, openScroll, closeScroll
+    submitMauQuiz, closeMauQuiz, openScroll, closeScroll,
+    achievementQueue, dismissAchievement,
   } = useGameState({
     onOpenProfile: openProfile,
   });
@@ -309,7 +311,9 @@ const Index = () => {
         )}
       </AnimatePresence>
 
-      <WizardDialog 
+      <AchievementToastQueue queue={achievementQueue} onDismiss={dismissAchievement} />
+
+      <WizardDialog
         externalMessage={dungeonMasterTip || teachingTip?.message || null}
         context={{
           goal: state.goal,

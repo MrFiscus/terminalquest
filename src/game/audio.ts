@@ -4,8 +4,10 @@ type SoundKind =
   | "step"
   | "door"
   | "lockedDoor"
+  | "lockoutRune"
   | "room"
   | "pickup"
+  | "keyPickup"
   | "error"
   | "reveal"
   | "find"
@@ -17,11 +19,14 @@ type SoundKind =
   | "remove"
   | "copy"
   | "echo"
+  | "ripple"
+  | "shimmer"
   | "hint"
   | "quiz"
   | "profile"
   | "clear"
   | "combo"
+  | "comboFanfare"
   | "win";
 
 type BrowserAudioContext = AudioContext & {
@@ -300,6 +305,41 @@ export function playGameSound(kind: SoundKind) {
       tone(587, 0.08, 0.08, "triangle", 0, 0.06);
       tone(784, 0.14, 0.08, "triangle", 0, 0.12);
       break;
+    case "comboFanfare":
+      // Heavier, more satisfying hit for multi-step combos: chord + swell
+      tone(392, 0.12, 0.1, "triangle");
+      tone(523.25, 0.14, 0.085, "triangle", 0, 0.04);
+      tone(659.25, 0.18, 0.08, "triangle", 0, 0.09);
+      tone(880, 0.22, 0.07, "sine", 0, 0.18);
+      noise(0.2, 0.045, 3200, 0.02);
+      break;
+    case "keyPickup":
+      // Distinct bright chime for KEY items — brighter and longer than pickup.
+      tone(880, 0.08, 0.12, "sine");
+      tone(1174.66, 0.1, 0.11, "sine", 0, 0.05);
+      tone(1760, 0.22, 0.085, "triangle", 0, 0.12);
+      noise(0.14, 0.035, 4800, 0.02);
+      break;
+    case "lockoutRune":
+      // A "locked out" feel — low thud + dissonant rune shimmer above.
+      noise(0.1, 0.11, 280);
+      tone(58, 0.18, 0.13, "square");
+      tone(146, 0.22, 0.05, "sawtooth", 20, 0.06);
+      tone(233, 0.16, 0.035, "triangle", -10, 0.1);
+      break;
+    case "ripple":
+      // `echo` — an airy outward breath, shorter than room-enter.
+      sweep(420, 160, 0.22, 0.05, "triangle");
+      tone(330, 0.16, 0.055, "sine", 0, 0.08);
+      noise(0.26, 0.025, 1800, 0.04);
+      break;
+    case "shimmer":
+      // `whoami` — golden twinkle around the player.
+      tone(987.77, 0.08, 0.085, "sine");
+      tone(1318.51, 0.1, 0.075, "sine", 0, 0.06);
+      tone(1567.98, 0.14, 0.06, "sine", 0, 0.12);
+      noise(0.1, 0.025, 5200, 0.02);
+      break;
     case "win":
       tone(523, 0.12, 0.1, "triangle");
       tone(659, 0.12, 0.1, "triangle", 0, 0.1);
@@ -322,7 +362,8 @@ export function playCommandSound(input: string, result: CommandResult, failed: b
   if (failed) {
     const text = result.lines.map((line) => line.text).join(" ").toLowerCase();
     if (command === "cd" && /(locked|broken|blocks|blocked|sealed)/.test(text)) {
-      playGameSound("lockedDoor");
+      // Distinct low rune for locked / broken doors — not the generic error tone.
+      playGameSound("lockoutRune");
     } else {
       playGameSound("error");
     }
@@ -332,7 +373,12 @@ export function playCommandSound(input: string, result: CommandResult, failed: b
   if (result.effect?.type === "enterRoom") {
     playGameSound(result.effect.wasLocked ? "unlock" : "door");
   }
-  if (result.effect?.type === "pickup") playGameSound("pickup");
+  if (result.effect?.type === "pickup") {
+    // Keys get a brighter, longer chime so important inventory events feel
+    // distinct from picking up a regular note.
+    const isKey = Boolean((result.effect as { isKey?: boolean }).isKey);
+    playGameSound(isKey ? "keyPickup" : "pickup");
+  }
   if (result.effect?.type === "removeFile") playGameSound("remove");
   if (result.effect?.type === "repairDoor") playGameSound("repair");
   if (result.effect?.type === "chmodFile") playGameSound("unlock");
@@ -348,7 +394,8 @@ export function playCommandSound(input: string, result: CommandResult, failed: b
   else if (result.vfx?.kind === "ghost" || command === "hint" || command === "help" || command === "man") playGameSound("hint");
 
   if (command === "cp") playGameSound("copy");
-  if (command === "echo") playGameSound("echo");
+  if (command === "echo") playGameSound("ripple"); // echo reads as an outgoing wave
   if (command === "grep") playGameSound("find");
   if (command === "pwd") playGameSound("hint");
+  if (command === "whoami") playGameSound("shimmer"); // identity reveal chime
 }

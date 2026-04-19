@@ -108,6 +108,11 @@ export function Terminal({ state, onSubmit }: TerminalProps) {
   const [input, setInput] = useState("");
   const [cursorPos, setCursorPos] = useState(0);
   const [histIndex, setHistIndex] = useState<number | null>(null);
+  // Bumps on every command submit; the wrapper div is keyed on this so the
+  // CSS animation re-plays from scratch every time. This is the visual
+  // "terminal firing into the map" bridge.
+  const [submitFlashKey, setSubmitFlashKey] = useState(0);
+  const flashSubmit = () => setSubmitFlashKey((n) => n + 1);
   const scrollRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -139,6 +144,7 @@ export function Terminal({ state, onSubmit }: TerminalProps) {
         setCursorPos(0);
         setHistIndex(null);
         inputRef.current?.focus();
+        flashSubmit();
         onSubmit(value);
         return;
       }
@@ -155,6 +161,7 @@ export function Terminal({ state, onSubmit }: TerminalProps) {
       setInput("");
       setCursorPos(0);
       setHistIndex(null);
+      flashSubmit();
       onSubmit(value);
     } else if (e.key === "ArrowUp") {
       e.preventDefault();
@@ -241,8 +248,9 @@ export function Terminal({ state, onSubmit }: TerminalProps) {
           );
         })}
 
-        {/* Active Input Prompt */}
-        <div className="mt-2">
+        {/* Active Input Prompt — `key` re-mounts on every submit so the
+            terminal-input-pulse animation replays, bridging terminal → map. */}
+        <div key={submitFlashKey} className="mt-2 terminal-input-pulse rounded-sm px-1">
           {twoLinePrompt ? (
             <>
               <div className="dungeon-prompt-line">

@@ -33,6 +33,7 @@ import {
   type ProfileCommand,
 } from "@/game/progressStats";
 import { askProfileSummary } from "@/game/aiDungeonMasterService";
+import { computeAchievementProgress } from "@/game/achievements";
 import profileBg from "@/assets/profile-bg.png";
 
 const C = {
@@ -359,13 +360,18 @@ export function ProfileModal({ onClose }: ProfileModalProps) {
     { label: "Best Streak", value: summary.bestWinStreak },
     { label: "Completed Today", value: summary.levelsToday },
   ];
-  const achievementStats = [
-    { name: "First Blood", detail: `${Math.min(summary.totalLevels, 1)}/1 completed`, earned: summary.totalLevels >= 1 },
-    { name: "Speed Runner", detail: `${runs.some((run) => run.durationMs < 120000) ? 1 : 0}/1 under 2m`, earned: runs.some((run) => run.durationMs < 120000) },
-    { name: "Explorer", detail: `${Math.min(summary.commandTotals.find ?? 0, 5)}/5 find uses`, earned: (summary.commandTotals.find ?? 0) >= 5 },
-    { name: "Lockpicker", detail: `${Math.min(summary.totalLockedDoorsUnlocked, 3)}/3 locks`, earned: summary.totalLockedDoorsUnlocked >= 3 },
-    { name: "Linux Wizard", detail: `${PROFILE_COMMANDS.filter((cmd) => (summary.commandTotals[cmd] ?? 0) > 0).length}/${PROFILE_COMMANDS.length} commands`, earned: PROFILE_COMMANDS.every((cmd) => (summary.commandTotals[cmd] ?? 0) > 0) },
-  ];
+  // Shared catalog — same list used by the unlock toast so the two views
+  // never drift.
+  const achievementStats = computeAchievementProgress(summary).map(({ def, state }) => ({
+    id: def.id,
+    name: def.name,
+    description: def.description,
+    reward: def.reward,
+    icon: def.icon,
+    rarity: def.rarity,
+    detail: `${state.current}/${state.target}`,
+    earned: state.unlocked,
+  }));
   const [leftMastery, rightMastery] = splitInHalf(PROFILE_COMMANDS);
   const [leftAchievements, rightAchievements] = splitInHalf(achievementStats);
 
@@ -658,15 +664,19 @@ export function ProfileModal({ onClose }: ProfileModalProps) {
 
     if (activeTab === "achievements") {
       const renderAchievement = (achievement: typeof achievementStats[number], index: number) => (
-        <SpellCard key={achievement.name} index={index} title={achievement.name} locked={!achievement.earned}>
+        <SpellCard key={achievement.id} index={index} title={`${achievement.icon} ${achievement.name}`} locked={!achievement.earned}>
           <p style={{ margin: 0, fontFamily: "Georgia, serif", fontSize: 13, lineHeight: 1.45 }}>
-            {achievement.earned ? "Inscribed in gold." : "Still hidden beneath wax and dust."}
+            {achievement.description}
           </p>
           <Divider />
-          <p style={{ margin: 0, fontFamily: "'Cinzel', Georgia, serif", fontSize: 10, color: C.goldDark, textTransform: "uppercase" }}>
-            Progress
+          <p style={{ margin: 0, fontFamily: "'Cinzel', Georgia, serif", fontSize: 10, color: C.goldDark, textTransform: "uppercase", letterSpacing: "0.1em" }}>
+            {achievement.rarity} · {achievement.earned ? "Earned" : `Progress ${achievement.detail}`}
           </p>
-          <p style={{ margin: "6px 0 0", fontFamily: "Georgia, serif", fontSize: 12 }}>{achievement.detail}</p>
+          {achievement.earned && (
+            <p style={{ margin: "6px 0 0", fontFamily: "Georgia, serif", fontSize: 12, fontStyle: "italic", color: C.goldDark }}>
+              "{achievement.reward}"
+            </p>
+          )}
         </SpellCard>
       );
       return (

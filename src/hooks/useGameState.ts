@@ -41,9 +41,16 @@ import {
   clearActiveRun,
   countCommands,
   saveActiveRun,
+  summarizeProgress,
   type ActiveRunRecord,
   type RunRecord,
 } from "@/game/progressStats";
+import {
+  ACHIEVEMENTS,
+  drainNewlyUnlocked,
+  markAchievementNotified,
+  type AchievementDef,
+} from "@/game/achievements";
 import { generateMauQuiz } from "@/game/mauQuizService";
 import { mauKeyQuizForDoor } from "@/game/difficultyMechanics";
 import {
@@ -59,6 +66,7 @@ import type {
   PlayMode,
   PlayerFacing,
   TerminalLine,
+  VfxPulse,
 } from "@/game/types";
 
 const STEP_MS = 180;
@@ -208,6 +216,28 @@ export function useGameState(options: UseGameStateOptions = {}) {
   const aiReportFeedbackRef = useRef<string | null>(null);
   const stateRef = useRef(state);
   stateRef.current = state;
+
+  // Achievement popup queue. Entries are full defs so the toast can render
+  // without another lookup. drainNewlyUnlocked() is idempotent and cheap.
+  const [achievementQueue, setAchievementQueue] = useState<AchievementDef[]>([]);
+  const checkAchievements = useCallback(() => {
+    const fresh = drainNewlyUnlocked(summarizeProgress());
+    if (fresh.length) setAchievementQueue((q) => [...q, ...fresh]);
+  }, []);
+  const dismissAchievement = useCallback((id: string) => {
+    setAchievementQueue((q) => q.filter((a) => a.id !== id));
+  }, []);
+
+  // On mount: silently mark any already-unlocked achievements as notified,
+  // so returning players aren't spammed with a stack of toasts for things
+  // they earned in previous sessions. Toasts only pop for NEW unlocks
+  // earned from here on.
+  useEffect(() => {
+    const summary = summarizeProgress();
+    for (const def of ACHIEVEMENTS) {
+      if (def.progress(summary).unlocked) markAchievementNotified(def.id);
+    }
+  }, []);
 
   const nextId = () => ++idRef.current;
 
@@ -536,8 +566,12 @@ export function useGameState(options: UseGameStateOptions = {}) {
         }
         return s;
       });
+      // After any effect that touches runTracker / localStorage-backed run
+      // stats (pickup / enterRoom lockpick / win), re-check achievement
+      // unlocks so newly-earned ones surface as toasts.
+      checkAchievements();
     },
-    [completeRun, showDungeonMasterTip, showRoomSubtitle],
+    [checkAchievements, completeRun, showDungeonMasterTip, showRoomSubtitle],
   );
 
   const submit = useCallback(
@@ -601,8 +635,21 @@ export function useGameState(options: UseGameStateOptions = {}) {
         runTrackerRef.current.commands.push(raw.trim());
         if (failed) runTrackerRef.current.mistakes.push(raw.trim());
         saveActiveRun(activeRunFromTracker(runTrackerRef.current, s.targetFile));
+        // Command-count achievements (explorer/wizard/observant/scholar/…).
+        checkAchievements();
       }
       const commandEffect = runCommandEffect(raw, result, failed);
+      // If this command picked up a KEY specifically, flag the effect so
+      // playCommandSound uses the brighter keyPickup chime instead of the
+      // generic pickup tone. Mutation is safe: the result object is
+      // consumed here and discarded.
+      if (result.effect?.type === "pickup") {
+        const pickedFrom = getRoom(s.rooms, s.cwd);
+        const pickedFile = pickedFrom?.files.find((f) => f.name === result.effect!.fileName);
+        if (pickedFile?.type === "key") {
+          (result.effect as { isKey?: boolean }).isKey = true;
+        }
+      }
       playCommandSound(raw, result, failed);
       const currentRoom = getRoom(s.rooms, s.cwd);
       const isDemoMode = isDemoState(s);
@@ -693,6 +740,50 @@ export function useGameState(options: UseGameStateOptions = {}) {
         setTimeout(() => {
           setState((cur) => ({ ...cur, vfx: cur.vfx.filter((v) => v.id !== id) }));
         }, dur);
+      }
+
+      // --- Ambient feedback VFX that the command system itself does NOT emit ---
+      //
+      // Small helper that pushes a one-shot VFX and cleans it up. Keeps all
+      // the ad-hoc effects below readable.
+      const emitVfx = (kind: VfxPulse["kind"], cells: { x: number; y: number }[], dur = 1000) => {
+        const id = nextId();
+        const vfx: VfxPulse = { id, kind, cells, expiresAt: Date.now() + dur };
+        setState((cur) => ({ ...cur, vfx: [...cur.vfx, vfx] }));
+        setTimeout(() => {
+          setState((cur) => ({ ...cur, vfx: cur.vfx.filter((v) => v.id !== id) }));
+        }, dur);
+      };
+
+      // 1) Locked / broken door: put a red rune on the actual door tile so
+      //    failed `cd` calls read as "that specific door rejected you",
+      //    not as a generic shake.
+      if (failed && commandName === "cd") {
+        const text = result.lines.map((line) => line.text).join(" ").toLowerCase();
+        if (/(locked|broken|blocks|blocked|sealed)/.test(text)) {
+          const target = raw.trim().split(/\s+/)[1]?.replace(/\/$/, "") ?? "";
+          const door = currentRoom?.doors.find((d) => d.target === target);
+          if (door) emitVfx("lockout", [{ x: door.x, y: door.y }], 700);
+          triggerScreenEffect("lockout", 500);
+        }
+      }
+      // 2) Key pickups — bright burst where the key was sitting. Runs
+      //    BEFORE the applyEffect removes the file, so coords still valid.
+      if (result.effect?.type === "pickup") {
+        const isKey = Boolean((result.effect as { isKey?: boolean }).isKey);
+        if (isKey) {
+          const pickedFile = currentRoom?.files.find((f) => f.name === result.effect!.fileName);
+          if (pickedFile) emitVfx("keyPickup", [{ x: pickedFile.x, y: pickedFile.y }], 1200);
+        }
+      }
+      // 3) echo → outgoing ripple from the player, anchoring the command
+      //    spatially on the map.
+      if (!failed && commandName === "echo") {
+        emitVfx("ripple", [{ x: s.player.x, y: s.player.y }], 1100);
+      }
+      // 4) whoami → golden shimmer halo around the player.
+      if (!failed && commandName === "whoami") {
+        emitVfx("shimmer", [{ x: s.player.x, y: s.player.y }], 1400);
       }
 
       if (result.popup) {
@@ -844,7 +935,11 @@ export function useGameState(options: UseGameStateOptions = {}) {
       ]);
 
       if (guided && shouldShowCombo) {
-        playGameSound("combo");
+        // Upgraded combo feel: fuller chord, gold screen flash, and the
+        // on-tile VFX together — combos should feel meaningfully different
+        // from a single successful command.
+        playGameSound("comboFanfare");
+        triggerScreenEffect("combo", 900);
         const id = nextId();
         const cells = [{ x: s.player.x, y: s.player.y }];
         setState((cur) => ({ ...cur, vfx: [...cur.vfx, { id, kind: "combo", cells, expiresAt: Date.now() + 1500 }] }));
@@ -890,7 +985,7 @@ export function useGameState(options: UseGameStateOptions = {}) {
         }
       }
     },
-    [animateWalk, animatePickup, appendLines, applyEffect, onOpenProfile, triggerTeaching, triggerScreenEffect],
+    [animateWalk, animatePickup, appendLines, applyEffect, checkAchievements, onOpenProfile, triggerTeaching, triggerScreenEffect],
   );
 
   const dismissPopup = useCallback(() => {
@@ -1060,20 +1155,22 @@ export function useGameState(options: UseGameStateOptions = {}) {
     }
   }, [appendLines, applyEffect, showDungeonMasterTip, triggerScreenEffect]);
 
-  return { 
-    state, 
-    submit, 
-    reset, 
-    dismissPopup, 
-    loadLevel, 
-    teachingTip, 
-    dismissTeaching, 
+  return {
+    state,
+    submit,
+    reset,
+    dismissPopup,
+    loadLevel,
+    teachingTip,
+    dismissTeaching,
     dungeonMasterTip,
     dismissDungeonMasterTip,
     roomSubtitle,
     submitMauQuiz,
     closeMauQuiz,
     openScroll,
-    closeScroll
+    closeScroll,
+    achievementQueue,
+    dismissAchievement,
   };
 }
