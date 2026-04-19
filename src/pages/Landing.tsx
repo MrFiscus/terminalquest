@@ -429,18 +429,28 @@ function CommandsCarousel() {
         <div style={{ padding: "0 32px" }}>
           <SectionTitle>✦ SPELLS YOU WILL LEARN ✦</SectionTitle>
         </div>
-        <div style={{
-          position: "relative", zIndex: 1,
-          display: "flex", gap: 18, padding: "8px 32px 16px",
-          overflowX: "auto", scrollSnapType: "x mandatory",
-        }}>
-          {FEATURED_CMDS.map((c, i) => (
+        <div
+          style={{
+            position: "relative", zIndex: 1,
+            padding: "8px 0 16px",
+            overflow: "hidden",
+            maskImage: "linear-gradient(90deg, transparent 0, #000 6%, #000 94%, transparent 100%)",
+            WebkitMaskImage: "linear-gradient(90deg, transparent 0, #000 6%, #000 94%, transparent 100%)",
+          }}
+        >
+          <div
+            style={{
+              display: "flex", gap: 18, width: "max-content",
+              padding: "0 32px",
+              animation: "lp-spell-marquee 40s linear infinite",
+            }}
+          >
+          {[...FEATURED_CMDS, ...FEATURED_CMDS].map((c, i) => (
             <div
-              key={c.cmd}
+              key={`${c.cmd}-${i}`}
               className="lp-tablet"
               style={{
                 flex: "0 0 auto", width: 200, minHeight: 130,
-                scrollSnapAlign: "start",
                 background: "linear-gradient(180deg, hsl(228 10% 22%), hsl(228 12% 14%))",
                 backgroundImage: `url(${slateTexture})`,
                 backgroundSize: "300px 300px",
