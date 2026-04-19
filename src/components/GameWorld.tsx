@@ -1091,7 +1091,7 @@ export function GameWorld({ state, onDismissPopup, headerRight }: GameWorldProps
 
           {/* ------- Door labels, revealed by ls ------- */}
           <AnimatePresence>
-            {showObjectNames && room.doors.map((d) => (
+            {showObjectNames && room.doors.filter((d) => !d.broken).map((d) => (
               <motion.div
                 key={`label-${d.x}-${d.y}`}
                 initial={{ opacity: 0, y: 4 }}

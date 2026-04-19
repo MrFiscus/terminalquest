@@ -9,7 +9,7 @@ import { RoomFlavorSubtitle } from "@/components/RoomFlavorSubtitle";
 import { MauQuizOverlay } from "@/components/MauQuizOverlay";
 import { ScrollModal } from "@/components/ScrollModal";
 import { WizardDialog } from "@/components/WizardDialog";
-import { useGameState } from "@/hooks/useGameState";
+import { DEMO_CONTEXT, useGameState } from "@/hooks/useGameState";
 import { getRoom } from "@/game/dungeon";
 import { type Difficulty } from "@/game/aiLevelService";
 import { generateDifficultyMechanicLevel } from "@/game/difficultyMechanics";
@@ -82,6 +82,7 @@ const Index = () => {
   }
 
   const currentRoom = getRoom(state.rooms, state.cwd);
+  const isDemoMode = Boolean(state.showcaseMode || state.difficultyValue === 50);
   const brokenDoor = currentRoom?.doors.find((door) => door.broken);
   const repairCommand = brokenDoor
     ? state.showcaseMode
@@ -188,6 +189,7 @@ const Index = () => {
           brokenDoorName: brokenDoor?.target,
           repairCommand,
           roomHintFiles,
+          demoScript: isDemoMode ? DEMO_CONTEXT : undefined,
         }}
       />
     </main>

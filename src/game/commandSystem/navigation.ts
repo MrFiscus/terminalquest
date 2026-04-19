@@ -32,7 +32,7 @@ export const navigationCommands: CommandDefinition[] = [
       const entries = [
         ...room.doors.map((door) =>
           door.broken
-            ? `${door.target}/ (broken)`
+            ? "broken door"
             : door.locked
               ? `[locked] ${door.target}/`
               : `${door.target}/`,

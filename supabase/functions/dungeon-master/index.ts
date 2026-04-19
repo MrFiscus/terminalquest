@@ -23,6 +23,7 @@ type DungeonMasterContext = {
   resultSummary?: unknown;
   recentCommands?: unknown;
   mistakes?: unknown;
+  demoScript?: unknown;
   eventKind?: unknown;
   fallback?: unknown;
   hintStage?: unknown;
@@ -60,6 +61,9 @@ const profileSummarySystemPrompt =
 
 const safeText = (value: unknown, fallback = "") =>
   typeof value === "string" ? value.slice(0, 160) : fallback;
+
+const safeLongText = (value: unknown, fallback = "") =>
+  typeof value === "string" ? value.slice(0, 2400) : fallback;
 
 const safeCommands = (value: unknown) =>
   Array.isArray(value)
@@ -253,6 +257,16 @@ async function askClaude(input: string, mode: DungeonMasterMode, context: Dungeo
     mode === "level-intro" ? levelIntroSystemPrompt :
     mode === "profile-summary" ? profileSummarySystemPrompt :
     unknownCommandSystemPrompt;
+  const demoScript = safeLongText(context.demoScript);
+  const systemWithDemoContext = demoScript
+    ? `GAME CONTEXT: ${demoScript}
+
+${systemPrompt}${
+        mode === "help-tutor"
+          ? "\nYou have full knowledge of this dungeon solution. Guide the player to their next correct step based on what they just typed."
+          : ""
+      }`
+    : systemPrompt;
   const maxTokens =
     mode === "help-tutor" ? 120 :
     mode === "run-report" || mode === "profile-summary" || mode === "level-intro" ? 110 :
@@ -273,7 +287,7 @@ async function askClaude(input: string, mode: DungeonMasterMode, context: Dungeo
       model: ANTHROPIC_MODEL,
       max_tokens: maxTokens,
       temperature,
-      system: systemPrompt,
+      system: systemWithDemoContext,
       messages: [{ role: "user", content: userPrompt(input, mode, context) }],
     }),
   });

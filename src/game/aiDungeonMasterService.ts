@@ -23,6 +23,7 @@ export interface DungeonMasterContext {
   resultSummary?: string;
   recentCommands?: string[];
   mistakes?: string[];
+  demoScript?: string;
   eventKind?: string;
   fallback?: string;
   hintStage?: number;

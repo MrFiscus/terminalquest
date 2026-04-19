@@ -63,6 +63,25 @@ import type {
 
 const STEP_MS = 180;
 const PICKUP_MS = 800;
+export const DEMO_CONTEXT = `This is a guided demo dungeon.
+The player must complete these steps in order:
+1. Type ls to see the room contents
+2. When they reach the room with mau type: find mau to locate Mau the cat
+5. Mau will ask a quiz question about mkdir
+6. Player must answer: mkdir
+7. Mau grants mkdir power and tells player about broken door
+8. Player navigates to the broken door room using cd
+9. Player types: mkdir door to repair the broken door
+10. Player cd's through the repaired door
+11. Player finds relic.txt inside
+12. Player types: mv relic.txt ~/inventory to win
+Available commands: ls, cd, cat, mv, mkdir, find, pwd
+The target file is relic.txt.
+The key NPC is Mau who gives mkdir privilege after quiz.
+The obstacle is a broken door that needs mkdir to repair.
+If the player seems lost, tell them to type find mau first.
+Guide the player toward the next step they need to take.
+Be helpful, medieval in tone, and concise.`;
 
 const delay = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
@@ -164,6 +183,10 @@ function facingFor(dx: number, dy: number): PlayerFacing | null {
 
 function isNear(a: { x: number; y: number }, b: { x: number; y: number }) {
   return Math.abs(a.x - b.x) + Math.abs(a.y - b.y) <= 1;
+}
+
+function isDemoState(state: GameState) {
+  return Boolean(state.showcaseMode || state.difficultyValue === 50);
 }
 
 export function useGameState(options: UseGameStateOptions = {}) {
@@ -374,6 +397,18 @@ export function useGameState(options: UseGameStateOptions = {}) {
           }
 
           const spawn = effect.from === "child" && next.returnSpawn ? next.returnSpawn : next.spawn;
+          const mauIsHere =
+            (next.npcs ?? []).some((npc) => npc.id === "mau" || npc.name.toLowerCase() === "mau") ||
+            next.files.some((file) => file.name.toLowerCase() === "mau");
+          const hasUsedCatMau = s.commandHistory.some((command) => command.trim().toLowerCase() === "cat mau");
+          const mauHintLine: TerminalLine | null =
+            isDemoState(s) && mauIsHere && !hasUsedCatMau
+              ? {
+                  id: nextId(),
+                  kind: "dm",
+                  text: "A presence stirs nearby. Type: find mau",
+                }
+              : null;
           runTrackerRef.current.visitedRooms.add(next.path);
           saveActiveRun(activeRunFromTracker(runTrackerRef.current, s.targetFile));
           return {
@@ -387,6 +422,7 @@ export function useGameState(options: UseGameStateOptions = {}) {
                 kind: "system",
                 text: `You enter ${next.name}. ${next.description}`,
               },
+              ...(mauHintLine ? [mauHintLine] : []),
             ],
           };
         }
@@ -584,6 +620,8 @@ export function useGameState(options: UseGameStateOptions = {}) {
       const commandEffect = runCommandEffect(raw, result, failed);
       playCommandSound(raw, result, failed);
       const currentRoom = getRoom(s.rooms, s.cwd);
+      const isDemoMode = isDemoState(s);
+      const demoScript = isDemoMode ? DEMO_CONTEXT : undefined;
       const brokenDoorFailure =
         failed &&
         commandName === "cd" &&
@@ -630,6 +668,7 @@ export function useGameState(options: UseGameStateOptions = {}) {
           requiredCommands: s.requiredCommands,
           winCondition: s.winCondition,
           currentRoom: currentRoom?.name ?? s.cwd.split("/").filter(Boolean).pop() ?? "home",
+          demoScript,
         });
         appendLines([{ kind: "dm", text: `Dungeon Master: ${message}` }]);
         if (reaction.line) appendLines([reaction.line]);
@@ -679,6 +718,7 @@ export function useGameState(options: UseGameStateOptions = {}) {
         requiredCommands: s.requiredCommands,
         winCondition: s.winCondition,
         currentRoom: currentRoom?.name ?? s.cwd.split("/").filter(Boolean).pop() ?? "home",
+        demoScript,
         command: commandName,
         recentCommands: runTrackerRef.current.commands.slice(-8),
         mistakes: runTrackerRef.current.mistakes.slice(-8),
