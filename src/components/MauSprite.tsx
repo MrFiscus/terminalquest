@@ -1,4 +1,5 @@
 import { cn } from "@/lib/utils";
+import catIdle from "@/assets/characters/cat-idle.gif";
 
 interface MauSpriteProps {
   className?: string;
@@ -12,7 +13,7 @@ export function MauSprite({ className, size = 32 }: MauSpriteProps) {
       style={{ width: size, height: size }}
     >
       <img
-        src="/src/assets/characters/cat-idle.gif"
+        src={catIdle}
         alt="Mau the Cat"
         draggable={false}
         className="max-w-none max-h-none object-contain"

@@ -3,6 +3,8 @@ import { motion, AnimatePresence } from "framer-motion";
 import { askDungeonMaster, type DungeonMasterContext } from "@/game/aiDungeonMasterService";
 import { X, Send } from "lucide-react";
 import { cn } from "@/lib/utils";
+import wizardIdle from "@/assets/characters/wizard-idle.png";
+import wizardTalking from "@/assets/characters/wizard-talking.gif";
 
 interface WizardDialogProps {
   context: DungeonMasterContext;
@@ -404,7 +406,7 @@ export function WizardDialog({ context, externalMessage, playerFamiliarity }: Wi
         onClick={() => setIsOpen(true)}
       >
         <img
-          src={isLoading ? "/src/assets/characters/wizard-talking.gif" : "/src/assets/characters/wizard-idle.png"}
+          src={isLoading ? wizardTalking : wizardIdle}
           alt="Wizard"
           className="w-full h-full object-contain drop-shadow-[0_3px_3px_rgba(0,0,0,0.3)] transition-transform group-hover:scale-105"
           style={{ imageRendering: "pixelated" }}

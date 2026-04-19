@@ -11,6 +11,7 @@ import tileWall from "@/assets/tile-wall.png";
 import tileFloor from "@/assets/tile-floor.png";
 import tileFloorAlt from "@/assets/tile-floor-alt.png";
 import archwayDoor from "@/assets/archway-door.png";
+import { dungeonElementAsset, dungeonNewAsset } from "@/game/dungeonAssetUrls";
 
 const gif = (name: string) => new URL(`../assets/characters/fox/${name}`, import.meta.url).href;
 
@@ -62,8 +63,8 @@ const MAP = [
 ];
 
 const dungeon = {
-  wall:    (name: string) => `/assets/dungeon/elements/${name}.png`,
-  new:     (name: string) => `/assets/dungeon/new/${name}.png`,
+  wall:    dungeonElementAsset,
+  new:     dungeonNewAsset,
 };
 
 function PixelDungeon({ sz = 24 }: { sz?: number }) {

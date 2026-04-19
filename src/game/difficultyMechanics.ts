@@ -151,7 +151,7 @@ function withMau(room: Room, mau: Pick<Npc, "x" | "y" | "blocksDoorTarget">): Ro
         name: "Mau",
         x: mau.x,
         y: mau.y,
-        sprite: "/src/assets/characters/cat-idle.gif",
+        sprite: "mau",
         blocksDoorTarget: mau.blocksDoorTarget,
         dialogue: [
           "Mrow? A command is missing from your paws.",

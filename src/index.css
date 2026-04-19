@@ -1047,7 +1047,7 @@
     background-color: hsl(230 8% 14%);
     background-image:
       linear-gradient(hsl(230 6% 16% / 0.78), hsl(230 6% 16% / 0.78)),
-      url("/src/assets/flagstone-floor.png");
+      url("./assets/flagstone-floor.png");
     background-size: 100% 100%, 128px 128px;
     background-repeat: no-repeat, repeat;
     image-rendering: pixelated;
@@ -1057,7 +1057,7 @@
     background-color: hsl(230 8% 12%);
     background-image:
       linear-gradient(hsl(230 6% 14% / 0.8), hsl(230 6% 14% / 0.8)),
-      url("/src/assets/flagstone-floor.png");
+      url("./assets/flagstone-floor.png");
     background-size: 100% 100%, 128px 128px;
     background-repeat: no-repeat, repeat;
     background-position: 0 0, 64px 64px;
@@ -1088,13 +1088,13 @@
   }
   .wall-tex {
     background-color: hsl(var(--wall));
-    background-image: url("/src/assets/env-wall.png");
+    background-image: url("./assets/env-wall.png");
     background-size: 32px 32px;
     background-repeat: repeat;
     image-rendering: pixelated;
   }
   .torch-tex {
-    background-image: url("/src/assets/brazier.png");
+    background-image: url("./assets/brazier.png");
     background-size: contain;
     background-repeat: no-repeat;
     background-position: center;

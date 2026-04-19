@@ -6,6 +6,8 @@ import { ScrollArea } from "./ui/scroll-area";
 import { Input } from "./ui/input";
 import { Send, X, MessageCircle } from "lucide-react";
 import { cn } from "@/lib/utils";
+import wizardIdle from "@/assets/characters/wizard-idle.png";
+import wizardTalking from "@/assets/characters/wizard-talking.gif";
 
 interface Message {
   role: "user" | "wizard";
@@ -64,7 +66,7 @@ export function WizardChat({ context }: WizardChatProps) {
               <div className="flex items-center gap-2">
                 <div className="w-8 h-8 rounded-full bg-[#f5e6d3] border-2 border-[#f5e6d3] overflow-hidden">
                   <img 
-                    src={isTyping ? "/src/assets/characters/wizard-talking.gif" : "/src/assets/characters/wizard-idle.png"} 
+                    src={isTyping ? wizardTalking : wizardIdle} 
                     alt="Wizard"
                     className="w-full h-full object-cover scale-150 mt-1"
                   />
@@ -80,7 +82,7 @@ export function WizardChat({ context }: WizardChatProps) {
             </div>
 
             {/* Chat Area */}
-            <ScrollArea className="flex-1 p-4 bg-[url('/assets/parchment-tile.png')] bg-repeat">
+            <ScrollArea className="flex-1 p-4 bg-[#ead8ba]">
               <div ref={scrollRef} className="space-y-4">
                 {messages.map((msg, i) => (
                   <motion.div
@@ -155,7 +157,7 @@ export function WizardChat({ context }: WizardChatProps) {
 
         <div className="w-16 h-16 rounded-full border-4 border-[#8b4513] bg-[#f5e6d3] shadow-xl overflow-hidden flex items-center justify-center">
           <img 
-            src="/src/assets/characters/wizard-idle.png" 
+            src={wizardIdle} 
             alt="Wizard"
             className="w-full h-full object-cover scale-150 mt-1 transition-transform group-hover:scale-[1.65]"
           />

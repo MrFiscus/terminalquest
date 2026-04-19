@@ -1319,7 +1319,7 @@ function spawnMauTheCat(rooms: Record<string, Room>, rootPath: string, nonce = 0
           name: "Mau",
           x: randomTile.x,
           y: randomTile.y,
-          sprite: "/src/assets/characters/cat-idle.gif",
+          sprite: "mau",
           dialogue: [
             "Mrow? You look lost, little fox.",
             "This dungeon is but a collection of directories.",

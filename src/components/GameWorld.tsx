@@ -6,6 +6,7 @@ import { PlayerSprite } from "@/components/PlayerSprite";
 import { MauSprite } from "@/components/MauSprite";
 import { ScrollPopup } from "@/components/ScrollPopup";
 import scrollItem from "@/assets/scroll-item.png";
+import { dungeonElementAsset, dungeonNewAsset, dungeonPropAsset } from "@/game/dungeonAssetUrls";
 import type { DecorKind, GameState, Room, VfxPulse } from "@/game/types";
 
 interface GameWorldProps {
@@ -163,8 +164,8 @@ function visualHash(value: string): number {
   return h >>> 0;
 }
 
-const elementAsset = (name: string) => `/assets/dungeon/elements/${name}.png`;
-const newAsset = (name: string) => `/assets/dungeon/new/${name}.png`;
+const elementAsset = dungeonElementAsset;
+const newAsset = dungeonNewAsset;
 
 // ------------------------------------------------------------------
 // WALL TILE SELECTION
@@ -252,14 +253,14 @@ function decorSpriteFor(kind: DecorKind, x: number, y: number, seed: number): st
     case "chest-empty": return elementAsset("Chest-Empty");
     case "crack":       return elementAsset("Floor-Crack");
     case "inscribed-floor": return elementAsset("Inscribed-Floor");
-    case "ladder":      return "/assets/dungeon/props/ladder.png";
+    case "ladder":      return dungeonPropAsset("ladder");
     case "lamp":        return elementAsset("Torch");
     case "pillar":      return elementAsset("Pillar");
     case "banner":      return elementAsset("Banner");
-    case "sack":        return "/assets/dungeon/props/sack.png";
+    case "sack":        return dungeonPropAsset("sack");
     case "skull":       return newAsset("skull");
     case "statue":      return elementAsset("Statue");
-    default:            return `/assets/dungeon/props/${kind}.png`;
+    default:            return dungeonPropAsset(kind);
   }
 }
 
