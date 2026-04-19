@@ -481,34 +481,109 @@
   }
   /* Inventory alcove — dark inset stone niche */
   .chest-slot {
-    background-color: hsl(230 14% 5%);
+    background-color: hsl(24 38% 13%);
     background-image:
-      radial-gradient(ellipse at 50% 35%, hsl(230 14% 11%) 0%, hsl(230 16% 4%) 75%),
-      radial-gradient(hsl(0 0% 0% / 0.55) 1px, transparent 1.4px);
-    background-size: 100% 100%, 6px 6px;
-    border: 1px solid hsl(230 18% 14%);
+      /* vignette — deep shadow pressed into the pit */
+      radial-gradient(ellipse at 50% 50%, transparent 30%, hsl(18 25% 5% / 0.75) 100%),
+      /* highlight catch — faint light from above-left */
+      radial-gradient(ellipse at 20% 15%, hsl(32 55% 38% / 0.18) 0%, transparent 55%),
+      /* fine diagonal grain lines */
+      repeating-linear-gradient(
+        168deg,
+        transparent        0px,
+        transparent        2px,
+        hsl(18 22% 8% / 0.55)  2px,
+        hsl(18 22% 8% / 0.55)  3px,
+        transparent        3px,
+        transparent        7px,
+        hsl(28 30% 20% / 0.25) 7px,
+        hsl(28 30% 20% / 0.25) 8px
+      ),
+      /* wide plank colour variation */
+      repeating-linear-gradient(
+        90deg,
+        hsl(26 42% 17%)  0px,
+        hsl(22 36% 13%)  9px,
+        hsl(27 44% 19%) 18px,
+        hsl(21 34% 12%) 28px,
+        hsl(25 40% 16%) 38px,
+        hsl(20 32% 11%) 48px
+      ),
+      /* base tone ramp top-to-bottom */
+      linear-gradient(180deg,
+        hsl(27 44% 22%)  0%,
+        hsl(24 40% 16%) 40%,
+        hsl(21 36% 11%) 75%,
+        hsl(18 30%  8%) 100%
+      );
+    /* outer frame — thick carved wood border */
+    border-width: 3px;
+    border-style: solid;
+    border-top-color:    hsl(30 50% 32%);
+    border-left-color:   hsl(28 44% 26%);
+    border-right-color:  hsl(18 28% 11%);
+    border-bottom-color: hsl(15 24%  8%);
     border-radius: 3px;
     box-shadow:
-      inset 0 0 0 1px hsl(0 0% 0% / 0.85),
-      inset 0 6px 12px hsl(0 0% 0% / 0.95),
-      inset 0 -3px 8px hsl(0 0% 0% / 0.7),
-      inset 2px 0 6px hsl(0 0% 0% / 0.7),
-      inset -2px 0 6px hsl(0 0% 0% / 0.7),
-      0 1px 0 hsl(230 14% 22% / 0.5);
+      /* inner top highlight — rim of the crate opening */
+      inset 0  2px  3px hsl(32 50% 38% / 0.30),
+      /* inner bottom dark — depth of the pit */
+      inset 0 -4px 10px hsl(14 20%  4% / 0.90),
+      /* side ambient occlusion */
+      inset  3px 0  8px hsl(18 22%  6% / 0.60),
+      inset -3px 0  8px hsl(18 22%  6% / 0.60),
+      /* centre pit shadow */
+      inset 0  4px 18px hsl(15 18%  4% / 0.70),
+      /* outer drop shadow — slot sits proud of the bar */
+      0 3px 6px hsl(0 0% 0% / 0.65),
+      0 1px 0   hsl(30 42% 26% / 0.50);
   }
   .chest-slot-active {
-    border-color: hsl(33 100% 50% / 0.7);
+    border-top-color:   hsl(38 100% 62% / 0.95);
+    border-left-color:  hsl(35 95%  55% / 0.80);
+    border-right-color: hsl(28 80%  35% / 0.70);
+    border-bottom-color:hsl(25 70%  28% / 0.60);
     box-shadow:
-      inset 0 0 0 1px hsl(33 100% 35% / 0.5),
-      inset 0 6px 12px hsl(0 0% 0% / 0.85),
-      inset 0 0 14px hsl(33 100% 50% / 0.25),
-      0 0 12px hsl(33 100% 50% / 0.55),
-      0 0 22px hsl(33 100% 50% / 0.3);
+      inset 0  2px  3px hsl(40 100% 60% / 0.30),
+      inset 0 -4px 10px hsl(14 20%  4% / 0.80),
+      inset  3px 0  8px hsl(18 22%  6% / 0.45),
+      inset -3px 0  8px hsl(18 22%  6% / 0.45),
+      inset 0  0  16px hsl(35 100% 50% / 0.22),
+      0 0 12px hsl(33 100% 50% / 0.60),
+      0 0 24px hsl(33 100% 50% / 0.30),
+      0 3px 6px hsl(0 0% 0% / 0.55);
   }
   .item-glow {
     background-image:
-      radial-gradient(ellipse at center, hsl(45 90% 55% / 0.10) 0%, hsl(33 100% 45% / 0.04) 55%, transparent 80%),
-      radial-gradient(ellipse at 50% 35%, hsl(230 14% 11%) 0%, hsl(230 16% 4%) 75%);
+      radial-gradient(ellipse at 50% 50%, transparent 30%, hsl(18 25% 5% / 0.75) 100%),
+      radial-gradient(ellipse at 20% 15%, hsl(32 55% 38% / 0.18) 0%, transparent 55%),
+      radial-gradient(ellipse at center, hsl(40 90% 55% / 0.14) 0%, transparent 65%),
+      repeating-linear-gradient(
+        168deg,
+        transparent        0px,
+        transparent        2px,
+        hsl(18 22% 8% / 0.55)  2px,
+        hsl(18 22% 8% / 0.55)  3px,
+        transparent        3px,
+        transparent        7px,
+        hsl(28 30% 20% / 0.25) 7px,
+        hsl(28 30% 20% / 0.25) 8px
+      ),
+      repeating-linear-gradient(
+        90deg,
+        hsl(26 42% 17%)  0px,
+        hsl(22 36% 13%)  9px,
+        hsl(27 44% 19%) 18px,
+        hsl(21 34% 12%) 28px,
+        hsl(25 40% 16%) 38px,
+        hsl(20 32% 11%) 48px
+      ),
+      linear-gradient(180deg,
+        hsl(27 44% 22%)  0%,
+        hsl(24 40% 16%) 40%,
+        hsl(21 36% 11%) 75%,
+        hsl(18 30%  8%) 100%
+      );
   }
   /* Dark iron textured header bar */
   .iron-header {

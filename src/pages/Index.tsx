@@ -72,16 +72,6 @@ const Index = () => {
         </button>
       ))}
 
-      {/* Book of Secrets button */}
-      <button
-        type="button"
-        onClick={() => setBookOpen(true)}
-        className="stone-tablet-btn"
-        style={{ fontSize: 8, padding: "4px 10px", letterSpacing: "0.08em" }}
-        title="Open the Book of Secrets"
-      >
-        📖 BOOK OF SECRETS
-      </button>
     </div>
   );
 
@@ -100,7 +90,7 @@ const Index = () => {
           <GameWorld state={state} onDismissPopup={dismissPopup} headerRight={difficultyToggles} />
         </div>
         <RoomFlavorSubtitle text={roomSubtitle} />
-        <InventoryBar items={state.inventory} slots={5} />
+        <InventoryBar items={state.inventory} slots={5} onOpenBook={() => setBookOpen(true)} />
       </section>
 
       {state.won && (
