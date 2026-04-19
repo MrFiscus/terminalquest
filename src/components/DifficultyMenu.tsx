@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { Difficulty } from "@/game/aiLevelService";
 import slateTexture from "@/assets/slate-texture.jpg";
+import { FireBlazes } from "@/components/FireBlazes";
 
 interface DifficultyMenuProps {
   onConfirm: (difficulty: Difficulty, value: number) => void;
@@ -136,28 +137,10 @@ export const DifficultyMenu = ({ onConfirm, busy }: DifficultyMenuProps) => {
         }}
       />
 
-      {/* Ember particles drifting upward */}
-      {Array.from({ length: 10 }).map((_, i) => {
-        const left = 6 + (i * 11) % 90;
-        const dur = 6 + (i % 4) * 1.2;
-        const delay = (i * 0.9) % 7;
-        const drift = (i % 2 === 0 ? 1 : -1) * (6 + (i % 3) * 4);
-        const bottom = 8 + (i * 7) % 32;
-        return (
-          <span
-            key={i}
-            className="lp-ember"
-            aria-hidden
-            style={{
-              left: `${left}%`,
-              bottom: `${bottom}%`,
-              animationDuration: `${dur}s`,
-              animationDelay: `${delay}s`,
-              ["--ember-drift" as never]: `${drift}px`,
-            }}
-          />
-        );
-      })}
+      {/* Fire blazes along the bottom */}
+      <div className="absolute inset-0 pointer-events-none overflow-hidden" aria-hidden style={{ zIndex: 1 }}>
+        <FireBlazes count={20} />
+      </div>
 
       {/* Content */}
       <div className="relative z-10 h-full flex flex-col items-center justify-center px-8 pt-16">

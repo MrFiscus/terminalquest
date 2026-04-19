@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { Link } from "react-router-dom";
+import { FireBlazes } from "@/components/FireBlazes";
 import slateTexture from "@/assets/slate-texture.jpg";
 import tileWall from "@/assets/tile-wall.png";
 import tileFloor from "@/assets/tile-floor.png";
@@ -539,6 +540,10 @@ export default function Landing() {
       {/* Global vignette + grain overlay (fixed — no seams) */}
       <div style={{ position: "fixed", inset: 0, pointerEvents: "none", zIndex: 0, background: "radial-gradient(ellipse at center, transparent 38%, hsl(0 0% 0% / 0.85) 100%)" }} />
       <div style={{ position: "fixed", inset: 0, pointerEvents: "none", zIndex: 0, opacity: 0.35, mixBlendMode: "overlay", backgroundImage: "radial-gradient(hsl(0 0% 100% / 0.06) 1px, transparent 1.4px), radial-gradient(hsl(0 0% 0% / 0.4) 1px, transparent 1.4px)", backgroundSize: "5px 5px, 7px 7px", backgroundPosition: "0 0, 2px 3px" }} />
+      {/* Fire blazes along the bottom */}
+      <div style={{ position: "fixed", inset: 0, pointerEvents: "none", zIndex: 1, overflow: "hidden" }} aria-hidden>
+        <FireBlazes count={22} />
+      </div>
       <style>{`
         .lp-eng {
           font-family: 'Cinzel','MedievalSharp',serif; font-weight:700; color:hsl(0 0% 18%);
