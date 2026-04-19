@@ -51,7 +51,7 @@ export const basicCommands: CommandDefinition[] = [
     description: "Show your adventurer profile and command mastery.",
     usage: "whoami",
     run: () => ({
-      lines: [out("Opening your adventurer profile...")],
+      lines: [dm("Dungeon Master: Opening your adventurer profile.")],
       openProfile: true,
     }),
   },
@@ -76,8 +76,7 @@ export const basicCommands: CommandDefinition[] = [
 
       return {
         lines: [
-          out("Mau's eyes glow with ancient knowledge."),
-          out("Mau: \"Show me your command of the shell, little fox.\""),
+          dm("Dungeon Master: Mau's eyes glow with ancient knowledge. Show him your command of the shell."),
         ],
       };
     },

@@ -151,7 +151,6 @@ function initialState(): GameState {
     playerFacing: "down",
     history: [
       { id: 1, kind: "system", text: "Terminal Quest v1.0 - type `help` to begin." },
-      { id: 2, kind: "system", text: `You stand in ${startRoom.name}. ${startRoom.description}` },
     ],
     commandHistory: [],
     commandStats: createCommandStats(),
@@ -371,10 +370,24 @@ export function useGameState(options: UseGameStateOptions = {}) {
         if (next) {
           showRoomSubtitle(next);
           playGameSound("room");
+          showDungeonMasterTip(`You enter ${next.name}. ${next.description}`);
           if (stateRef.current.showcaseMode && next.files.some((file) => file.name === stateRef.current.targetFile)) {
             showDungeonMasterTip("Almost there! Type: mv relic.txt ~/inventory");
           }
+          const mauIsHere =
+            (next.npcs ?? []).some((npc) => npc.id === "mau" || npc.name.toLowerCase() === "mau") ||
+            next.files.some((file) => file.name.toLowerCase() === "mau");
+          const hasUsedCatMau = stateRef.current.commandHistory.some((command) => command.trim().toLowerCase() === "cat mau");
+          if (isDemoState(stateRef.current) && mauIsHere && !hasUsedCatMau) {
+            showDungeonMasterTip("A presence stirs nearby. Type: find mau");
+          }
         }
+      }
+      if (effect.type === "pickup") {
+        showDungeonMasterTip(`${effect.fileName} is now in ~/inventory.`);
+      }
+      if (effect.type === "win") {
+        showDungeonMasterTip(`You seize ${effect.fileName}.`);
       }
 
       setState((s) => {
@@ -398,33 +411,13 @@ export function useGameState(options: UseGameStateOptions = {}) {
           }
 
           const spawn = effect.from === "child" && next.returnSpawn ? next.returnSpawn : next.spawn;
-          const mauIsHere =
-            (next.npcs ?? []).some((npc) => npc.id === "mau" || npc.name.toLowerCase() === "mau") ||
-            next.files.some((file) => file.name.toLowerCase() === "mau");
-          const hasUsedCatMau = s.commandHistory.some((command) => command.trim().toLowerCase() === "cat mau");
-          const mauHintLine: TerminalLine | null =
-            isDemoState(s) && mauIsHere && !hasUsedCatMau
-              ? {
-                  id: nextId(),
-                  kind: "dm",
-                  text: "A presence stirs nearby. Type: find mau",
-                }
-              : null;
           runTrackerRef.current.visitedRooms.add(next.path);
           saveActiveRun(activeRunFromTracker(runTrackerRef.current, s.targetFile));
           return {
             ...s,
             cwd: next.path,
             player: { ...spawn },
-            history: [
-              ...s.history,
-              {
-                id: nextId(),
-                kind: "system",
-                text: `You enter ${next.name}. ${next.description}`,
-              },
-              ...(mauHintLine ? [mauHintLine] : []),
-            ],
+            history: s.history,
           };
         }
         if (effect.type === "pickup") {
@@ -439,10 +432,7 @@ export function useGameState(options: UseGameStateOptions = {}) {
             ...s,
             rooms: { ...s.rooms, [room.path]: newRoom },
             inventory: [...s.inventory, file],
-            history: [
-              ...s.history,
-              { id: nextId(), kind: "output", text: `'${file.name}' is now in ~/inventory.` },
-            ],
+            history: s.history,
           };
         }
         if (effect.type === "removeFile") {
@@ -541,20 +531,13 @@ export function useGameState(options: UseGameStateOptions = {}) {
             won: true,
             completionMessage,
             completionReport: report,
-            history: [
-              ...s.history,
-              {
-                id: nextId(),
-                kind: "victory",
-                text: `You seize ${effect.fileName}. ${completionMessage}`,
-              },
-            ],
+            history: s.history,
           };
         }
         return s;
       });
     },
-    [completeRun, showRoomSubtitle],
+    [completeRun, showDungeonMasterTip, showRoomSubtitle],
   );
 
   const submit = useCallback(
@@ -627,7 +610,7 @@ export function useGameState(options: UseGameStateOptions = {}) {
       const brokenDoorFailure =
         failed &&
         commandName === "cd" &&
-        result.lines.some((line) => /door is broken/i.test(line.text));
+        result.lines.some((line) => /broken door/i.test(line.text));
       const shouldRememberMistake =
         failed &&
         (Boolean(commandFromInput(raw)) ||
@@ -937,15 +920,6 @@ export function useGameState(options: UseGameStateOptions = {}) {
     saveActiveRun(activeRunFromTracker(runTrackerRef.current, level.targetFile));
     dismissRoomSubtitle();
     if (adaptation) showDungeonMasterTip(adaptation);
-    const intro: TerminalLine[] = [];
-    const modeLine: TerminalLine = {
-      id: intro.length + 1,
-      kind: "system",
-      text: playMode === "guided"
-        ? "Mode: Guided Terminal. Hints, spell effects, and mentor reactions are active."
-        : "Mode: Real Terminal. Minimal hints. Trust the shell.",
-    };
-    const offset = intro.length + 1;
     setState((s) => ({
       ...s,
       ...patch,
@@ -961,17 +935,7 @@ export function useGameState(options: UseGameStateOptions = {}) {
       playMode,
       showcaseMode: options.showcaseMode ?? false,
       hintStage: 0,
-      history: [
-        ...intro,
-        modeLine,
-        { id: offset + 1, kind: "system", text: `Dungeon loaded: ${label}` },
-        { id: offset + 2, kind: "system", text: `Goal: ${level.goal}` },
-        { id: offset + 3, kind: "system", text: `Required: ${level.required.join(", ")}` },
-        { id: offset + 4, kind: "system", text: `Win: mv ${level.targetFile} ~/inventory` },
-        ...(playMode === "guided" && !options.showcaseMode
-          ? [{ id: offset + 5, kind: "system" as const, text: level.hint ? `Hint: ${level.hint}` : "Type `ls` to look around." }]
-          : []),
-      ],
+      history: [],
     }));
     if (playMode === "guided") {
       const fallbackIntro =
@@ -1062,7 +1026,9 @@ export function useGameState(options: UseGameStateOptions = {}) {
           kind: "npc",
           text: successMessage,
         },
-        ...(reward ? [{ kind: "output" as const, text: mechanicMessages[reward] ?? `${reward} is now usable.` }] : []),
+        ...(reward
+          ? [{ kind: "dm" as const, text: `Dungeon Master: ${mechanicMessages[reward] ?? `${reward} is now usable.`}` }]
+          : []),
       ]);
       if (s.showcaseMode && reward === "mkdir") {
         showDungeonMasterTip("The stones listen: type mkdir door to mend the doorway.");
@@ -1084,7 +1050,7 @@ export function useGameState(options: UseGameStateOptions = {}) {
       appendLines([{ kind: "npc", text: "Mau: \"Not quite. Try again, little fox.\"" }]);
       triggerScreenEffect("error", 800);
     }
-  }, [appendLines, triggerScreenEffect]);
+  }, [appendLines, applyEffect, showDungeonMasterTip, triggerScreenEffect]);
 
   return { 
     state, 

@@ -6,6 +6,7 @@ import {
   baseName,
   cloneFile,
   currentFile,
+  dm,
   err,
   findOpenFloor,
   isSafeName,
@@ -67,11 +68,7 @@ export const fileCommands: CommandDefinition[] = [
           }
           return {
             lines: [
-              out("Mau purrs loudly as you attempt to read his contents."),
-              out("  /\\_/\\  "),
-              out(" ( o.o ) "),
-              out("  > ^ <  "),
-              out("Mau is not a file, but he appreciates the attention.")
+              dm("Dungeon Master: Mau purrs loudly as you attempt to read his contents. Mau is not a file, but he appreciates the attention."),
             ],
             vfx: { kind: "inspect", cells: (room.npcs || []).filter(n => n.id === "mau").map(n => ({ x: n.x, y: n.y })), durationMs: 2000 }
           };
@@ -97,7 +94,7 @@ export const fileCommands: CommandDefinition[] = [
       // Special win condition for Mau's Secret Vault
       if (file.name === "relic.txt" && room.name === "Mau's Secret Vault") {
         return {
-          lines: [out("As you read the relic, the room begins to glow with an otherworldly light...")],
+          lines: [dm("Dungeon Master: As you read the relic, the room begins to glow with an otherworldly light.")],
           effect: { type: "win", fileName: "relic.txt" }
         };
       }
@@ -242,7 +239,7 @@ export const fileCommands: CommandDefinition[] = [
       if (!file) return { lines: [err(`rm: ${name}: no such file`)] };
       if (name === state.targetFile) return { lines: [err(`rm: ${name}: the relic resists destruction`)] };
       return {
-        lines: [out(`You raise your hand toward '${name}'.`)],
+        lines: [dm(`Dungeon Master: You raise your hand toward '${name}'.`)],
         vfx: { kind: "rm", cells: [{ x: file.x, y: file.y }], durationMs: 1100 },
         effect: { type: "removeFile", fileName: name },
       };
@@ -260,7 +257,7 @@ export const fileCommands: CommandDefinition[] = [
       if (!file) return { lines: [err(`chmod: ${name}: no such file`)] };
       if (file.permissions !== "locked") return { lines: [out(`${name} is already readable.`)] };
       return {
-        lines: [out(`You grant read permission to ${name}.`)],
+        lines: [dm(`Dungeon Master: You grant read permission to ${name}.`)],
         vfx: { kind: "inspect", cells: [{ x: file.x, y: file.y }], durationMs: 1200 },
         effect: { type: "chmodFile", fileName: name },
       };
@@ -283,7 +280,7 @@ export const fileCommands: CommandDefinition[] = [
       if (file.name !== state.targetFile) {
         console.log(`[mv] file="${fileArg}" targetFile="${state.targetFile}" type="${file.type}" isWin=false`);
         return {
-          lines: [out(`You stride toward '${fileArg}'...`)],
+          lines: [dm(`Dungeon Master: You stride toward '${fileArg}'.`)],
           walkTo: { x: file.x, y: file.y },
           effect: pickupEffect,
         };
@@ -292,7 +289,7 @@ export const fileCommands: CommandDefinition[] = [
       const isWin = file.name === TARGET_FILE && state.targetFile === TARGET_FILE && file.type !== "key";
       console.log(`[mv] file="${fileArg}" targetFile="${state.targetFile}" type="${file.type}" isWin=${isWin}`);
       return {
-        lines: [out(`You stride toward '${fileArg}'...`)],
+        lines: [dm(`Dungeon Master: You stride toward '${fileArg}'.`)],
         walkTo: { x: file.x, y: file.y },
         effect: isWin ? { type: "win", fileName: fileArg } : pickupEffect,
       };

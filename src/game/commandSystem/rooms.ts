@@ -1,7 +1,7 @@
 import { getWeakCommands } from "../adaptiveDungeon";
 import { generateAIRoomBlueprint, glyphForBlueprintItem } from "../aiRoomGeneration";
 import { addDoorToRoom, generateRoom } from "../generator";
-import { dm, err, isSafeName, out } from "./helpers";
+import { dm, err, isSafeName } from "./helpers";
 import type { CommandDefinition } from "./types";
 
 export const roomCommands: CommandDefinition[] = [
@@ -15,7 +15,7 @@ export const roomCommands: CommandDefinition[] = [
       const brokenDoor = room.doors.find((door) => door.broken);
       if (state.mechanic === "mkdir" && brokenDoor && (name === brokenDoor.target || (state.showcaseMode && name === "door"))) {
         return {
-          lines: [out("You rebuild the broken doorway. The path is open.")],
+          lines: [dm("Dungeon Master: You rebuild the broken doorway. The path is open.")],
           vfx: { kind: "manifest", cells: [{ x: brokenDoor.x, y: brokenDoor.y }], durationMs: 1400 },
           effect: { type: "repairDoor", target: brokenDoor.target },
         };
@@ -69,7 +69,7 @@ export const roomCommands: CommandDefinition[] = [
       const newDoor = currentWithDoor.doors.find((door) => door.target === name);
       return {
         lines: [
-          out(`You carve '${name}' into the wall, and a directory door opens.`),
+          dm(`Dungeon Master: You carve '${name}' into the wall, and a directory door opens.`),
           dm(`Dungeon Master: ${blueprint.hint}`),
         ],
         patch: { rooms: nextRooms },

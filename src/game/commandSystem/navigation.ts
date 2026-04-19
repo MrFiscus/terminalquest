@@ -1,5 +1,5 @@
 import { findDoor, getRoom, isWalkable, resolvePath, pathfind } from "../dungeon";
-import { out, relativePath } from "./helpers";
+import { dm, out, relativePath } from "./helpers";
 import type { CommandDefinition } from "./types";
 import { err } from "./helpers";
 import type { CommandResult } from "../types";
@@ -89,14 +89,14 @@ export const navigationCommands: CommandDefinition[] = [
         const blocker = room.files.find((file) => file.name === liveDoor.blockedBy && file.type === "blocker");
         if (blocker) {
           return {
-            lines: [err("A heavy stone blocks the way.")],
+            lines: [err(`cd: ${arg}: blocked`)],
             walkTo: { x: blocker.x, y: blocker.y },
           };
         }
       }
       if (liveDoor.broken) {
         return {
-          lines: [err("The door is broken. You need to repair it.")],
+          lines: [err(`cd: ${arg}: broken door`)],
           walkTo: blockedDoorStop(room, liveDoor),
         };
       }
@@ -109,7 +109,7 @@ export const navigationCommands: CommandDefinition[] = [
           { x: mauBlocker.x, y: mauBlocker.y - 1 },
         ].find((candidate) => isWalkable(room, candidate.x, candidate.y)) ?? { x: liveDoor.x, y: liveDoor.y };
         return {
-          lines: [err("Mau blocks your path. Speak with Mau first.")],
+          lines: [err(`cd: ${arg}: blocked by Mau`)],
           walkTo: stopAt,
         };
       }
@@ -118,7 +118,7 @@ export const navigationCommands: CommandDefinition[] = [
         console.log(`[cd] lock check: hasKey=${hasKey}`);
         if (!hasKey) {
           return {
-            lines: [err(`The door is locked. You need a key to enter.`)],
+            lines: [err(`cd: ${arg}: locked`)],
             walkTo: blockedDoorStop(room, liveDoor),
           };
         }
@@ -148,7 +148,7 @@ export const navigationCommands: CommandDefinition[] = [
       console.log("[cd] liveDoor.requiredKey=", liveDoor.requiredKey);
 
       return {
-        lines: [out(approachText)],
+        lines: [{ kind: "dm", text: `Dungeon Master: ${approachText}` }],
         walkTo: { x: liveDoor.x, y: liveDoor.y },
         patch: unlockPatch,
         effect: {
@@ -235,7 +235,7 @@ export const navigationCommands: CommandDefinition[] = [
       }
 
       return {
-        lines: hits.length ? [out("You sense something hidden..."), ...hits.map(out)] : [out(`(no matches in ${room.name})`)],
+        lines: hits.length ? [dm("Dungeon Master: You sense something hidden."), ...hits.map(out)] : [out(`(no matches in ${room.name})`)],
         vfx: cells.length ? { kind: "find", cells, durationMs: 2200 } : undefined,
         walkTo,
       };

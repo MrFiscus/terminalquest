@@ -10,7 +10,6 @@ const commandName = (input: string) => input.trim().split(/\s+/)[0]?.toLowerCase
 
 const feedback: Record<string, string> = {
   ls: "You reveal the contents of the chamber.",
-  cd: "You step through the archway...",
   mv: "You lift the relic and carry it with purpose.",
   rm: "The object crumbles into dust.",
   mkdir: "A new passage forms before you.",
