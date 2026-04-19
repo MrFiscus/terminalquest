@@ -15,7 +15,7 @@ import { generateLevel, type Difficulty } from "@/game/aiLevelService";
 import { generateDifficultyMechanicLevel } from "@/game/difficultyMechanics";
 import { adaptationMessage, getWeakCommands, type CommandStats } from "@/game/adaptiveDungeon";
 import { startGameAmbience, stopGameAmbience } from "@/game/audio";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
   clearLevelSession,
   readFamiliarity,
@@ -28,7 +28,20 @@ import {
 import { ResumeDialog } from "@/components/ResumeDialog";
 import { UserRound } from "lucide-react";
 import { AnimatePresence } from "framer-motion";
+import { useNavigate } from "react-router-dom";
 import type { LinuxCommand, VictoryReport } from "@/game/types";
+import type { GeneratedLevel } from "@/game/aiLevelService";
+
+interface ReplayLoadPayload {
+  level: GeneratedLevel;
+  label: string;
+  adaptation?: string | null;
+  playMode: "guided" | "real";
+  options?: {
+    showcaseMode?: boolean;
+    weakCommands?: string[];
+  };
+}
 
 const progressionCommands: LinuxCommand[] = [
   "pwd",
@@ -116,6 +129,7 @@ function roomHeaderNote(room: ReturnType<typeof getRoom>, transientNote: string 
 }
 
 const Index = () => {
+  const navigate = useNavigate();
   const [profileOpen, setProfileOpen] = useState(false);
   const openProfile = useCallback(() => setProfileOpen(true), []);
   const {
@@ -154,6 +168,7 @@ const Index = () => {
   });
   const [bookOpen, setBookOpen] = useState(false);
   const [advancingLevel, setAdvancingLevel] = useState(false);
+  const replayPayloadRef = useRef<ReplayLoadPayload | null>(null);
 
   useEffect(() => {
     if (!hasEntered) return;
@@ -186,12 +201,21 @@ const Index = () => {
             recentMistakes: state.recentMistakes,
             generationSeed,
           });
+      const label = `${difficulty} (${level.rooms.length} rooms)`;
+      const adaptation = showcaseMode
+        ? "The dungeon whispers: type ls to survey your surroundings."
+        : playMode === "guided" ? adaptationMessage(weakCommands) : null;
+      replayPayloadRef.current = {
+        level,
+        label,
+        adaptation,
+        playMode,
+        options: { showcaseMode, weakCommands },
+      };
       loadLevel(
         level,
-        `${difficulty} (${level.rooms.length} rooms)`,
-        showcaseMode
-          ? "The dungeon whispers: type ls to survey your surroundings."
-          : playMode === "guided" ? adaptationMessage(weakCommands) : null,
+        label,
+        adaptation,
         playMode,
         { showcaseMode, weakCommands },
       );
@@ -235,7 +259,15 @@ const Index = () => {
       const focus = weakCommands[0];
       const adaptation =
         `Next dungeon tuned for ${focus}, with ${teachingCommands.length} new ${teachingCommands.length === 1 ? "lesson" : "lessons"} woven in: ${teachingCommands.join(", ")}.`;
-      loadLevel(level, `${difficulty} (${level.rooms.length} rooms)`, adaptation, "guided", {
+      const label = `${difficulty} (${level.rooms.length} rooms)`;
+      replayPayloadRef.current = {
+        level,
+        label,
+        adaptation,
+        playMode: "guided",
+        options: { showcaseMode: false, weakCommands },
+      };
+      loadLevel(level, label, adaptation, "guided", {
         showcaseMode: false,
         weakCommands,
       });
@@ -306,6 +338,28 @@ const Index = () => {
     setAutoEntering(readOnboarded() && readFamiliarity() != null);
   };
 
+  const handleCloseVictoryToResume = () => {
+    const session = readLevelSession();
+    if (!session) {
+      navigate("/", { replace: true });
+      return;
+    }
+    setPendingSession(session);
+    setResumeDecision("pending");
+    setHasEntered(false);
+  };
+
+  const handleCloseResumeToLanding = () => {
+    navigate("/", { replace: true });
+  };
+
+  const handleReplayCurrentLevel = () => {
+    const payload = replayPayloadRef.current;
+    if (!payload) return;
+    loadLevel(payload.level, payload.label, payload.adaptation, payload.playMode, payload.options);
+    setHasEntered(true);
+  };
+
   if (!hasEntered) {
     if (resumeDecision === "pending" && pendingSession) {
       return (
@@ -313,6 +367,7 @@ const Index = () => {
           session={pendingSession}
           onContinue={handleContinueSession}
           onNew={handleStartNewWorld}
+          onClose={handleCloseResumeToLanding}
         />
       );
     }
@@ -406,7 +461,10 @@ const Index = () => {
       {state.won && (
         <VictoryOverlay
           onReset={loadNextAdaptiveDungeon}
+          onReplay={handleReplayCurrentLevel}
+          onClose={handleCloseVictoryToResume}
           targetFile={state.targetFile}
+          canReplay={Boolean(replayPayloadRef.current)}
           completionMessage={state.completionMessage}
           report={state.completionReport}
           busy={advancingLevel}

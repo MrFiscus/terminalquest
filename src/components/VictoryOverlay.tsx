@@ -4,7 +4,10 @@ import scrollImage from "@/assets/scroll.png";
 
 interface VictoryOverlayProps {
   onReset: () => void;
+  onReplay: () => void;
+  onClose: () => void;
   targetFile: string;
+  canReplay?: boolean;
   completionMessage?: string | null;
   report?: VictoryReport | null;
   busy?: boolean;
@@ -13,7 +16,10 @@ interface VictoryOverlayProps {
 
 export function VictoryOverlay({
   onReset,
+  onReplay,
+  onClose,
   targetFile,
+  canReplay = true,
   completionMessage,
   report,
   busy = false,
@@ -34,6 +40,14 @@ export function VictoryOverlay({
           backgroundColor: "transparent",
         }}
       >
+        <button
+          type="button"
+          onClick={onClose}
+          className="absolute right-[14%] top-[19%] z-20 rounded-full border border-[#8b6914]/70 bg-[#f3dfab]/90 px-2 py-0.5 font-pixel text-[10px] tracking-wider text-[#5a3d0b] shadow-sm transition hover:bg-[#f0d894]"
+          aria-label="Close victory scroll"
+        >
+          X
+        </button>
         <div
           className="victory-scroll-content"
           style={{
@@ -73,13 +87,24 @@ export function VictoryOverlay({
               <p className="mt-1 mb-0 text-center">Next lesson: {report.nextLesson}</p>
             </div>
           )}
-          <Button
-            onClick={onReset}
-            disabled={busy}
-            className="font-pixel text-[10px] tracking-widest"
-          >
-            {busy ? "SHAPING DUNGEON..." : actionLabel}
-          </Button>
+          <div className="flex flex-wrap items-center justify-center gap-2">
+            <Button
+              type="button"
+              onClick={onReplay}
+              disabled={busy || !canReplay}
+              className="font-pixel text-[10px] tracking-widest"
+            >
+              PLAY AGAIN
+            </Button>
+            <Button
+              type="button"
+              onClick={onReset}
+              disabled={busy}
+              className="font-pixel text-[10px] tracking-widest"
+            >
+              {busy ? "SHAPING DUNGEON..." : actionLabel}
+            </Button>
+          </div>
         </div>
         <div
           className="pointer-events-none absolute left-[18%] right-[18%] bottom-[16.5%] flex justify-center pb-1"

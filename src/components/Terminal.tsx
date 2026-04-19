@@ -228,7 +228,7 @@ export function Terminal({ state, onSubmit }: TerminalProps) {
           title="Return to Landing Page"
         >
           <span className="dungeon-terminal-header-text">
-            ⚔ <span style={{ letterSpacing: '0.12em' }}>TERMINAL QUEST</span> ⚔
+            <span style={{ letterSpacing: '0.12em' }}>TERMINAL QUEST</span>
           </span>
         </button>
         <span className="dungeon-terminal-header-sub">rune·shell</span>

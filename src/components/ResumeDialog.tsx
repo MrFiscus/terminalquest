@@ -12,6 +12,7 @@ interface ResumeDialogProps {
   session: LevelSessionSnapshot;
   onContinue: () => void;
   onNew: () => void;
+  onClose?: () => void;
 }
 
 const slabStyle: CSSProperties = {
@@ -55,7 +56,7 @@ function formatAgo(ms: number): string {
   return `${days} day${days === 1 ? "" : "s"} ago`;
 }
 
-export function ResumeDialog({ session, onContinue, onNew }: ResumeDialogProps) {
+export function ResumeDialog({ session, onContinue, onNew, onClose }: ResumeDialogProps) {
   const tracker = session.tracker;
   const commandCount = tracker.commands.length;
   const roomsVisited = tracker.visitedRooms.length;
@@ -77,6 +78,29 @@ export function ResumeDialog({ session, onContinue, onNew }: ResumeDialogProps) 
         className="relative flex flex-col gap-4"
         style={{ width: "420px", maxWidth: "92vw" }}
       >
+        {onClose && (
+          <button
+            type="button"
+            onClick={onClose}
+            aria-label="Close return to your quest menu"
+            className="absolute right-2 top-2 z-10"
+            style={{
+              width: 28,
+              height: 28,
+              borderRadius: "999px",
+              border: "1px solid hsl(0 0% 6%)",
+              background: "hsl(228 14% 8%)",
+              color: "hsl(38 80% 62%)",
+              fontFamily: "'Cinzel', serif",
+              fontSize: "11px",
+              cursor: "pointer",
+              boxShadow: "0 0 10px hsl(33 100% 45% / 0.22), inset 0 0 12px hsl(0 0% 0% / 0.5)",
+            }}
+          >
+            X
+          </button>
+        )}
+
         {/* Title slab */}
         <div style={{ ...slabStyle, padding: "18px 22px 14px" }}>
           <p

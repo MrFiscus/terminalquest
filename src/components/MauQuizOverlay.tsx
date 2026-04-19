@@ -23,10 +23,14 @@ export function MauQuizOverlay({ quiz, onSubmit, onClose }: MauQuizOverlayProps)
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === "Escape") onClose();
+      if (e.key === "Enter" && quiz.completedMessage) {
+        e.preventDefault();
+        onClose();
+      }
     };
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [onClose]);
+  }, [onClose, quiz.completedMessage]);
 
   return (
     <motion.div
