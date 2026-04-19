@@ -96,18 +96,34 @@ export function Terminal({ state, onSubmit }: TerminalProps) {
   }, [state.animating]);
 
   useEffect(() => {
-    const onKey = (e: KeyboardEvent) => {
-      if (state.animating || state.won) return;
+    const onKey = (e: globalThis.KeyboardEvent) => {
+      if (state.animating || state.won || state.activeMauQuiz) return;
       
-      // Don't steal focus if user is already typing in an input
+      // Don't steal focus from active form controls or buttons.
       const target = document.activeElement;
-      if (target?.tagName === "INPUT" || target?.tagName === "TEXTAREA") return;
+      if (
+        target?.tagName === "INPUT" ||
+        target?.tagName === "TEXTAREA" ||
+        target?.tagName === "BUTTON" ||
+        target?.tagName === "SELECT" ||
+        target?.getAttribute("contenteditable") === "true"
+      ) return;
 
+      if (e.key === "Enter") {
+        e.preventDefault();
+        const value = input;
+        setInput("");
+        setCursorPos(0);
+        setHistIndex(null);
+        inputRef.current?.focus();
+        onSubmit(value);
+        return;
+      }
       if (document.activeElement !== inputRef.current) inputRef.current?.focus();
     };
-    window.addEventListener("keydown", onKey as any);
-    return () => window.removeEventListener("keydown", onKey as any);
-  }, [state.animating, state.won]);
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [input, onSubmit, state.activeMauQuiz, state.animating, state.won]);
 
   const handleKey = (e: KeyboardEvent<HTMLInputElement>) => {
     if (e.key === "Enter") {
