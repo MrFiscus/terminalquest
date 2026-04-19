@@ -468,6 +468,7 @@ export function GameWorld({ state, onDismissPopup, headerRight }: GameWorldProps
     () => (room?.decor ?? []).filter((d) => d.kind === "interior-door"),
     [room],
   );
+  const showObjectNames = state.vfx.some((vfx) => vfx.kind === "ls");
   // Both interior-wall AND interior-door cells participate in a "run". We
   // use this set to decide whether a given cap is at an end of its run
   // (corner tile) or in the middle (wall-capped middle tile).
@@ -878,9 +879,10 @@ export function GameWorld({ state, onDismissPopup, headerRight }: GameWorldProps
             );
           })}
 
-          {/* ------- Interior doors (archways cut through interior wall runs) ------- */}
+          {/* ------- Interior wall openings (passable breaks, not command doors) ------- */}
           {interiorDoors.map((d) => {
             const cap = horizontalInteriorCapFor(d.x, d.y);
+            const useNormalDoor = (roomSeed + d.x * 7 + d.y * 11) % 3 === 0;
             return (
             <div
               key={`id-${d.x}-${d.y}`}
@@ -890,34 +892,37 @@ export function GameWorld({ state, onDismissPopup, headerRight }: GameWorldProps
                 top: d.y * tileH,
                 width: tileW,
                 height: tileH,
-                zIndex: 6,
+                zIndex: 22,
               }}
             >
-              {/* darkened opening behind the door */}
+              {/* darkened floor break behind the wall cap */}
               <span
                 aria-hidden
-                className="absolute inset-0"
+                className="absolute inset-x-[18%] bottom-[4%] top-[28%]"
                 style={{
                   background:
-                    "radial-gradient(circle at 50% 65%, rgba(0,0,0,0.85) 0%, rgba(0,0,0,0.45) 55%, transparent 80%)",
+                    "linear-gradient(to bottom, rgba(0,0,0,0.28), rgba(0,0,0,0.58))",
                 }}
               />
-              {/* door sprite sits in the opening */}
               <img
-                src={elementAsset("Door-Closed")}
+                src={useNormalDoor ? elementAsset("Door-Closed") : elementAsset("arch-gate")}
                 alt=""
                 draggable={false}
-                className="absolute object-contain"
+                className={useNormalDoor ? "absolute object-contain" : "absolute inset-0 h-full w-full object-cover"}
                 style={{
-                  left: "6%",
-                  top: "0%",
-                  width: "88%",
-                  height: "105%",
+                  ...(useNormalDoor
+                    ? {
+                        left: "6%",
+                        top: "0%",
+                        width: "88%",
+                        height: "105%",
+                      }
+                    : {}),
                   imageRendering: "pixelated",
-                  filter: "drop-shadow(0 4px 4px rgba(0,0,0,0.75))",
+                  filter: "drop-shadow(0 4px 4px rgba(0,0,0,0.72))",
                 }}
               />
-              {/* Soil cap above the door — continues the run's corner/middle pattern. */}
+              {/* Soil cap above the pass-through continues the run pattern. */}
               <img
                 src={cap.src}
                 alt=""
@@ -1093,24 +1098,29 @@ export function GameWorld({ state, onDismissPopup, headerRight }: GameWorldProps
             })}
           </div>
 
-          {/* ------- Door labels ------- */}
-          {room.doors.map((d) => (
-            <div
-              key={`label-${d.x}-${d.y}`}
-              className="pointer-events-none absolute label-float"
-              style={doorLabelStyle(d.x, d.y, room.width, room.height, tileW, tileH)}
-            >
-              <span
-                className="label-chip breathe text-[10px] font-bold whitespace-nowrap"
-                style={{
-                  transform: doorLabelTransform(d.x, d.y, room.width, room.height),
-                  display: "inline-block",
-                }}
+          {/* ------- Door labels, revealed by ls ------- */}
+          <AnimatePresence>
+            {showObjectNames && room.doors.map((d) => (
+              <motion.div
+                key={`label-${d.x}-${d.y}`}
+                initial={{ opacity: 0, y: 4 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -4 }}
+                className="pointer-events-none absolute label-float"
+                style={doorLabelStyle(d.x, d.y, room.width, room.height, tileW, tileH)}
               >
-                {d.target === ".." ? "../" : `${d.target}/`}
-              </span>
-            </div>
-          ))}
+                <span
+                  className="label-chip breathe text-[10px] font-bold whitespace-nowrap"
+                  style={{
+                    transform: doorLabelTransform(d.x, d.y, room.width, room.height),
+                    display: "inline-block",
+                  }}
+                >
+                  {d.target === ".." ? "../" : `${d.target}/`}
+                </span>
+              </motion.div>
+            ))}
+          </AnimatePresence>
 
           {/* ------- Files (items on floor) ------- */}
           {room.files.map((f) => {
@@ -1154,9 +1164,18 @@ export function GameWorld({ state, onDismissPopup, headerRight }: GameWorldProps
                     }}
                   />
                 )}
-                <span className="absolute -bottom-1 left-1/2 -translate-x-1/2 label-chip breathe text-[7px]">
-                  {f.name}
-                </span>
+                <AnimatePresence>
+                  {showObjectNames && (
+                    <motion.span
+                      initial={{ opacity: 0, y: 4 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: -4 }}
+                      className="absolute -bottom-1 left-1/2 -translate-x-1/2 label-chip breathe text-[7px]"
+                    >
+                      {f.name}
+                    </motion.span>
+                  )}
+                </AnimatePresence>
               </div>
             );
           })}

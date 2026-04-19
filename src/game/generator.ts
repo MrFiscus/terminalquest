@@ -88,6 +88,9 @@ type CompactWallBlueprint = {
   v: Array<[x: number, y: number, length: number]>;
 };
 
+const MAX_ROOM_DOORS = 4;
+const MIN_ROOM_DOORS = 2;
+
 interface Layout {
   width: number;
   height: number;
@@ -265,6 +268,14 @@ function reservePaths(layout: Layout) {
 
 function doorAdjacent(doors: DoorTile[], x: number, y: number) {
   return doors.some((d) => Math.max(Math.abs(d.x - x), Math.abs(d.y - y)) <= 1);
+}
+
+function resolveDoorPath(currentPath: string, door: DoorTile): string {
+  return door.toPath ?? (
+    door.target === ".."
+      ? currentPath.split("/").slice(0, -1).join("/") || "/"
+      : `${currentPath}/${door.target}`
+  );
 }
 
 function hasInteriorDoor(decor: DecorItem[] | undefined, x: number, y: number): boolean {
@@ -526,9 +537,9 @@ function interiorWallTemplate(
 /**
  * Emit interior-wall decor cells from the active template. Each wall tile
  * is reserved in occupancy so props never overlap structural elements.
- * Runs of length >= 4 get an "interior-door" archway in the middle so
- * the wall reads as a real partition with a passage rather than a blank
- * stub.
+ * Runs of length >= 4 get an "interior-door" pass-through in the middle.
+ * The renderer treats these as open breaks, not door sprites, so only real
+ * room exits look like commandable doors.
  */
 function placeInteriorWalls(layout: Layout) {
   const { theme, width, height, rng, doors, files } = layout;
@@ -998,6 +1009,7 @@ function buildFiles(
 
 export function addDoorToRoom(room: Room, target: string): Room | null {
   if (room.doors.some((d) => d.target === target)) return null;
+  if (room.doors.length >= MAX_ROOM_DOORS) return null;
   const used = new Set(room.doors.map((d) => key(d.x, d.y)));
   for (const side of ["right", "top", "bottom", "left"] as WallSide[]) {
     for (const slot of doorSlotsForSide(side, room.width, room.height)) {
@@ -1006,6 +1018,63 @@ export function addDoorToRoom(room: Room, target: string): Room | null {
     }
   }
   return null;
+}
+
+function basename(path: string): string {
+  return path.split("/").filter(Boolean).pop() ?? "room";
+}
+
+function uniqueDoorTarget(room: Room, base: string): string {
+  const used = new Set(room.doors.map((door) => door.target));
+  if (!used.has(base)) return base;
+  for (let i = 2; i < 20; i++) {
+    const next = `${base}-${i}`;
+    if (!used.has(next)) return next;
+  }
+  return `${base}-${room.doors.length + 1}`;
+}
+
+function addShortcutDoor(room: Room, target: string, toPath: string): Room | null {
+  if (room.path === toPath) return null;
+  if (room.doors.length >= MAX_ROOM_DOORS) return null;
+  if (room.doors.some((door) => resolveDoorPath(room.path, door) === toPath)) return null;
+
+  const used = new Set(room.doors.map((d) => key(d.x, d.y)));
+  for (const side of ["top", "bottom", "right", "left"] as WallSide[]) {
+    for (const slot of doorSlotsForSide(side, room.width, room.height)) {
+      if (used.has(key(slot.x, slot.y))) continue;
+      return {
+        ...room,
+        doors: [...room.doors, { ...slot, kind: "door", target: uniqueDoorTarget(room, target), toPath }],
+      };
+    }
+  }
+  return null;
+}
+
+function ensureMinimumRoomDoors(rooms: Record<string, Room>, rootPath: string): Record<string, Room> {
+  const paths = Object.keys(rooms);
+  if (paths.length < 2) return rooms;
+
+  const result: Record<string, Room> = { ...rooms };
+  for (const path of paths) {
+    let room = result[path];
+    if (!room) continue;
+    while (room.doors.length < MIN_ROOM_DOORS && room.doors.length < MAX_ROOM_DOORS) {
+      const existing = new Set(room.doors.map((door) => resolveDoorPath(path, door)));
+      const candidate =
+        paths.find((other) => other !== path && !existing.has(other) && other !== rootPath) ??
+        paths.find((other) => other !== path && !existing.has(other));
+      if (!candidate) break;
+
+      const next = addShortcutDoor(room, basename(candidate), candidate);
+      if (!next) break;
+      room = next;
+      result[path] = room;
+    }
+  }
+
+  return result;
 }
 
 export function generateRoom(spec: RoomSpec, nonce = 0): Room {
@@ -1035,9 +1104,11 @@ export function generateRoom(spec: RoomSpec, nonce = 0): Room {
   // (doors leading forward into the dungeon). Never on left/right.
   if (spec.hasParent) dropDoor("..", "bottom");
 
-  const desiredSides = pickExitSides(spec.exits.length, spec.hasParent, rng);
+  const maxExitDoors = Math.max(0, MAX_ROOM_DOORS - (spec.hasParent ? 1 : 0));
+  const exitTargets = spec.exits.slice(0, maxExitDoors);
+  const desiredSides = pickExitSides(exitTargets.length, spec.hasParent, rng);
   const fallbackSides: WallSide[] = ["top", "bottom"];
-  spec.exits.forEach((target, i) => {
+  exitTargets.forEach((target, i) => {
     const wanted = desiredSides[i] ?? fallbackSides[i % fallbackSides.length];
     if (dropDoor(target, wanted)) return;
     for (const alt of fallbackSides) if (alt !== wanted && dropDoor(target, alt)) return;
@@ -1113,8 +1184,9 @@ export function generateDungeon(
   rootPath: string,
   nonce = 0,
 ): Record<string, Room> {
-  const rooms: Record<string, Room> = {};
+  let rooms: Record<string, Room> = {};
   for (const spec of specs) rooms[spec.path] = generateRoom(spec, nonce);
+  rooms = ensureMinimumRoomDoors(rooms, rootPath);
 
   const seen = new Set<string>([rootPath]);
   const queue = [rootPath];
@@ -1123,8 +1195,7 @@ export function generateDungeon(
     const r = rooms[p];
     if (!r) continue;
     for (const d of r.doors) {
-      const next =
-        d.target === ".." ? p.split("/").slice(0, -1).join("/") || "/" : `${p}/${d.target}`;
+      const next = resolveDoorPath(p, d);
       if (rooms[next] && !seen.has(next)) {
         seen.add(next);
         queue.push(next);
@@ -1179,9 +1250,7 @@ function spawnMauTheCat(rooms: Record<string, Room>, rootPath: string): Record<s
     // 2. Through doors
     const door = room.doors.find(d => d.x === curr.x && d.y === curr.y);
     if (door) {
-      const nextPath = door.target === ".." 
-        ? curr.path.split("/").slice(0, -1).join("/") || "/" 
-        : `${curr.path}/${door.target}`;
+      const nextPath = resolveDoorPath(curr.path, door);
       const nextRoom = rooms[nextPath];
       if (nextRoom) {
         // Find corresponding entry door or use spawn
