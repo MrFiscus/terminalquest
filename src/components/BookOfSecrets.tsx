@@ -44,15 +44,6 @@ const DIFF_OPTIONS: Array<DifficultyLevel | "all"> = ["all", "beginner", "interm
 // ── CSS keyframes + Google Font ────────────────────────────────────────────
 const KEYFRAMES = `
 @import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=Pirata+One&display=swap');
-
-@keyframes pageFadeOut {
-  0%   { opacity: 1; }
-  100% { opacity: 0; }
-}
-@keyframes pageFadeIn {
-  0%   { opacity: 0; }
-  100% { opacity: 1; }
-}
 `;
 
 // ── Parchment background — transparent so the book frame shows through, but
