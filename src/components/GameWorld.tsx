@@ -833,7 +833,7 @@ export function GameWorld({ state, onDismissPopup, headerRight }: GameWorldProps
               const y = Math.floor(i / room.width);
               const k = vfxKindFor(state.vfx, x, y);
               if (!k) return <div key={i} />;
-              if (k === "ls") return <div key={i} className="vfx-pulse" style={{ background: "hsl(var(--torch-glow) / 0.35)" }} />;
+              if (k === "ls") return <div key={i} className="vfx-ls-glow" />;
               if (k === "find") return (
                 <div key={i} className="vfx-trail flex items-center justify-center text-[16px]">
                   <span style={{ color: "hsl(195 90% 65%)", textShadow: "0 0 8px hsl(195 90% 65%)" }}>◉</span>

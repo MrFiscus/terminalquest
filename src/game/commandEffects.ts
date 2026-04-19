@@ -28,7 +28,6 @@ const feedback: Record<string, string> = {
 };
 
 const screenEffects: Record<string, ScreenEffect["kind"]> = {
-  ls: "reveal",
   cd: "traverse",
   mkdir: "create",
   pwd: "aware",
@@ -53,4 +52,3 @@ export function runCommandEffect(input: string, result: CommandResult, failed: b
 
   return plan;
 }
-

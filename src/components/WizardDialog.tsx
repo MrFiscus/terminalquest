@@ -126,7 +126,8 @@ export function WizardDialog({ context }: WizardDialogProps) {
                           if (e.key === "Enter") handleSend();
                         }}
                         placeholder="Your question..."
-                        className="w-full bg-transparent border-b-2 border-[#5d4037]/30 px-0 py-2 font-sans text-lg text-[#3e2723] focus:outline-none focus:border-[#5d4037] placeholder:text-[#5d4037]/30 font-medium"
+                        className="w-full bg-transparent border-0 border-b-2 border-[#8b6914] px-0 py-1 text-[#3b1f0a] outline-none placeholder:text-[#3b1f0a]/40 focus:border-[#8b6914]"
+                        style={{ fontFamily: "'Uncial Antiqua', 'MedievalSharp', cursive", fontSize: "1.2rem" }}
                       />
                       <button 
                         onClick={handleSend} 

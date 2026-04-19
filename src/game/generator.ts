@@ -1,5 +1,4 @@
 import type { DecorItem, DecorKind, DoorTile, FileItem, Room, Tile } from "./types";
-import { findAdjacentWallSlot } from "./dungeon";
 
 /**
  * Procedural room/dungeon generator.
@@ -949,57 +948,6 @@ export function generateDungeon(
   }
 
   const finalRooms = spawnMauTheCat(rooms, rootPath);
-
-  // --- Add Mau's Vault ---
-  // Pick a random reachable room for the vault door (NOT root, NOT Mau's room)
-  const reachablePaths = Object.keys(finalRooms).filter(p => p !== rootPath);
-  const mauRoomPath = Object.entries(finalRooms).find(([_, r]) => r.npcs?.some(n => n.id === "mau"))?.[0];
-  const possibleVaultPaths = reachablePaths.filter(p => p !== mauRoomPath);
-  
-  // Deterministic random selection for the vault room using nonce
-  const vaultRoomPath = possibleVaultPaths.length > 0 
-    ? possibleVaultPaths[Math.floor(mulberry32(hashString("vault" + nonce))() * possibleVaultPaths.length)]
-    : reachablePaths[0];
-
-  if (vaultRoomPath) {
-    const vaultRoom = finalRooms[vaultRoomPath];
-    const vaultPath = `${vaultRoomPath}/vault`;
-    
-    // 1. Create the Vault (1x1 interior, 5x5 with walls)
-    const vault: Room = {
-      path: vaultPath,
-      name: "Mau's Secret Vault",
-      description: "A tiny, glimmering chamber where the ultimate relic resides.",
-      width: 5,
-      height: 5,
-      tiles: [],
-      doors: [{ x: 0, y: 2, kind: "door", target: ".." }],
-      files: [{ name: "relic.txt", glyph: "🏆", x: 2, y: 2, contents: "The ancient text of the Linux Elders. It hums with power." }],
-      spawn: { x: 1, y: 2 },
-      returnSpawn: { x: 1, y: 2 }
-    };
-    
-    // Fill vault with walls and floor
-    for (let y = 0; y < 5; y++) {
-      for (let x = 0; x < 5; x++) {
-        const isEdge = x === 0 || y === 0 || x === 4 || y === 4;
-        vault.tiles.push({ x, y, kind: isEdge ? "wall" : "floor" });
-      }
-    }
-    
-    // 2. Add locked door in the selected room leading to the vault
-    const doorPos = findAdjacentWallSlot(vaultRoom, vaultRoom.spawn);
-    if (doorPos) {
-      vaultRoom.doors.push({
-        ...doorPos,
-        kind: "door",
-        target: "vault",
-        locked: true,
-        requiredKey: "Vault Key"
-      });
-      finalRooms[vaultPath] = vault;
-    }
-  }
 
   for (const p of Object.keys(finalRooms)) {
     if (!seen.has(p)) {

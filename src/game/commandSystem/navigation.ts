@@ -1,4 +1,4 @@
-import { findDoor, getRoom, resolvePath, pathfind } from "../dungeon";
+import { findDoor, getRoom, isWalkable, resolvePath, pathfind } from "../dungeon";
 import { out, relativePath } from "./helpers";
 import type { CommandDefinition } from "./types";
 import { err } from "./helpers";
@@ -129,8 +129,19 @@ export const navigationCommands: CommandDefinition[] = [
           hits.push(`${rel}/${file.name}`.replace(/^\.\//, "./"));
           if (isCurrentRoom) {
             cells.push({ x: file.x, y: file.y });
-            const path = pathfind(room, state.player, { x: file.x, y: file.y });
+            const currentRoom = state.rooms[state.cwd] ?? room;
+            const candidates = [
+              { x: file.x, y: file.y - 1 },
+              { x: file.x + 1, y: file.y },
+              { x: file.x - 1, y: file.y },
+              { x: file.x, y: file.y + 1 },
+            ];
+            const stopAt = candidates.find((candidate) =>
+              isWalkable(currentRoom, candidate.x, candidate.y),
+            ) ?? { x: file.x, y: file.y };
+            const path = pathfind(currentRoom, state.player, stopAt);
             if (path) cells.push(...path);
+            walkTo = stopAt;
           }
         }
         for (const door of searchRoom.doors) {
@@ -147,12 +158,25 @@ export const navigationCommands: CommandDefinition[] = [
           hits.push(`${rel}/${npc.name}`.replace(/^\.\//, "./"));
           if (isCurrentRoom) {
             cells.push({ x: npc.x, y: npc.y });
-            const path = pathfind(room, state.player, { x: npc.x, y: npc.y });
-            if (path) cells.push(...path);
 
             // Special Case: Walk to Mau specifically
             if (npc.id === "mau") {
-              walkTo = { x: npc.x, y: npc.y };
+              const currentRoom = state.rooms[state.cwd] ?? room;
+              const candidates = [
+                { x: npc.x, y: npc.y - 1 },
+                { x: npc.x + 1, y: npc.y },
+                { x: npc.x - 1, y: npc.y },
+                { x: npc.x, y: npc.y + 1 },
+              ];
+              const stopAt = candidates.find((candidate) =>
+                isWalkable(currentRoom, candidate.x, candidate.y),
+              ) ?? { x: npc.x, y: npc.y };
+              const path = pathfind(currentRoom, state.player, stopAt);
+              if (path) cells.push(...path);
+              walkTo = stopAt;
+            } else {
+              const path = pathfind(room, state.player, { x: npc.x, y: npc.y });
+              if (path) cells.push(...path);
             }
           }
         }

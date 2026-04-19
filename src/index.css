@@ -375,6 +375,15 @@
     animation: player-pickup 0.52s ease-out;
   }
   /* VFX */
+  .vfx-ls-glow {
+    margin: -2px;
+    padding: 2px;
+    border: 2px solid rgba(255, 215, 0, 1);
+    border-radius: 6px;
+    background: rgba(255, 215, 0, 0.75);
+    box-shadow: 0 0 12px 6px rgba(255, 215, 0, 0.9), 0 0 24px 12px rgba(255, 165, 0, 0.6);
+    animation: lsPulse 900ms ease-in-out forwards;
+  }
   .vfx-pulse {
     animation: vfx-pulse 0.9s ease-out forwards;
   }
@@ -819,6 +828,13 @@
   0%   { opacity: 0; transform: scale(0.6); }
   40%  { opacity: 1; transform: scale(1); }
   100% { opacity: 0; transform: scale(1.1); }
+}
+@keyframes lsPulse {
+  0%   { opacity: 0; }
+  25%  { opacity: 1; }
+  50%  { opacity: 0.5; }
+  75%  { opacity: 1; }
+  100% { opacity: 0; }
 }
 @keyframes vfx-trail {
   0%   { opacity: 0; transform: translateY(2px); }
