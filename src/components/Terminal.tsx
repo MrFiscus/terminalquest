@@ -236,7 +236,7 @@ export function Terminal({ state, onSubmit }: TerminalProps) {
           const tokenColor = line.kind === "output" ? lsTokenClass(line.text) : null;
           return (
             <div
-              key={line.id}
+              key={line.id ?? idx}
               className={cn(
                 "whitespace-pre-wrap text-left transition-opacity duration-300",
                 tokenColor ?? lineClass[line.kind],

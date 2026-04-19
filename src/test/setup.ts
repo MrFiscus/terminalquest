@@ -38,3 +38,8 @@ Object.defineProperty(window, "matchMedia", {
     dispatchEvent: () => {},
   }),
 });
+
+// Mock scrollTo as it is not implemented in JSDOM
+if (typeof HTMLElement !== "undefined") {
+  HTMLElement.prototype.scrollTo = vi.fn();
+}
