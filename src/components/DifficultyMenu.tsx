@@ -326,7 +326,8 @@ export const DifficultyMenu = ({ onConfirm, busy }: DifficultyMenuProps) => {
 
         /* Molten-rune hover: glow from within with tier-colored drop-shadow */
         .engraved-menu .engraved-hover:hover,
-        .engraved-menu .engraved-hover:focus-visible {
+        .engraved-menu .engraved-hover:focus-visible,
+        .engraved-menu .engraved-active {
           color: hsl(var(--glow) / 0.92);
           text-shadow:
             -1px -1px 0 hsl(0 0% 0% / 0.9),
