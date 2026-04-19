@@ -986,3 +986,8 @@
     drop-shadow(0 0 32px rgba(110,170,235,0.45))
     drop-shadow(0 0 70px rgba(80,140,220,0.3));
 }
+
+@keyframes lp-spell-marquee {
+  from { transform: translateX(0); }
+  to   { transform: translateX(-50%); }
+}
