@@ -112,9 +112,41 @@ export const DifficultyMenu = ({ onConfirm, busy }: DifficultyMenuProps) => {
         }}
       />
 
+      {/* Ambient floating embers */}
+      <div className="pointer-events-none absolute inset-0 overflow-hidden" aria-hidden>
+        {Array.from({ length: 7 }).map((_, i) => {
+          const left = 6 + (i * 14) % 88;
+          const dur = 6 + (i % 4) * 1.3;
+          const delay = (i * 0.9) % 6;
+          const drift = (i % 2 === 0 ? 1 : -1) * (6 + (i % 3) * 4);
+          return (
+            <span
+              key={i}
+              className="lp-ember"
+              style={{
+                left: `${left}%`,
+                bottom: `${10 + (i * 8) % 30}%`,
+                animationDuration: `${dur}s`,
+                animationDelay: `${delay}s`,
+                ["--ember-drift" as never]: `${drift}px`,
+              }}
+            />
+          );
+        })}
+      </div>
+
       {/* Content */}
-      <div className="relative z-10 h-full flex flex-col items-center justify-center px-8 pt-16">
-        <h1 className="engraved engraved-hover text-center" style={{ fontSize: 92, lineHeight: 1.05 }}>
+      <div className="relative z-10 h-full flex flex-col items-center justify-center px-8 pt-16 lp-hero-in">
+        <h1
+          className="lp-silver-cast text-center"
+          style={{
+            fontFamily: "'Cinzel', 'Pirata One', serif",
+            fontSize: 92,
+            lineHeight: 1.05,
+            fontWeight: 900,
+            letterSpacing: "0.06em",
+          }}
+        >
           TERMINAL QUEST
         </h1>
         <div className="mt-3 engraved engraved-muted text-center" style={{ fontSize: 22, letterSpacing: "0.3em" }}>
@@ -238,15 +270,17 @@ export const DifficultyMenu = ({ onConfirm, busy }: DifficultyMenuProps) => {
           </div>
         </div>
 
-        {/* Manifest button — engraved into stone */}
+        {/* Manifest button — landing-style stone tablet */}
         <button
           type="button"
           disabled={busy || fading}
           onClick={handleManifest}
-          className="manifest-btn engraved engraved-hover mt-12 px-12 py-5"
-          style={{ fontSize: 22, fontWeight: 700, letterSpacing: "0.18em" }}
+          className="lp-stone-btn lp-stone-btn-sweep mt-12 px-12 py-5"
+          style={{ fontSize: 18, letterSpacing: "0.18em" }}
         >
-          {busy || fading ? "MANIFESTING…" : "⚔  MANIFEST THE DUNGEON  ⚔"}
+          <span className="lp-eng-glow">
+            {busy || fading ? "MANIFESTING…" : "⚔  MANIFEST THE DUNGEON  ⚔"}
+          </span>
         </button>
       </div>
 
