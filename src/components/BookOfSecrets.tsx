@@ -458,13 +458,7 @@ export function BookOfSecrets({ onClose }: BookOfSecretsProps) {
                 </div>
 
                 {/* Center gutter */}
-                <div className="text-center mx-0 pr-0 pl-0 mr-px ml-[47px]" style={{ width: 24, flexShrink: 0, position: "relative" }}>
-                  <div style={{
-                    position: "absolute", inset: 0,
-                    background: "linear-gradient(to right, rgba(0,0,0,0.35) 0%, rgba(0,0,0,0.10) 50%, rgba(0,0,0,0.35) 100%)",
-                    pointerEvents: "none",
-                  }} />
-                </div>
+                <div className="text-center mx-0 pr-0 pl-0 mr-px ml-[47px]" style={{ width: 24, flexShrink: 0 }} />
 
                 {/* Right page */}
                 <div style={{ flex: 1, overflow: "hidden", position: "relative" }}>
