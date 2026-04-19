@@ -874,17 +874,10 @@
 .lp-stone-btn:active { transform: translateY(2px); }
 .lp-stone-btn:disabled { opacity: 0.6; cursor: not-allowed; }
 
-/* Shared dungeon-page background (slate texture + radial vignette + grain).
-   Apply to a relatively-positioned container; layers sit at z-index 0. */
+/* Shared dungeon-page background overlays (slate vignette + grain).
+   Pair with an inline-style background-image (slate texture) on the same element. */
 .dungeon-page-bg {
   background-color: hsl(230 18% 5%);
-  background-image:
-    radial-gradient(ellipse at 50% 30%, hsl(230 14% 14%) 0%, hsl(230 18% 7%) 55%, hsl(230 22% 3%) 100%),
-    url('/src/assets/slate-texture.jpg');
-  background-repeat: no-repeat, repeat;
-  background-size: 100% 100%, 512px 512px;
-  background-position: center, center;
-  background-attachment: fixed, fixed;
   background-blend-mode: multiply, normal;
 }
 .dungeon-page-bg::before,
