@@ -4,6 +4,36 @@ A React + TypeScript terminal dungeon RPG for learning beginner Linux commands. 
 
 AI features use Claude through Supabase Edge Functions when an Anthropic key is available. Claude never runs directly in the browser. If the key is missing, expired, quota-limited, or the Edge Function is slow/unavailable, the app automatically falls back to deterministic local content so the game remains playable.
 
+## Output Gallery
+
+<table>
+  <tr>
+    <td><img src="readme-img/Screenshot%202026-04-19%20164539.png" alt="Terminal Quest gameplay screenshot 1" width="320" /></td>
+    <td><img src="readme-img/Screenshot%202026-04-19%20164557.png" alt="Terminal Quest gameplay screenshot 2" width="320" /></td>
+    <td><img src="readme-img/Screenshot%202026-04-19%20164608.png" alt="Terminal Quest gameplay screenshot 3" width="320" /></td>
+  </tr>
+  <tr>
+    <td><img src="readme-img/Screenshot%202026-04-19%20164619.png" alt="Terminal Quest gameplay screenshot 4" width="320" /></td>
+    <td><img src="readme-img/Screenshot%202026-04-19%20164629.png" alt="Terminal Quest gameplay screenshot 5" width="320" /></td>
+    <td><img src="readme-img/Screenshot%202026-04-19%20164637.png" alt="Terminal Quest gameplay screenshot 6" width="320" /></td>
+  </tr>
+  <tr>
+    <td><img src="readme-img/Screenshot%202026-04-19%20164645.png" alt="Terminal Quest gameplay screenshot 7" width="320" /></td>
+    <td><img src="readme-img/Screenshot%202026-04-19%20164654.png" alt="Terminal Quest gameplay screenshot 8" width="320" /></td>
+    <td><img src="readme-img/Screenshot%202026-04-19%20164715.png" alt="Terminal Quest gameplay screenshot 9" width="320" /></td>
+  </tr>
+  <tr>
+    <td><img src="readme-img/Screenshot%202026-04-19%20164726.png" alt="Terminal Quest gameplay screenshot 10" width="320" /></td>
+    <td><img src="readme-img/Screenshot%202026-04-19%20164743.png" alt="Terminal Quest gameplay screenshot 11" width="320" /></td>
+    <td><img src="readme-img/Screenshot%202026-04-19%20164809.png" alt="Terminal Quest gameplay screenshot 12" width="320" /></td>
+  </tr>
+  <tr>
+    <td><img src="readme-img/Screenshot%202026-04-19%20164818.png" alt="Terminal Quest gameplay screenshot 13" width="320" /></td>
+    <td><img src="readme-img/Screenshot%202026-04-19%20164825.png" alt="Terminal Quest gameplay screenshot 14" width="320" /></td>
+    <td><img src="readme-img/Screenshot%202026-04-19%20164836.png" alt="Terminal Quest gameplay screenshot 15" width="320" /></td>
+  </tr>
+</table>
+
 ## Features
 
 - Split-screen terminal + 2D dungeon renderer
