@@ -49,6 +49,7 @@ export default function Auth() {
   const [error, setError] = useState<string | null>(null);
   const [info, setInfo] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [googleLoading, setGoogleLoading] = useState(false);
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => {
@@ -56,16 +57,34 @@ export default function Auth() {
       setProgressProfileUser(data.session.user);
       navigate("/play", { replace: true });
     });
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (!session) return;
+      setProgressProfileUser(session.user);
+      navigate("/play", { replace: true });
+    });
+
+    return () => subscription.unsubscribe();
   }, [navigate]);
 
   const handleGoogle = async () => {
     setError(null);
     setInfo(null);
+    setGoogleLoading(true);
     const { error } = await supabase.auth.signInWithOAuth({
       provider: "google",
-      options: { redirectTo: `${window.location.origin}/play` },
+      options: {
+        redirectTo: `${window.location.origin}/play`,
+        queryParams: {
+          access_type: "offline",
+          prompt: "select_account",
+        },
+      },
     });
-    if (error) setError(error.message);
+    if (error) {
+      setError(error.message);
+      setGoogleLoading(false);
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -325,6 +344,7 @@ export default function Auth() {
           <button
             type="button"
             onClick={handleGoogle}
+            disabled={googleLoading || loading}
             style={{
               width: "100%",
               display: "flex",
@@ -339,7 +359,8 @@ export default function Auth() {
               fontSize: "12px",
               letterSpacing: "0.15em",
               padding: "8px",
-              cursor: "pointer",
+              cursor: googleLoading || loading ? "not-allowed" : "pointer",
+              opacity: googleLoading || loading ? 0.65 : 1,
             }}
             onMouseEnter={e => {
               (e.currentTarget as HTMLButtonElement).style.boxShadow = "inset 0 0 24px hsl(30 100%50%/0.25), 0 0 18px hsl(30 100%50%/0.35), 0 0 36px hsl(30 100%45%/0.2)";
@@ -356,7 +377,7 @@ export default function Auth() {
               <path d="M12.8 27.8c-.4-1.2-.6-2.5-.6-3.8s.2-2.6.6-3.8V15H6A19.9 19.9 0 004 24c0 3.2.8 6.2 2 8.9l6.8-5.1z" fill="#FBBC05"/>
               <path d="M24 12.1c2.9 0 5.5 1 7.5 3l5.6-5.6C33.9 6.3 29.4 4 24 4 16.2 4 9.3 8.4 6 15l6.8 5.1C14.4 15.6 18.8 12.1 24 12.1z" fill="#EA4335"/>
             </svg>
-            Continue with Google
+            {googleLoading ? "Opening Google..." : "Continue with Google"}
           </button>
         </div>
 
