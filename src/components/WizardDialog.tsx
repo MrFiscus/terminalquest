@@ -114,7 +114,7 @@ export function WizardDialog({ context, externalMessage }: WizardDialogProps) {
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
                     exit={{ opacity: 0 }}
-                    className="max-h-28 overflow-y-auto text-sm text-[#3e2723] leading-snug font-semibold"
+                    className="max-h-28 overflow-y-auto text-base text-[#3e2723] leading-snug font-semibold"
                   >
                     <span>{displayedMessage}</span>
                     {isLoading && (
@@ -154,7 +154,7 @@ export function WizardDialog({ context, externalMessage }: WizardDialogProps) {
                           if (e.key === "Enter") handleSend();
                         }}
                         placeholder="Your question..."
-                        className="w-full bg-transparent border-0 border-b border-[#8b6914] px-0 py-0.5 text-[#3b1f0a] outline-none placeholder:text-[#3b1f0a]/40 text-[13px]"
+                        className="w-full bg-transparent border-0 border-b border-[#8b6914] px-0 py-0.5 text-[#3b1f0a] outline-none placeholder:text-[#3b1f0a]/40 text-[15px]"
                         style={{ fontFamily: "'Uncial Antiqua', cursive" }}
                       />
                       <button
