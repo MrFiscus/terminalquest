@@ -72,37 +72,38 @@ export const DifficultyMenu = ({ onConfirm, busy }: DifficultyMenuProps) => {
       style={{
         width: "100vw",
         height: "100vh",
-        background: "#000",
         zIndex: 100,
         ["--glow" as string]: glowHue,
+        backgroundColor: "hsl(230 18% 5%)",
+        backgroundImage: `radial-gradient(ellipse at 50% 30%, hsl(230 14% 14%) 0%, hsl(230 18% 7%) 55%, hsl(230 22% 3%) 100%), url(${slateTexture})`,
+        backgroundRepeat: "no-repeat, no-repeat",
+        backgroundSize: "100% 100%, cover",
+        backgroundPosition: "center, center",
+        backgroundBlendMode: "multiply, normal",
       }}
     >
-      {/* Seamless slate stone background */}
-      <div
-        className="absolute inset-0"
-        aria-hidden
-        style={{
-          backgroundImage: `url(${slateTexture})`,
-          backgroundRepeat: "repeat",
-          backgroundSize: "512px 512px",
-        }}
-      />
-      {/* Darkening + central torch wash */}
+      {/* Global vignette */}
       <div
         className="absolute inset-0 pointer-events-none"
         aria-hidden
         style={{
-          background: `
-            radial-gradient(ellipse 70% 55% at 50% 42%,
-              hsl(33 40% 30% / 0.35) 0%,
-              hsl(0 0% 0% / 0.0) 45%,
-              hsl(0 0% 0% / 0.55) 80%,
-              hsl(0 0% 0% / 0.9) 100%)
-          `,
-          mixBlendMode: "multiply",
+          background: "radial-gradient(ellipse at center, transparent 38%, hsl(0 0% 0% / 0.85) 100%)",
         }}
       />
-      {/* Soft top torch glow */}
+      {/* Grain overlay */}
+      <div
+        className="absolute inset-0 pointer-events-none"
+        aria-hidden
+        style={{
+          opacity: 0.35,
+          mixBlendMode: "overlay",
+          backgroundImage:
+            "radial-gradient(hsl(0 0% 100% / 0.06) 1px, transparent 1.4px), radial-gradient(hsl(0 0% 0% / 0.4) 1px, transparent 1.4px)",
+          backgroundSize: "5px 5px, 7px 7px",
+          backgroundPosition: "0 0, 2px 3px",
+        }}
+      />
+      {/* Tier-colored top torch glow */}
       <div
         className="absolute inset-0 pointer-events-none"
         aria-hidden
