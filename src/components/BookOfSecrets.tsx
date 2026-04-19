@@ -406,7 +406,7 @@ export function BookOfSecrets({ onClose }: BookOfSecretsProps) {
               return (
                 <button
                   key={d}
-                  onClick={() => { setDiffFilter(d); setCurrentSpread(0); setFlipping(null); }}
+                  onClick={() => { setDiffFilter(d); setCurrentSpread(0); setFading(false); }}
                   style={{
                     fontFamily: "'Cinzel', Georgia, serif", fontSize: 9,
                     letterSpacing: "0.1em", textTransform: "uppercase",
