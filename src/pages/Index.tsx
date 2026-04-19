@@ -2,6 +2,7 @@ import { GameWorld } from "@/components/GameWorld";
 import { InventoryBar } from "@/components/InventoryBar";
 import { Terminal } from "@/components/Terminal";
 import { BookOfSecrets } from "@/components/BookOfSecrets";
+import { LoreBookOverlay } from "@/components/LoreBookOverlay";
 import { VictoryOverlay } from "@/components/VictoryOverlay";
 import { DifficultyMenu } from "@/components/DifficultyMenu";
 import { WizardPopup } from "@/components/WizardPopup";
