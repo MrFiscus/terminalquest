@@ -442,39 +442,36 @@ export function BookOfSecrets({ onClose }: BookOfSecretsProps) {
             left: PAGE_INSET_X,
             right: PAGE_INSET_X,
             display: "flex",
-            perspective: "1400px",
-            perspectiveOrigin: "50% 50%",
           }}>
-            {/* Left page */}
-            <div style={{ flex: 1, overflow: "hidden", zIndex: 1, position: "relative" }}>
-              <Page spells={leftSpells} startIndex={pageStart} side="left" />
-            </div>
+            {/* Pages fade together as a single content layer */}
+            <div
+              key={safeSpread}
+              style={{
+                flex: 1, display: "flex", minHeight: 0,
+                animation: fading
+                  ? `pageFadeOut ${FADE_MS}ms ease-in forwards`
+                  : `pageFadeIn ${FADE_MS}ms ease-out forwards`,
+              }}
+            >
+              {/* Left page */}
+              <div style={{ flex: 1, overflow: "hidden", position: "relative" }}>
+                <Page spells={leftSpells} startIndex={pageStart} side="left" />
+              </div>
 
-            {/* Center gutter (transparent — shows the book's spine shadow through) */}
-            <div style={{ width: 18, flexShrink: 0, zIndex: 5, position: "relative" }}>
-              <div style={{
-                position: "absolute", inset: 0,
-                background: "linear-gradient(to right, rgba(0,0,0,0.45) 0%, rgba(0,0,0,0.15) 50%, rgba(0,0,0,0.45) 100%)",
-                pointerEvents: "none",
-              }} />
-            </div>
+              {/* Center gutter */}
+              <div style={{ width: 18, flexShrink: 0, position: "relative" }}>
+                <div style={{
+                  position: "absolute", inset: 0,
+                  background: "linear-gradient(to right, rgba(0,0,0,0.45) 0%, rgba(0,0,0,0.15) 50%, rgba(0,0,0,0.45) 100%)",
+                  pointerEvents: "none",
+                }} />
+              </div>
 
-            {/* Right page */}
-            <div style={{ flex: 1, overflow: "hidden", zIndex: 1, position: "relative" }}>
-              <Page spells={rightSpells} startIndex={pageStart + 2} side="right" />
+              {/* Right page */}
+              <div style={{ flex: 1, overflow: "hidden", position: "relative" }}>
+                <Page spells={rightSpells} startIndex={pageStart + 2} side="right" />
+              </div>
             </div>
-
-            {/* Animated flip overlay */}
-            {flipping && (
-              <>
-                <LandingShadow direction={flipping} />
-                <FlipPage
-                  direction={flipping}
-                  frontSpells={flipFrontRef.current}
-                  frontStartIndex={flipFrontIdxRef.current}
-                />
-              </>
-            )}
           </div>
 
           {/* ── Footer navigation (over the bottom binding) ── */}
