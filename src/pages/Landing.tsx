@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import { FireBlazes } from "@/components/FireBlazes";
 import { RepelDots } from "@/components/RepelDots";
 import slateTexture from "@/assets/slate-texture.jpg";
+import logoImage from "@/assets/logo_updated.png";
 import tileWall from "@/assets/tile-wall.png";
 import tileFloor from "@/assets/tile-floor.png";
 import tileFloorAlt from "@/assets/tile-floor-alt.png";
@@ -632,20 +633,12 @@ export default function Landing() {
 
         {/* Hero content */}
         <div style={{ position: "relative", zIndex: 5, display: "flex", flexDirection: "column", alignItems: "center", padding: "72px 32px 70px", textAlign: "center" }}>
-          <h1
-            className="lp-hero-in lp-silver-cast"
-            style={{
-              margin: 0,
-              animationDelay: "0ms",
-              fontFamily: "'Cinzel', 'Pirata One', serif",
-              fontWeight: 900,
-              letterSpacing: "0.05em",
-              fontSize: "clamp(56px,9vw,128px)",
-              lineHeight: 1,
-            }}
-          >
-            TERMINAL QUEST
-          </h1>
+          <img
+            src={logoImage}
+            alt="Terminal Quest"
+            className="lp-hero-in"
+            style={{ width: 900, maxWidth: "94vw", animationDelay: "0ms" }}
+          />
           <p className="lp-eng lp-hero-in" style={{ fontSize: "clamp(12px,1.8vw,18px)", letterSpacing: "0.32em", marginTop: 22, color: "hsl(0 0%26%)", fontWeight: 600, animationDelay: "220ms" }}>
             ☩ DON'T JUST PLAY THE GAME. WRITE THE REALITY. ☩
           </p>
