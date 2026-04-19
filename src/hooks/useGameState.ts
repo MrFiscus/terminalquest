@@ -347,6 +347,7 @@ export function useGameState(options: UseGameStateOptions = {}) {
         const next = getRoom(stateRef.current.rooms, effect.path);
         if (next) {
           showRoomSubtitle(next);
+          playGameSound("room");
           if (stateRef.current.showcaseMode && next.files.some((file) => file.name === stateRef.current.targetFile)) {
             showDungeonMasterTip("Almost there! Type: mv relic.txt ~/inventory");
           }
@@ -532,6 +533,7 @@ export function useGameState(options: UseGameStateOptions = {}) {
         const room = getRoom(s.rooms, s.cwd);
         const npc = (room?.npcs || []).find(n => n.id === "mau" && isNear(s.player, n));
         if (npc) {
+          playGameSound("quiz");
           if (s.mechanic === "chmod" && npc.blocksDoorTarget) {
             if (s.mauSecretKnown) {
               startMauQuiz(mauKeyQuizForDoor(npc.blocksDoorTarget));
@@ -821,6 +823,7 @@ export function useGameState(options: UseGameStateOptions = {}) {
       }
 
       if (result.openProfile) {
+        playGameSound("profile");
         onOpenProfile?.();
         return;
       }
@@ -887,6 +890,7 @@ export function useGameState(options: UseGameStateOptions = {}) {
     options: LoadLevelOptions = {},
   ) => {
     const patch = levelToStatePatch(level);
+    playGameSound("room");
     idRef.current = 100;
     const difficulty = label.split(/\s+/)[0]?.toLowerCase() || "default";
     runTrackerRef.current = createRunTracker(difficulty);
@@ -959,18 +963,22 @@ export function useGameState(options: UseGameStateOptions = {}) {
   }, []);
 
   const startMauQuiz = useCallback((quiz: MauQuiz) => {
+    playGameSound("quiz");
     setState((s) => ({ ...s, activeMauQuiz: quiz }));
   }, []);
 
   const closeMauQuiz = useCallback(() => {
+    playGameSound("clear");
     setState((s) => ({ ...s, activeMauQuiz: undefined }));
   }, []);
 
   const openScroll = useCallback((name: string, contents: string) => {
+    playGameSound("scroll");
     setState((s) => ({ ...s, activeScroll: { name, contents } }));
   }, []);
 
   const closeScroll = useCallback(() => {
+    playGameSound("clear");
     setState((s) => ({ ...s, activeScroll: undefined }));
   }, []);
 
@@ -982,6 +990,7 @@ export function useGameState(options: UseGameStateOptions = {}) {
     appendLines([{ kind: "input", text: `> ${answer}` }]);
     
     if (isCorrect) {
+      playGameSound("unlock");
       const reward = s.activeMauQuiz.rewardCommand;
       const releaseMauTarget = s.activeMauQuiz.releaseMauTarget;
       const successMessage =
@@ -1031,6 +1040,7 @@ export function useGameState(options: UseGameStateOptions = {}) {
       }, 1500);
 
     } else {
+      playGameSound("error");
       appendLines([{ kind: "npc", text: "Mau: \"Not quite. Try again, little fox.\"" }]);
       triggerScreenEffect("error", 800);
     }
