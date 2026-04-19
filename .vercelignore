@@ -1,0 +1,12 @@
+node_modules
+dist
+.env
+.env.*
+.vercel
+
+# Local scratch/config files that should never be uploaded by a CLI deploy.
+.claude
+Elements
+New
+instruction.txt
+output
