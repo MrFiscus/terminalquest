@@ -8,6 +8,7 @@ import { DifficultyMenu } from "@/components/DifficultyMenu";
 import { WizardPopup } from "@/components/WizardPopup";
 import { RoomFlavorSubtitle } from "@/components/RoomFlavorSubtitle";
 import { MauQuizOverlay } from "@/components/MauQuizOverlay";
+import { ScrollModal } from "@/components/ScrollModal";
 import { WizardDialog } from "@/components/WizardDialog";
 import { useGameState } from "@/hooks/useGameState";
 import { getRoom } from "@/game/dungeon";
@@ -25,7 +26,7 @@ const Index = () => {
   const { 
     state, submit, reset, dismissPopup, loadLevel, 
     teachingTip, dismissTeaching, roomSubtitle,
-    submitMauQuiz, closeMauQuiz 
+    submitMauQuiz, closeMauQuiz, openScroll, closeScroll
   } = useGameState({
     onOpenProfile: openProfile,
   });
@@ -53,7 +54,7 @@ const Index = () => {
     return (
       <DifficultyMenu
         busy={Boolean(generating)}
-        onConfirm={async (difficulty, familiarity) => {
+        onConfirm={async (difficulty, familiarity, precise) => {
           setLinuxFamiliarity(familiarity);
           const loaded = await loadAIDungeon(difficulty, familiarity);
           if (loaded) setHasEntered(true);
@@ -129,6 +130,16 @@ const Index = () => {
             quiz={state.activeMauQuiz}
             onSubmit={submitMauQuiz}
             onClose={closeMauQuiz}
+          />
+        )}
+      </AnimatePresence>
+
+      <AnimatePresence>
+        {state.activeScroll && (
+          <ScrollModal
+            name={state.activeScroll.name}
+            contents={state.activeScroll.contents}
+            onClose={closeScroll}
           />
         )}
       </AnimatePresence>

@@ -24,6 +24,7 @@ import {
   formatDuration,
   masteryLabel,
   personalizedTips,
+  readActiveRun,
   readPlayerName,
   readRuns,
   savePlayerName,
@@ -261,7 +262,8 @@ function ChartShell({ title, children }: { title: string; children: React.ReactN
 }
 
 export function ProfileModal({ onClose }: ProfileModalProps) {
-  const runs = useMemo(() => readRuns(), []);
+  const [profileData, setProfileData] = useState(() => ({ runs: readRuns(), activeRun: readActiveRun() }));
+  const { runs, activeRun } = profileData;
   const [name, setName] = useState(() => readPlayerName());
   const [activeTab, setActiveTab] = useState<ProfileTab>("account");
   const [user, setUser] = useState<User | null>(null);
@@ -281,22 +283,24 @@ export function ProfileModal({ onClose }: ProfileModalProps) {
     setTimeout(() => setUsernameSaved(false), 2000);
   };
   const [revealed, setRevealed] = useState<Set<ProfileCommand>>(() => new Set());
-  const summary = useMemo(() => summarizeProgress(runs, name), [runs, name]);
+  const summary = useMemo(() => summarizeProgress(runs, name, activeRun), [runs, name, activeRun]);
   const lastRun = runs.at(-1);
+  const latestRunStats = activeRun ?? lastRun;
 
   const latestCommandData = PROFILE_COMMANDS.map((cmd) => ({
     command: cmd,
-    count: lastRun?.commandCounts?.[cmd] ?? 0,
+    count: latestRunStats?.commandCounts?.[cmd] ?? 0,
   }));
   const nonZeroCounts = latestCommandData.map((entry) => entry.count).filter((count) => count > 0);
   const leastNonZero = Math.min(...(nonZeroCounts.length ? nonZeroCounts : [0]));
   const mostUsed = Math.max(...latestCommandData.map((entry) => entry.count), 0);
-  const efficiencyData = runs.map((run, index) => {
-    const first = runs[0]?.totalCommands ?? run.totalCommands;
-    const last = runs.at(-1)?.totalCommands ?? run.totalCommands;
-    const trend = runs.length > 1 ? first + ((last - first) * index) / (runs.length - 1) : run.totalCommands;
+  const runSeries = activeRun ? [...runs, activeRun] : runs;
+  const efficiencyData = runSeries.map((run, index) => {
+    const first = runSeries[0]?.totalCommands ?? run.totalCommands;
+    const last = runSeries.at(-1)?.totalCommands ?? run.totalCommands;
+    const trend = runSeries.length > 1 ? first + ((last - first) * index) / (runSeries.length - 1) : run.totalCommands;
     return {
-      run: `Run ${index + 1}`,
+      run: index === runs.length && activeRun ? "Now" : `Run ${index + 1}`,
       commands: run.totalCommands,
       trend: Math.round(trend * 10) / 10,
     };
@@ -305,11 +309,16 @@ export function ProfileModal({ onClose }: ProfileModalProps) {
     command: cmd,
     mastery: Math.min(30, summary.commandTotals[cmd] ?? 0),
   }));
-  const bestMs = runs.length ? Math.min(...runs.map((run) => run.durationMs)) : 0;
-  const timeData = runs.map((run, index) => ({
-    run: `Run ${index + 1}`,
-    seconds: Math.round(run.durationMs / 1000),
-    best: run.durationMs === bestMs,
+  const timeSeries = [
+    ...runs.map((run, index) => ({ run: `Run ${index + 1}`, seconds: Math.round(run.durationMs / 1000), active: false })),
+    ...(activeRun ? [{ run: "Now", seconds: Math.max(1, Math.round((Date.now() - activeRun.startedAt) / 1000)), active: true }] : []),
+  ];
+  const bestSeconds = timeSeries.filter((entry) => !entry.active).length
+    ? Math.min(...timeSeries.filter((entry) => !entry.active).map((entry) => entry.seconds))
+    : 0;
+  const timeData = timeSeries.map((entry) => ({
+    ...entry,
+    best: !entry.active && entry.seconds === bestSeconds,
   }));
 
   const leftStats = [
@@ -362,6 +371,18 @@ export function ProfileModal({ onClose }: ProfileModalProps) {
       const meta = data.user?.user_metadata;
       setEditingUsername(meta?.username ?? meta?.full_name ?? meta?.name ?? readPlayerName());
     });
+  }, []);
+
+  useEffect(() => {
+    const refresh = () => setProfileData({ runs: readRuns(), activeRun: readActiveRun() });
+    refresh();
+    const id = window.setInterval(refresh, 1000);
+    const onStorage = () => refresh();
+    window.addEventListener("storage", onStorage);
+    return () => {
+      window.clearInterval(id);
+      window.removeEventListener("storage", onStorage);
+    };
   }, []);
 
   const renderMasteryCard = (cmd: ProfileCommand, index: number) => {

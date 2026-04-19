@@ -177,6 +177,7 @@ export interface GameState {
   mechanic?: DifficultyMechanic;
   lockedCommands?: LinuxCommand[];
   mauSecretKnown?: boolean;
+  activeScroll?: { name: string; contents: string };
 }
 
 export interface CommandResult {

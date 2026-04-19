@@ -50,12 +50,14 @@
     --torch: 51 100% 50%;             /* #ffcc00 */
     --torch-glow: 33 100% 50%;        /* #ff8c00 */
     --parchment: 42 55% 78%;
-    --terminal-bg: 0 0% 8%;            /* charcoal slate */
-    --terminal-frame: 0 0% 16%;        /* wrought iron #2a2a2a */
-    --terminal-prompt: 38 100% 50%;    /* ember gold #ffb300 */
-    --terminal-text: 0 0% 82%;         /* ash white #d1d1d1 */
-    --terminal-error: 0 75% 60%;
-    --terminal-dm: 280 60% 70%;
+    --terminal-bg: 0 0% 7%;             /* Gruvbox bg-hard #1d2021 */
+    --terminal-frame: 0 0% 12%;        /* wrought iron dark */
+    --terminal-prompt: 61 66% 44%;     /* Gruvbox green #b8bb26 */
+    --terminal-text: 42 47% 87%;       /* Gruvbox cream #ebdbb2 */
+    --terminal-error: 0 73% 59%;       /* Gruvbox red #fb4934 */
+    --terminal-dm: 0 0% 50%;           /* Gruvbox grey #928374 */
+    --terminal-path: 194 32% 56%;      /* Gruvbox blue #83a598 */
+    --terminal-deep: 38 84% 50%;       /* muted amber for deep dirs */
     --door: 25 55% 35%;
     --door-frame: 25 40% 22%;
     --player: 50 95% 65%;
@@ -284,64 +286,272 @@
       inset -2px 0 0 hsl(0 0% 0% / 0.5),
       inset 0 0 8px hsl(0 0% 0% / 0.55);
   }
-  /* === Dungeon Terminal: Dark Scriptorium === */
-  .scriptorium-bg {
-    background-color: hsl(var(--terminal-bg));
+  /* ================================================================
+     DUNGEON TERMINAL — Aged stone tablet lit by torchlight
+     ================================================================ */
+
+  /* -- Container: dark rough-stone slab with inset shadow pit -- */
+  .dungeon-terminal {
+    background-color: hsl(25 12% 8%);
     background-image:
-      radial-gradient(ellipse at 50% 50%,
-        hsl(0 0% 11%) 0%,
-        hsl(0 0% 8%) 55%,
-        hsl(0 0% 5%) 100%),
+      /* warm torchlight centre glow */
+      radial-gradient(ellipse at 50% 35%,
+        hsl(33 55% 14% / 0.45) 0%,
+        transparent 65%),
+      /* stone grain — horizontal chisel marks */
       repeating-linear-gradient(0deg,
-        hsl(0 0% 100% / 0.012) 0 1px,
-        transparent 1px 3px),
+        hsl(0 0% 100% / 0.018) 0 1px,
+        transparent 1px 4px),
+      /* stone grain — vertical hairline cracks */
       repeating-linear-gradient(90deg,
-        hsl(0 0% 0% / 0.18) 0 1px,
-        transparent 1px 4px);
-    background-blend-mode: normal, overlay, multiply;
-  }
-  .scriptorium-frame {
-    border: 6px solid #1a1a1a;
-    border-radius: 4px;
+        hsl(0 0% 0% / 0.14) 0 1px,
+        transparent 1px 6px),
+      /* mottled rock noise */
+      radial-gradient(hsl(25 10% 12%) 1px, transparent 1.3px);
+    background-size: 100% 100%, 100% 100%, 100% 100%, 5px 5px;
+    background-blend-mode: normal, overlay, multiply, normal;
+    /* Heavy iron frame with recessed pit */
+    border: 5px solid hsl(25 14% 8%);
+    border-radius: 3px;
     box-shadow:
-      /* Outer iron bevel: bright top edge, dark bottom edge */
-      inset 0 2px 0 hsl(0 0% 22% / 0.9),
-      inset 2px 0 0 hsl(0 0% 18% / 0.7),
-      inset -2px 0 0 hsl(0 0% 4% / 0.95),
+      /* Outer iron bevel */
+      inset 0 2px 0 hsl(30 18% 22% / 0.8),
+      inset 2px 0 0 hsl(28 14% 18% / 0.6),
+      inset -2px 0 0 hsl(0 0% 3% / 0.9),
       inset 0 -3px 0 hsl(0 0% 2% / 0.95),
-      /* Inner deep recess */
-      inset 0 0 0 7px hsl(0 0% 0% / 0.95),
-      inset 0 0 28px hsl(0 0% 0% / 0.85),
-      /* Hammered-iron grain via faint inner glow band */
-      inset 0 0 0 8px hsl(20 18% 8%),
+      /* Deep inner recess — stone pit */
+      inset 0 0 0 6px hsl(0 0% 0% / 0.9),
+      inset 0 0 36px hsl(0 0% 0% / 0.7),
+      /* Warm torchlight bleeding in from edges */
+      inset 0 0 60px hsl(33 80% 40% / 0.06),
       /* Outer drop shadow */
-      0 0 0 1px hsl(0 0% 4%),
-      0 4px 14px hsl(0 0% 0% / 0.85),
-      0 0 22px hsl(0 0% 0% / 0.6);
+      0 0 0 1px hsl(0 0% 3%),
+      0 4px 16px hsl(0 0% 0% / 0.8);
+    font-family: 'JetBrains Mono', 'Courier New', monospace;
+    font-size: 14px;
+    line-height: 1.55;
+    letter-spacing: 0;
+    -webkit-font-smoothing: antialiased;
   }
-  /* Hammered iron texture overlay for the frame edges */
-  .iron-rivets::before {
-    content: "";
+
+  /* -- Scanlines overlay — stone-chisel grain, NOT cyber CRT -- */
+  .dungeon-terminal-scanlines {
     position: absolute;
     inset: 0;
     pointer-events: none;
-    border-radius: 4px;
+    z-index: 40;
     background:
-      radial-gradient(circle at 14px 14px, hsl(0 0% 28%) 0 2px, hsl(0 0% 4%) 2.5px, transparent 4px),
-      radial-gradient(circle at calc(100% - 14px) 14px, hsl(0 0% 28%) 0 2px, hsl(0 0% 4%) 2.5px, transparent 4px),
-      radial-gradient(circle at 14px calc(100% - 14px), hsl(0 0% 28%) 0 2px, hsl(0 0% 4%) 2.5px, transparent 4px),
-      radial-gradient(circle at calc(100% - 14px) calc(100% - 14px), hsl(0 0% 28%) 0 2px, hsl(0 0% 4%) 2.5px, transparent 4px);
-    background-repeat: no-repeat;
-    filter: drop-shadow(0 1px 0 hsl(0 0% 0% / 0.9));
-    z-index: 2;
+      repeating-linear-gradient(
+        to bottom,
+        transparent 0px,
+        transparent 3px,
+        hsl(0 0% 0% / 0.045) 3px,
+        hsl(0 0% 0% / 0.045) 4px
+      ),
+      repeating-linear-gradient(
+        to right,
+        transparent 0px,
+        transparent 5px,
+        hsl(25 8% 10% / 0.03) 5px,
+        hsl(25 8% 10% / 0.03) 6px
+      );
+    mix-blend-mode: multiply;
+    border-radius: 3px;
   }
-  .scriptorium-divider {
-    border-color: hsl(var(--terminal-frame));
+
+  /* -- Torchlight vignette — warm amber glow from above -- */
+  .dungeon-terminal-vignette {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    z-index: 41;
+    background:
+      radial-gradient(ellipse at 50% 0%,
+        hsl(35 90% 45% / 0.06) 0%,
+        transparent 50%),
+      radial-gradient(ellipse at 50% 100%,
+        hsl(0 0% 0% / 0.35) 0%,
+        transparent 60%),
+      radial-gradient(ellipse at 0% 50%,
+        hsl(0 0% 0% / 0.2) 0%,
+        transparent 40%),
+      radial-gradient(ellipse at 100% 50%,
+        hsl(0 0% 0% / 0.2) 0%,
+        transparent 40%);
+    border-radius: 3px;
   }
+
+  /* -- Header — hammered iron plate with runic text -- */
+  .dungeon-terminal-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 6px 14px;
+    border-bottom: 2px solid hsl(25 20% 10%);
+    background:
+      linear-gradient(180deg,
+        hsl(25 14% 14%) 0%,
+        hsl(25 12% 9%) 50%,
+        hsl(20 10% 6%) 100%),
+      radial-gradient(hsl(0 0% 0% / 0.35) 1px, transparent 1.4px);
+    background-size: 100% 100%, 5px 5px;
+    box-shadow:
+      inset 0 1px 0 hsl(30 20% 25% / 0.5),
+      inset 0 -1px 0 hsl(0 0% 0% / 0.9),
+      0 3px 8px hsl(0 0% 0% / 0.6);
+    position: relative;
+    z-index: 5;
+  }
+  .dungeon-terminal-header-text {
+    font-family: 'Press Start 2P', 'VT323', monospace;
+    font-size: 9px;
+    color: hsl(38 60% 55%);
+    text-shadow:
+      0 1px 0 hsl(0 0% 0% / 0.9),
+      0 0 8px hsl(33 80% 45% / 0.3);
+    letter-spacing: 0.1em;
+  }
+  .dungeon-terminal-header-sub {
+    font-family: 'VT323', monospace;
+    font-size: 12px;
+    color: hsl(25 10% 38%);
+    text-shadow: 0 1px 0 hsl(0 0% 0% / 0.8);
+  }
+
+  /* -- History scroll area -- */
+  .dungeon-terminal-scroll {
+    scrollbar-width: thin;
+    scrollbar-color: hsl(25 18% 18%) transparent;
+  }
+  .dungeon-terminal-scroll::-webkit-scrollbar { width: 5px; height: 5px; }
+  .dungeon-terminal-scroll::-webkit-scrollbar-track { background: transparent; }
+  .dungeon-terminal-scroll::-webkit-scrollbar-thumb {
+    background:
+      linear-gradient(180deg, hsl(28 22% 22%), hsl(25 16% 14%));
+    border-radius: 2px;
+    border: 1px solid hsl(20 10% 8%);
+  }
+  .dungeon-terminal-scroll::-webkit-scrollbar-thumb:hover {
+    background: hsl(30 25% 28%);
+  }
+
+  /* -- Text line styles: crisp and readable with faint magical bleed -- */
+  .term-line-input {
+    color: hsl(38 80% 65%);
+  }
+  .term-line-output {
+    color: hsl(42 40% 76%);
+  }
+  .term-line-error {
+    color: hsl(0 75% 65%);
+  }
+  .term-line-dm {
+    color: hsl(30 15% 55%);
+    font-style: italic;
+  }
+  .term-line-system {
+    color: hsl(30 10% 50%);
+    font-style: italic;
+  }
+  .term-line-victory {
+    color: hsl(80 75% 60%);
+    font-weight: 600;
+  }
+  .term-line-npc {
+    color: hsl(310 50% 70%);
+    font-style: italic;
+  }
+
+  /* ls-output tokens — directory/file/exec colors */
+  .term-ls-dir {
+    color: hsl(38 75% 60%);
+    font-weight: bold;
+  }
+  .term-ls-exec {
+    color: hsl(80 60% 60%);
+    font-weight: bold;
+  }
+  .term-ls-link {
+    color: hsl(175 50% 60%);
+    font-weight: bold;
+  }
+  .term-ls-file {
+    color: hsl(42 35% 75%);
+  }
+
+  /* -- Prompt bar — now just a wrapper inside scroll area -- */
+  .dungeon-terminal-prompt-bar {
+    position: relative;
+    z-index: 5;
+  }
+
+  /* Prompt parts */
+  .dungeon-prompt-line {
+    font-family: 'JetBrains Mono', 'Courier New', monospace;
+    font-size: 14px;
+    line-height: 1.55;
+  }
+  .dungeon-prompt-user {
+    color: hsl(80 55% 62%);
+  }
+  .dungeon-prompt-sep {
+    color: hsl(30 30% 40%);
+    margin: 0 2px;
+  }
+  .dungeon-prompt-path {
+    color: hsl(195 40% 65%);
+  }
+  .dungeon-prompt-path-deep {
+    color: hsl(35 90% 60%) !important;
+    animation: rune-pulse 2s infinite ease-in-out;
+  }
+  .dungeon-prompt-sigil {
+    color: hsl(38 80% 65%);
+    margin: 0 3px;
+  }
+
+  /* Input field */
+  .dungeon-terminal-input {
+    width: 100%;
+    background: transparent;
+    color: hsl(42 60% 85%);
+    outline: none;
+    caret-color: transparent;
+    font-family: 'JetBrains Mono', 'Courier New', monospace;
+    font-size: 14px;
+    line-height: 1.55;
+    letter-spacing: 0;
+  }
+  .dungeon-terminal-input:disabled {
+    opacity: 0.5;
+  }
+
+  /* Cursor — glowing ember block */
+  .dungeon-cursor {
+    display: inline-block;
+    width: 9px;
+    height: 17px;
+    background: hsl(38 85% 50%);
+    box-shadow:
+      0 0 6px hsl(38 90% 50% / 0.7),
+      0 0 12px hsl(33 80% 45% / 0.35);
+    animation: cursor-blink 1s step-end infinite;
+  }
+
+  @keyframes rune-pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.72; }
+  }
+
+  /* Legacy — keep scriptorium classes alive for other uses */
+  .scriptorium-bg { background-color: hsl(25 12% 8%); }
+  .scriptorium-frame { border: none; }
+  .iron-rivets::before { content: none; }
+  .scriptorium-divider { border-color: hsl(25 18% 12%); }
   .ember-glow {
     box-shadow:
-      inset 0 0 12px hsl(38 100% 50% / 0.08),
-      0 0 10px hsl(38 100% 50% / 0.18);
+      inset 0 0 12px hsl(33 70% 40% / 0.06),
+      0 0 10px hsl(33 70% 40% / 0.12);
   }
   .ember-bloom {
     text-shadow:
@@ -350,19 +560,22 @@
       0 1px 0 hsl(0 0% 0% / 0.9);
   }
   .ember-cursor {
-    background: hsl(38 100% 50%) !important;
-    box-shadow: 0 0 8px hsl(38 100% 50% / 0.85), 0 0 14px hsl(38 100% 50% / 0.45);
+    background: hsl(38 85% 50%) !important;
+    box-shadow: 0 0 8px hsl(38 85% 50% / 0.8), 0 0 14px hsl(33 80% 45% / 0.4);
   }
-  .scriptorium-scroll::-webkit-scrollbar { width: 4px; height: 4px; }
+  .dungeon-glow {
+    text-shadow: 0 0 5px rgba(251, 189, 4, 0.3);
+  }
+  .scriptorium-scroll::-webkit-scrollbar { width: 5px; height: 5px; }
   .scriptorium-scroll::-webkit-scrollbar-track { background: transparent; }
   .scriptorium-scroll::-webkit-scrollbar-thumb {
-    background: hsl(0 0% 10%);
+    background: hsl(25 18% 18%);
     border-radius: 2px;
   }
-  .scriptorium-scroll::-webkit-scrollbar-thumb:hover { background: hsl(0 0% 16%); }
+  .scriptorium-scroll::-webkit-scrollbar-thumb:hover { background: hsl(28 20% 24%); }
   .scriptorium-scroll {
     scrollbar-width: thin;
-    scrollbar-color: hsl(0 0% 10%) transparent;
+    scrollbar-color: hsl(25 18% 18%) transparent;
   }
   /* Player animation states */
   .player-idle {

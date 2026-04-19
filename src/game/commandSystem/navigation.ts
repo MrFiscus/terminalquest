@@ -4,6 +4,14 @@ import type { CommandDefinition } from "./types";
 import { err } from "./helpers";
 import type { CommandResult } from "../types";
 
+function insideDoorStop(room: { width: number; height: number }, door: { x: number; y: number }) {
+  if (door.x === 0) return { x: 1, y: door.y };
+  if (door.x === room.width - 1) return { x: room.width - 2, y: door.y };
+  if (door.y === 0) return { x: door.x, y: 1 };
+  if (door.y === room.height - 1) return { x: door.x, y: room.height - 2 };
+  return { x: door.x, y: door.y };
+}
+
 export const navigationCommands: CommandDefinition[] = [
   {
     name: "ls",
@@ -97,9 +105,10 @@ export const navigationCommands: CommandDefinition[] = [
         const hasKey = state.inventory.some((f) => f.name === liveDoor.requiredKey);
         console.log(`[cd] lock check: hasKey=${hasKey}`);
         if (!hasKey) {
+          const lockedStop = insideDoorStop(room, liveDoor);
           return {
             lines: [err(`The door is locked. You need a key to enter.`)],
-            walkTo: { x: liveDoor.x, y: liveDoor.y },
+            walkTo: isWalkable(room, lockedStop.x, lockedStop.y) ? lockedStop : undefined,
           };
         }
         const liveRoom = state.rooms[state.cwd];

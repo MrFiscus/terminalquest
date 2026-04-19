@@ -1,11 +1,11 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useRef, useState } from "react";
 import type { Difficulty } from "@/game/aiLevelService";
-import slateTexture from "@/assets/slate-texture.jpg";
+import { cn } from "@/lib/utils";
 import { FireBlazes } from "@/components/FireBlazes";
 import { RepelDots } from "@/components/RepelDots";
 
 interface DifficultyMenuProps {
-  onConfirm: (difficulty: Difficulty, value: number) => void;
+  onConfirm: (difficulty: Difficulty, familiarity: number, precise: number) => void;
   busy?: boolean;
 }
 
@@ -16,342 +16,110 @@ const tierFor = (v: number): { label: string; difficulty: Difficulty } => {
 };
 
 export const DifficultyMenu = ({ onConfirm, busy }: DifficultyMenuProps) => {
-  const [dungeonDifficulty, setDungeonDifficulty] = useState<number>(50);
-  const [fading, setFading] = useState(false);
-  const [dragging, setDragging] = useState(false);
-  const trackRef = useRef<HTMLDivElement>(null);
-  const draggingRef = useRef(false);
-  const tier = tierFor(dungeonDifficulty);
-  const isMaster = tier.difficulty === "hard";
+  const [precise, setPrecise] = useState<number>(50);
+  const sliderRef = useRef<HTMLDivElement>(null);
+  const tier = tierFor(precise);
 
-  const setFromClientX = useCallback((clientX: number) => {
-    const el = trackRef.current;
-    if (!el) return;
-    const rect = el.getBoundingClientRect();
+  const handleMove = useCallback((clientX: number) => {
+    if (!sliderRef.current) return;
+    const rect = sliderRef.current.getBoundingClientRect();
     const pct = Math.max(0, Math.min(1, (clientX - rect.left) / rect.width));
-    setDungeonDifficulty(Math.round(pct * 100));
+    setPrecise(Math.round(pct * 100));
   }, []);
 
-  useEffect(() => {
-    const onMove = (e: PointerEvent) => {
-      if (!draggingRef.current) return;
-      e.preventDefault();
-      setFromClientX(e.clientX);
+  const onPointerDown = (e: React.PointerEvent) => {
+    handleMove(e.clientX);
+    const onPointerMove = (moveEvent: PointerEvent) => handleMove(moveEvent.clientX);
+    const onPointerUp = () => {
+      window.removeEventListener("pointermove", onPointerMove);
+      window.removeEventListener("pointerup", onPointerUp);
     };
-    const onUp = () => {
-      draggingRef.current = false;
-      setDragging(false);
-    };
-    window.addEventListener("pointermove", onMove);
-    window.addEventListener("pointerup", onUp);
-    return () => {
-      window.removeEventListener("pointermove", onMove);
-      window.removeEventListener("pointerup", onUp);
-    };
-  }, [setFromClientX]);
-
-  const onTrackPointerDown = (e: React.PointerEvent) => {
-    draggingRef.current = true;
-    setDragging(true);
-    setFromClientX(e.clientX);
+    window.addEventListener("pointermove", onPointerMove);
+    window.addEventListener("pointerup", onPointerUp);
   };
-
-  const onKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === "ArrowLeft") setDungeonDifficulty((v) => Math.max(0, v - 1));
-    else if (e.key === "ArrowRight") setDungeonDifficulty((v) => Math.min(100, v + 1));
-    else if (e.key === "Home") setDungeonDifficulty(0);
-    else if (e.key === "End") setDungeonDifficulty(100);
-  };
-
-  const handleManifest = () => {
-    if (busy || fading) return;
-    console.log("[DifficultyMenu] dungeonDifficulty =", dungeonDifficulty);
-    setFading(true);
-    window.setTimeout(() => onConfirm(tier.difficulty, dungeonDifficulty), 1000);
-  };
-
-  // Hover glow color: amber by default, deep red on Master tier
-  const glowHue = isMaster ? "0 85% 50%" : "30 100% 50%";
 
   return (
-    <div
-      className="fixed inset-0 m-0 p-0 overflow-hidden engraved-menu"
-      style={{
-        width: "100vw",
-        height: "100vh",
-        zIndex: 100,
-        ["--glow" as string]: glowHue,
-        backgroundColor: "hsl(230 18% 5%)",
-        backgroundImage: `radial-gradient(ellipse at 50% 30%, hsl(230 14% 14%) 0%, hsl(230 18% 7%) 55%, hsl(230 22% 3%) 100%), url(${slateTexture})`,
-        backgroundRepeat: "no-repeat, no-repeat",
-        backgroundSize: "100% 100%, cover",
-        backgroundPosition: "center, center",
-        backgroundBlendMode: "multiply, normal",
-      }}
-    >
-      {/* Global vignette */}
-      <div
-        className="absolute inset-0 pointer-events-none"
-        aria-hidden
-        style={{
-          background: "radial-gradient(ellipse at center, transparent 38%, hsl(0 0% 0% / 0.85) 100%)",
-        }}
-      />
-      {/* Grain overlay */}
-      <div
-        className="absolute inset-0 pointer-events-none"
-        aria-hidden
-        style={{
-          opacity: 0.35,
-          mixBlendMode: "overlay",
-          backgroundImage:
-            "radial-gradient(hsl(0 0% 100% / 0.06) 1px, transparent 1.4px), radial-gradient(hsl(0 0% 0% / 0.4) 1px, transparent 1.4px)",
-          backgroundSize: "5px 5px, 7px 7px",
-          backgroundPosition: "0 0, 2px 3px",
-        }}
-      />
-      {/* Tier-colored top torch glow */}
-      <div
-        className="absolute inset-0 pointer-events-none"
-        aria-hidden
-        style={{
-          background: `radial-gradient(circle at 50% 14%, hsl(${glowHue} / 0.18) 0%, transparent 42%)`,
-          transition: "background 400ms ease",
-        }}
-      />
-
-      {/* Breathing tier-colored washes (matches landing page hero) */}
-      <div
-        className="lp-breathe absolute inset-0 pointer-events-none"
-        aria-hidden
-        style={{
-          background: `radial-gradient(ellipse 80% 60% at 50% 45%, hsl(33 60% 22% / 0.28) 0%, transparent 60%)`,
-          mixBlendMode: "screen",
-        }}
-      />
-      <div
-        className="lp-breathe absolute inset-0 pointer-events-none"
-        aria-hidden
-        style={{
-          background: `radial-gradient(circle at 50% 10%, hsl(${glowHue} / 0.18) 0%, transparent 44%)`,
-          animationDelay: "1.2s",
-        }}
-      />
-
-      {/* Fire blazes along the bottom */}
+    <div className="fixed inset-0 dungeon-terminal flex flex-col items-center justify-center p-8 z-[9999]" style={{ outline: 'none', border: 'none', borderRadius: 0 }}>
+      {/* Background ambient overlays */}
+      <div className="dungeon-terminal-scanlines" aria-hidden />
+      <div className="dungeon-terminal-vignette" aria-hidden />
+      
+      {/* Visual background elements */}
       <div className="absolute inset-0 pointer-events-none overflow-hidden" aria-hidden style={{ zIndex: 1 }}>
         <FireBlazes count={20} />
       </div>
       <RepelDots count={80} />
 
-      {/* Content */}
-      <div className="relative z-10 h-full flex flex-col items-center justify-center px-8 pt-16">
-        <h1 className="engraved engraved-hover text-center" style={{ fontSize: 92, lineHeight: 1.05 }}>
-          TERMINAL QUEST
-        </h1>
-        <div className="mt-3 engraved engraved-muted text-center" style={{ fontSize: 22, letterSpacing: "0.3em" }}>
-          ☩ CHOOSE THY PERIL ☩
-        </div>
+      <div className="relative z-10 max-w-xl w-full space-y-12 text-center font-mono-clean">
+        <header className="space-y-4">
+          <h1 
+            className="text-4xl md:text-6xl font-pixel text-[#ffcc00] tracking-widest uppercase italic"
+            style={{ textShadow: "0 2px 0 #000, 0 4px 16px rgba(255,140,0,0.6)" }}
+          >
+            Terminal Quest
+          </h1>
+          <p className="text-[#a89f91] font-bold tracking-widest uppercase text-xs md:text-sm" style={{ textShadow: "0 1px 0 #000" }}>
+            ⯌ CHOOSE THY PERIL ⯌
+          </p>
+        </header>
 
-        {/* Engraved slider */}
-        <div className="mt-14 w-full max-w-3xl select-none">
-          <div className="relative px-6 pt-20 pb-2">
-            {/* Floating engraved counter above thumb */}
-            <div
-              className={`absolute pointer-events-none transition-[left] duration-75 engraved engraved-hover ${dragging ? "engraved-active" : ""}`}
-              style={{
-                left: `calc(28px + (100% - 56px) * ${dungeonDifficulty / 100})`,
-                top: 0,
-                transform: "translateX(-50%)",
-                fontSize: 56,
-                fontWeight: 900,
-              }}
-              aria-hidden
+        <div className="space-y-8 p-10 relative">
+          {/* Subtle carved stone backing for the menu block */}
+          <div className="absolute inset-0 bg-[#161412]/80 rounded-sm border border-[#2a2622] shadow-[inset_0_0_24px_rgba(0,0,0,0.8),0_4px_12px_rgba(0,0,0,0.6)]" style={{ zIndex: -1 }} />
+          
+          <div className="space-y-2">
+            <div 
+              className="text-6xl font-black text-[#f3e3cc] tabular-nums"
+              style={{ textShadow: "0 2px 4px #000, 0 0 12px rgba(255,200,100,0.2)" }}
             >
-              {dungeonDifficulty}
+              {precise}%
             </div>
-
-            {/* Engraved groove channel */}
-            <div
-              ref={trackRef}
-              role="slider"
-              tabIndex={0}
-              aria-valuemin={0}
-              aria-valuemax={100}
-              aria-valuenow={dungeonDifficulty}
-              aria-label="Dungeon difficulty"
-              onPointerDown={onTrackPointerDown}
-              onKeyDown={onKeyDown}
-              className="relative h-14 cursor-pointer outline-none focus-visible:ring-2 rounded-sm"
-              style={{ ["--ring" as string]: `hsl(${glowHue} / 0.5)` }}
-            >
-              {/* Carved channel */}
-              <div className="absolute left-0 right-0 top-1/2 -translate-y-1/2 h-7 rounded-sm" style={{
-                background: "linear-gradient(180deg, hsl(0 0% 0% / 0.85) 0%, hsl(0 0% 0% / 0.55) 50%, hsl(220 8% 22% / 0.4) 100%)",
-                boxShadow: [
-                  "inset 0 3px 4px hsl(0 0% 0% / 0.95)",
-                  "inset 0 -2px 0 hsl(0 0% 100% / 0.18)",
-                  "inset 2px 0 3px hsl(0 0% 0% / 0.85)",
-                  "inset -2px 0 3px hsl(0 0% 0% / 0.85)",
-                  "0 1px 0 hsl(0 0% 100% / 0.18)",
-                  "0 -1px 0 hsl(0 0% 0% / 0.7)",
-                ].join(", "),
-                border: "1px solid hsl(0 0% 0% / 0.95)",
-              }} />
-
-              {/* Chisel notches */}
-              {Array.from({ length: 11 }).map((_, i) => (
-                <div key={i} className="absolute top-1/2" aria-hidden style={{
-                  left: `${i * 10}%`,
-                  width: 2,
-                  height: i % 5 === 0 ? 22 : 14,
-                  transform: "translate(-50%, -50%)",
-                  background: "hsl(0 0% 0% / 0.95)",
-                  boxShadow: "1px 0 0 hsl(0 0% 100% / 0.2), -1px 0 0 hsl(0 0% 0% / 0.85)",
-                }} />
-              ))}
-
-              {/* Molten fill in the engraved channel */}
-              <div className="absolute top-1/2 -translate-y-1/2 h-3 rounded-sm pointer-events-none"
-                style={{
-                  left: 6,
-                  width: `calc((100% - 12px) * ${dungeonDifficulty / 100})`,
-                  background: `linear-gradient(90deg, hsl(${glowHue} / 0.5) 0%, hsl(${glowHue}) 60%, hsl(45 95% 75%) 100%)`,
-                  boxShadow: `0 0 8px hsl(${glowHue} / 0.85), 0 0 18px hsl(${glowHue} / 0.55), inset 0 1px 0 hsl(45 100% 80% / 0.6), inset 0 -1px 0 hsl(0 0% 0% / 0.5)`,
-                  transition: "background 300ms ease, box-shadow 300ms ease",
-                }} aria-hidden />
-
-              {/* Stone tablet thumb */}
-              <div
-                className="absolute pointer-events-none"
-                style={{
-                  left: `calc(28px + (100% - 56px) * ${dungeonDifficulty / 100})`,
-                  top: "50%",
-                  transform: "translate(-50%, -50%)",
-                }}
-                aria-hidden
-              >
-                <div style={{
-                  width: 44,
-                  height: 56,
-                  borderRadius: 4,
-                  backgroundImage: `url(${slateTexture})`,
-                  backgroundSize: "200px 200px",
-                  border: "2px solid hsl(0 0% 4%)",
-                  boxShadow: [
-                    "inset 1px 1px 0 hsl(0 0% 100% / 0.18)",
-                    "inset -1px -1px 0 hsl(0 0% 0% / 0.85)",
-                    "inset 0 -3px 4px hsl(0 0% 0% / 0.55)",
-                    "0 3px 0 hsl(0 0% 0% / 0.8)",
-                    "0 6px 12px hsl(0 0% 0% / 0.7)",
-                    `0 0 16px hsl(${glowHue} / 0.4)`,
-                  ].join(", "),
-                  display: "grid",
-                  placeItems: "center",
-                  transition: "box-shadow 300ms ease",
-                }}>
-                  <span className="engraved" style={{ fontSize: 26, fontWeight: 900 }}>✦</span>
-                </div>
-              </div>
+            <div className="text-amber-500 font-bold uppercase tracking-widest text-xl">
+              {tier.label}
             </div>
-
-            {/* End labels: numbers at bar ends, descriptions beneath */}
-            <div className="mt-3 flex items-start justify-between px-1">
-              <div className="flex flex-col items-start">
-                <span className="engraved engraved-hover" style={{ fontSize: 24, fontWeight: 900 }}>0</span>
-                <span className="engraved engraved-hover mt-1" style={{ fontSize: 16, letterSpacing: "0.12em" }}>NOVICE'S PATH</span>
-              </div>
-              <div className="flex flex-col items-end">
-                <span className="engraved engraved-hover" style={{ fontSize: 24, fontWeight: 900 }}>100</span>
-                <span className="engraved engraved-hover mt-1" style={{ fontSize: 16, letterSpacing: "0.12em" }}>MASTER'S CHALLENGE</span>
-              </div>
-            </div>
-
           </div>
+
+          <div 
+            ref={sliderRef}
+            onPointerDown={onPointerDown}
+            className="relative h-6 bg-[#0a0a0a] rounded-sm cursor-pointer overflow-hidden border-2 border-[#1f1d1a] shadow-[inset_0_2px_4px_rgba(0,0,0,0.8)] mx-8"
+          >
+            {/* The slider fill - Ember glow */}
+            <div 
+              className="absolute inset-y-0 left-0 bg-gradient-to-r from-[#8b4513] via-[#cd853f] to-[#ffaa00] transition-all duration-75 shadow-[0_0_12px_#ffaa00]"
+              style={{ width: `${precise}%` }}
+            />
+            {/* The slider thumb block */}
+            <div 
+              className="absolute top-1/2 -mt-4 w-6 h-8 stone-tablet-btn flex items-center justify-center transition-all duration-75 z-10"
+              style={{ left: `calc(${precise}% - 12px)` }}
+            >
+              <div className="w-1.5 h-1.5 bg-[#ffcc00] rotate-45 shadow-[0_0_4px_#ffcc00]" />
+            </div>
+          </div>
+
+          <div className="flex justify-between px-8 text-[#8c8273] font-bold uppercase tracking-widest text-[9px] md:text-[10px]" style={{ textShadow: "0 1px 0 #000" }}>
+            <span>0<br/><span className="text-[#5a5349] mt-1 block italic">Novice</span></span>
+            <span>100<br/><span className="text-[#5a5349] mt-1 block italic">Master</span></span>
+          </div>
+
+          <p className="text-[#a89f91] italic text-xs md:text-sm px-4 leading-relaxed" style={{ textShadow: "0 1px 0 #000" }}>
+            "Thy choice here defines the density of shadows and the weight of the trials ahead."
+          </p>
         </div>
 
-        {/* Manifest button — engraved into stone */}
         <button
-          type="button"
-          disabled={busy || fading}
-          onClick={handleManifest}
-          className="manifest-btn engraved engraved-hover mt-12 px-12 py-5"
-          style={{ fontSize: 22, fontWeight: 700, letterSpacing: "0.18em" }}
+          onClick={() => onConfirm(tier.difficulty, precise, precise)}
+          disabled={busy}
+          className={cn(
+            "w-full max-w-[320px] mx-auto py-5 font-pixel text-base md:text-lg transition-all focus:outline-none uppercase italic tracking-tighter",
+            "stone-tablet-btn text-[#ffcc00]",
+            busy && "opacity-50 grayscale cursor-not-allowed"
+          )}
         >
-          {busy || fading ? "MANIFESTING…" : "⚔  MANIFEST THE DUNGEON  ⚔"}
+          {busy ? "MANIFESTING..." : "⚔ MANIFEST THE DUNGEON ⚔"}
         </button>
       </div>
-
-      {/* Fade-to-black overlay */}
-      <div className="absolute inset-0 pointer-events-none" aria-hidden style={{
-        background: "#000",
-        opacity: fading ? 1 : 0,
-        transition: "opacity 1000ms ease-in",
-        zIndex: 50,
-      }} />
-
-      <style>{`
-        .engraved-menu .engraved {
-          font-family: 'Cinzel', 'MedievalSharp', serif;
-          font-weight: 700;
-          color: hsl(0 0% 18%);
-          /* Letter-press: dark top-left shadow + light bottom-right highlight */
-          text-shadow:
-            -1px -1px 0 hsl(0 0% 0% / 0.85),
-            -1px -1px 2px hsl(0 0% 0% / 0.6),
-             1px  1px 0 hsl(0 0% 100% / 0.22),
-             1px  2px 2px hsl(0 0% 100% / 0.12);
-          transition: color 300ms ease, filter 300ms ease, text-shadow 300ms ease;
-        }
-        .engraved-menu .engraved-muted {
-          color: hsl(0 0% 28%);
-          font-weight: 600;
-        }
-        .engraved-menu .engraved-sm { font-weight: 600; }
-
-        /* Molten-rune hover: glow from within with tier-colored drop-shadow */
-        .engraved-menu .engraved-hover:hover,
-        .engraved-menu .engraved-hover:focus-visible,
-        .engraved-menu .engraved-active {
-          color: hsl(var(--glow) / 0.92);
-          text-shadow:
-            -1px -1px 0 hsl(0 0% 0% / 0.9),
-             1px  1px 0 hsl(0 0% 100% / 0.18),
-             0 0 6px hsl(var(--glow) / 0.85),
-             0 0 14px hsl(var(--glow) / 0.55),
-             0 0 28px hsl(var(--glow) / 0.35);
-          filter: drop-shadow(0 0 6px hsl(var(--glow) / 0.6));
-        }
-
-        .engraved-menu .manifest-btn {
-          position: relative;
-          background-color: hsl(0 0% 8%);
-          background-image:
-            linear-gradient(180deg, hsl(0 0% 100% / 0.06), transparent 40%),
-            linear-gradient(0deg, hsl(0 0% 0% / 0.6), transparent 50%);
-          border: 2px solid hsl(0 0% 4%);
-          border-radius: 4px;
-          box-shadow:
-            inset 1px 1px 0 hsl(0 0% 100% / 0.12),
-            inset -1px -1px 0 hsl(0 0% 0% / 0.85),
-            inset 0 2px 6px hsl(0 0% 0% / 0.6),
-            inset 0 -3px 5px hsl(0 0% 0% / 0.55),
-            0 2px 0 hsl(0 0% 0% / 0.7),
-            0 6px 14px hsl(0 0% 0% / 0.65);
-          cursor: pointer;
-          transition: box-shadow 250ms ease, transform 120ms ease;
-        }
-        .engraved-menu .manifest-btn:hover:not(:disabled) {
-          box-shadow:
-            inset 1px 1px 0 hsl(0 0% 100% / 0.12),
-            inset -1px -1px 0 hsl(0 0% 0% / 0.85),
-            inset 0 0 24px hsl(var(--glow) / 0.45),
-            0 0 18px hsl(var(--glow) / 0.55),
-            0 0 36px hsl(var(--glow) / 0.35);
-        }
-        .engraved-menu .manifest-btn:active:not(:disabled) { transform: translateY(2px); }
-        .engraved-menu .manifest-btn:disabled { opacity: 0.6; cursor: not-allowed; }
-      `}</style>
     </div>
   );
 };

@@ -21,7 +21,15 @@ import { magicLineForCommandInput } from "@/game/commandMagic";
 import { runCommandEffect } from "@/game/commandEffects";
 import { roomFlavor } from "@/game/roomFlavor";
 import { levelCompletionLine } from "@/game/levelCompletion";
-import { appendRun, baseCommand, countCommands, type RunRecord } from "@/game/progressStats";
+import {
+  appendRun,
+  baseCommand,
+  clearActiveRun,
+  countCommands,
+  saveActiveRun,
+  type ActiveRunRecord,
+  type RunRecord,
+} from "@/game/progressStats";
 import { generateMauQuiz } from "@/game/mauQuizService";
 import { mauKeyQuizForDoor, mauQuizForMechanic } from "@/game/difficultyMechanics";
 import {
@@ -68,6 +76,22 @@ function createRunTracker(difficulty = "default"): RunTracker {
     keysFound: 0,
     lockedDoorsUnlocked: 0,
     completed: false,
+  };
+}
+
+function activeRunFromTracker(tracker: RunTracker, targetFile = TARGET_FILE): ActiveRunRecord {
+  return {
+    difficulty: tracker.difficulty,
+    startedAt: tracker.startedAt,
+    updatedAt: Date.now(),
+    totalCommands: tracker.commands.length,
+    commands: [...tracker.commands],
+    commandCounts: countCommands(tracker.commands),
+    mistakes: [...tracker.mistakes],
+    roomsVisited: tracker.visitedRooms.size,
+    lockedDoorsUnlocked: tracker.lockedDoorsUnlocked,
+    keysFound: tracker.keysFound,
+    targetFile,
   };
 }
 
@@ -157,6 +181,7 @@ export function useGameState(options: UseGameStateOptions = {}) {
       targetFile,
     };
     appendRun(run);
+    clearActiveRun();
   }, []);
 
   const appendLines = useCallback((lines: Omit<TerminalLine, "id">[]) => {
@@ -220,7 +245,6 @@ export function useGameState(options: UseGameStateOptions = {}) {
         if (!room) return resolve();
         const path = pathfind(room, s.player, target);
         if (!path || path.length === 0) {
-          setState((cur) => ({ ...cur, player: { ...target } }));
           return resolve();
         }
         setState((cur) => ({ ...cur, playerAnim: "walking" }));
@@ -289,6 +313,7 @@ export function useGameState(options: UseGameStateOptions = {}) {
 
           const spawn = effect.from === "child" && next.returnSpawn ? next.returnSpawn : next.spawn;
           runTrackerRef.current.visitedRooms.add(next.path);
+          saveActiveRun(activeRunFromTracker(runTrackerRef.current, s.targetFile));
           return {
             ...s,
             cwd: next.path,
@@ -309,6 +334,7 @@ export function useGameState(options: UseGameStateOptions = {}) {
           const file = room.files.find((f) => f.name === effect.fileName);
           if (!file) return s;
           if (file.type === "key") runTrackerRef.current.keysFound += 1;
+          saveActiveRun(activeRunFromTracker(runTrackerRef.current, s.targetFile));
           const newRoom = { ...room, files: room.files.filter((f) => f.name !== effect.fileName) };
           return {
             ...s,
@@ -475,12 +501,19 @@ export function useGameState(options: UseGameStateOptions = {}) {
         commandHistory: [...cur.commandHistory, raw],
       }));
 
-      const result = await runCommand(raw, s, { startMauQuiz, submitMauQuiz, closeMauQuiz });
+      const result = await runCommand(raw, s, { 
+        startMauQuiz, 
+        submitMauQuiz, 
+        closeMauQuiz,
+        openScroll,
+        closeScroll
+      });
       const failed = Boolean(result.unknown || result.lines.some((line) => line.kind === "error"));
       const commandName = baseCommand(raw);
       if (commandName) {
         runTrackerRef.current.commands.push(raw.trim());
         if (failed) runTrackerRef.current.mistakes.push(raw.trim());
+        saveActiveRun(activeRunFromTracker(runTrackerRef.current, s.targetFile));
       }
       const commandEffect = runCommandEffect(raw, result, failed);
       const shouldRememberMistake =
@@ -615,6 +648,7 @@ export function useGameState(options: UseGameStateOptions = {}) {
     magicCommandsRef.current.clear();
     dismissTeaching();
     dismissRoomSubtitle();
+    clearActiveRun();
     setState(initialState());
   }, [dismissTeaching, dismissRoomSubtitle]);
 
@@ -623,6 +657,7 @@ export function useGameState(options: UseGameStateOptions = {}) {
     idRef.current = 100;
     const difficulty = label.split(/\s+/)[0]?.toLowerCase() || "default";
     runTrackerRef.current = createRunTracker(difficulty);
+    saveActiveRun(activeRunFromTracker(runTrackerRef.current, level.targetFile));
     dismissRoomSubtitle();
     const intro: TerminalLine[] = adaptation
       ? [{ id: 1, kind: "dm", text: `Dungeon Master: ${adaptation}` }]
@@ -662,6 +697,14 @@ export function useGameState(options: UseGameStateOptions = {}) {
     setState((s) => ({ ...s, activeMauQuiz: undefined }));
   }, []);
 
+  const openScroll = useCallback((name: string, contents: string) => {
+    setState((s) => ({ ...s, activeScroll: { name, contents } }));
+  }, []);
+
+  const closeScroll = useCallback(() => {
+    setState((s) => ({ ...s, activeScroll: undefined }));
+  }, []);
+
   const submitMauQuiz = useCallback((answer: string) => {
     const s = stateRef.current;
     if (!s.activeMauQuiz) return;
@@ -685,6 +728,7 @@ export function useGameState(options: UseGameStateOptions = {}) {
         mkdir: "You can now repair the broken door.",
         chmod: "There is a scroll nearby. Use chmod +r scroll to read it.",
       };
+      saveActiveRun(activeRunFromTracker(runTrackerRef.current, s.targetFile));
 
       setState(cur => ({
         ...cur,
@@ -730,6 +774,8 @@ export function useGameState(options: UseGameStateOptions = {}) {
     dismissTeaching, 
     roomSubtitle,
     submitMauQuiz,
-    closeMauQuiz
+    closeMauQuiz,
+    openScroll,
+    closeScroll
   };
 }

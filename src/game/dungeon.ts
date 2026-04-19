@@ -149,20 +149,56 @@ export function getRoom(rooms: Record<string, Room>, path: string): Room | undef
   return rooms[path];
 }
 
+function hasInteriorDoor(room: Room, x: number, y: number): boolean {
+  return room.decor?.some((d) => d.x === x && d.y === y && d.kind === "interior-door") ?? false;
+}
+
+function hasInteriorRun(room: Room, x: number, y: number): boolean {
+  return (
+    room.decor?.some(
+      (d) => d.x === x && d.y === y && (d.kind === "interior-wall" || d.kind === "interior-door"),
+    ) ?? false
+  );
+}
+
+function hasWallLadder(room: Room, x: number, y: number): boolean {
+  return room.decor?.some((d) => d.x === x && d.y === y && d.kind === "ladder") ?? false;
+}
+
+function interiorRunAxis(room: Room, x: number, y: number): "h" | "v" {
+  const hasLeft = hasInteriorRun(room, x - 1, y);
+  const hasRight = hasInteriorRun(room, x + 1, y);
+  const hasUp = hasInteriorRun(room, x, y - 1);
+  const hasDown = hasInteriorRun(room, x, y + 1);
+  return hasLeft || hasRight || (!hasUp && !hasDown) ? "h" : "v";
+}
+
+function generatedWallBlocks(room: Room, x: number, y: number): boolean {
+  const decor = room.decor ?? [];
+  if (hasWallLadder(room, x, y)) return false;
+  if (decor.some((d) => d.x === x && d.y === y && d.kind === "pillar")) return true;
+  if (decor.some((d) => d.x === x && d.y === y && d.kind === "interior-wall")) return true;
+
+  // Horizontal interior walls draw their soil cap into the tile above the wall.
+  // Keep collision in sync with that visual footprint, while leaving door cuts open.
+  const wallBelow = decor.find((d) => d.x === x && d.y === y + 1 && d.kind === "interior-wall");
+  return Boolean(wallBelow && interiorRunAxis(room, wallBelow.x, wallBelow.y) === "h");
+}
+
 export function isWalkable(room: Room, x: number, y: number): boolean {
   if (x < 0 || y < 0 || x >= room.width || y >= room.height) return false;
+
+  // Doors are walkable even when they sit on the wall ring or cut through an interior wall run.
+  if (room.doors.some((d) => d.x === x && d.y === y)) return true;
+  if (hasInteriorDoor(room, x, y)) return true;
 
   // NPCs block movement
   if ((room.npcs || []).some(n => n.x === x && n.y === y)) return false;
   if (room.files.some((file) => file.type === "blocker" && file.x === x && file.y === y)) return false;
 
-  if (room.decor?.some((d) => d.x === x && d.y === y && (d.kind === "interior-wall" || d.kind === "pillar"))) {
-    return false;
-  }
+  if (generatedWallBlocks(room, x, y)) return false;
+
   const tile = room.tiles.find((t) => t.x === x && t.y === y);
-  // Doors are walkable too (they sit on the wall ring)
-  if (room.doors.some((d) => d.x === x && d.y === y)) return true;
-  if (room.decor?.some((d) => d.x === x && d.y === y && d.kind === "interior-door")) return true;
   if (!tile) return false;
   return tile.kind === "floor" || tile.kind === "torch";
 }
@@ -174,6 +210,7 @@ export function pathfind(
   to: { x: number; y: number },
 ): { x: number; y: number }[] | null {
   if (from.x === to.x && from.y === to.y) return [];
+  const targetIsDoor = room.doors.some((d) => d.x === to.x && d.y === to.y);
   const key = (x: number, y: number) => `${x},${y}`;
   const visited = new Set<string>([key(from.x, from.y)]);
   const queue: { x: number; y: number; path: { x: number; y: number }[] }[] = [
@@ -194,7 +231,7 @@ export function pathfind(
       if (visited.has(k)) continue;
       const walk = isWalkable(room, nx, ny);
       const isTarget = nx === to.x && ny === to.y;
-      if (!walk && !isTarget) continue;
+      if (!walk && !(isTarget && targetIsDoor)) continue;
       const path = [...cur.path, { x: nx, y: ny }];
       if (isTarget) return path;
       visited.add(k);

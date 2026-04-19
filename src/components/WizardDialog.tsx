@@ -40,6 +40,16 @@ export function WizardDialog({ context }: WizardDialogProps) {
     }
   }, [isChatting]);
 
+  // Auto-close welcome dialog after 7 seconds if not chatting
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      if (!isChatting) {
+        setIsOpen(false);
+      }
+    }, 7000);
+    return () => clearTimeout(timer);
+  }, [isChatting]);
+
   return (
     <div className="fixed bottom-0 right-0 z-40 pointer-events-none flex items-end justify-end p-2 gap-0 h-64 w-full max-w-2xl">
       

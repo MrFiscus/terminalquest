@@ -9,6 +9,8 @@ export interface CommandContext {
   startMauQuiz: (quiz: MauQuiz) => void;
   submitMauQuiz: (answer: string) => void;
   closeMauQuiz: () => void;
+  openScroll: (name: string, contents: string) => void;
+  closeScroll: () => void;
 }
 
 export interface CommandDefinition {

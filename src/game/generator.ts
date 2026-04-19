@@ -17,7 +17,7 @@ import type { DecorItem, DecorKind, DoorTile, FileItem, Room, Tile } from "./typ
  *   5. Place focal features per theme (altar, paired statues, chest trio,
  *      water pool) on the "presentation" side of the room.
  *   6. Stack corner clusters (storage-heavy in 3 corners, lighter elsewhere).
- *   7. Drift environmental details (cracks, inscribed floor, ladders).
+ *   7. Drift environmental details (cracks, inscribed floor).
  *   8. Top up with a wall-band fill pass until density target is hit.
  */
 
@@ -267,6 +267,53 @@ function doorAdjacent(doors: DoorTile[], x: number, y: number) {
   return doors.some((d) => Math.max(Math.abs(d.x - x), Math.abs(d.y - y)) <= 1);
 }
 
+function hasInteriorDoor(decor: DecorItem[] | undefined, x: number, y: number): boolean {
+  return decor?.some((d) => d.x === x && d.y === y && d.kind === "interior-door") ?? false;
+}
+
+function hasInteriorRun(decor: DecorItem[] | undefined, x: number, y: number): boolean {
+  return (
+    decor?.some(
+      (d) => d.x === x && d.y === y && (d.kind === "interior-wall" || d.kind === "interior-door"),
+    ) ?? false
+  );
+}
+
+function interiorRunAxis(decor: DecorItem[] | undefined, x: number, y: number): "h" | "v" {
+  const hasLeft = hasInteriorRun(decor, x - 1, y);
+  const hasRight = hasInteriorRun(decor, x + 1, y);
+  const hasUp = hasInteriorRun(decor, x, y - 1);
+  const hasDown = hasInteriorRun(decor, x, y + 1);
+  return hasLeft || hasRight || (!hasUp && !hasDown) ? "h" : "v";
+}
+
+function generatedWallBlocks(decor: DecorItem[] | undefined, x: number, y: number): boolean {
+  const items = decor ?? [];
+  if (hasWallLadder(decor, x, y)) return false;
+  if (items.some((d) => d.x === x && d.y === y && d.kind === "pillar")) return true;
+  if (items.some((d) => d.x === x && d.y === y && d.kind === "interior-wall")) return true;
+
+  const wallBelow = items.find((d) => d.x === x && d.y === y + 1 && d.kind === "interior-wall");
+  return Boolean(wallBelow && interiorRunAxis(items, wallBelow.x, wallBelow.y) === "h");
+}
+
+function hasWallLadder(decor: DecorItem[] | undefined, x: number, y: number): boolean {
+  return decor?.some((d) => d.x === x && d.y === y && d.kind === "ladder") ?? false;
+}
+
+function isRoomWalkableForNpc(room: Room, x: number, y: number): boolean {
+  if (x < 0 || y < 0 || x >= room.width || y >= room.height) return false;
+  if (room.doors.some((d) => d.x === x && d.y === y)) return true;
+  if (hasInteriorDoor(room.decor, x, y)) return true;
+  if (generatedWallBlocks(room.decor, x, y)) return false;
+  if (room.files.some((f) => f.x === x && f.y === y)) return false;
+  if (room.spawn.x === x && room.spawn.y === y) return false;
+  if (room.returnSpawn?.x === x && room.returnSpawn.y === y) return false;
+  if ((room.npcs ?? []).some((n) => n.x === x && n.y === y)) return false;
+  const tile = room.tiles.find((t) => t.x === x && t.y === y);
+  return tile?.kind === "floor" || tile?.kind === "torch";
+}
+
 /** Floor features (crack, inscribed-floor, water) don't block movement or cover props visually. */
 function isFloorFeature(kind: DecorKind) {
   return kind === "crack" || kind === "inscribed-floor" || kind === "water";
@@ -491,6 +538,8 @@ function placeInteriorWalls(layout: Layout) {
     !doors.some((d) => Math.abs(d.x - x) <= 1 && Math.abs(d.y - y) <= 1);
   const fileClear = (x: number, y: number) =>
     !files.some((f) => f.x === x && f.y === y);
+  const fileClearOfWallFootprint = (x: number, y: number, dir: InteriorWallRun["dir"]) =>
+    dir !== "h" || !files.some((f) => f.x === x && f.y === y - 1);
 
   for (const run of runs) {
     const doorIdx = run.dir === "h" && run.length >= 4 ? Math.floor(run.length / 2) : -1;
@@ -503,7 +552,8 @@ function placeInteriorWalls(layout: Layout) {
       isInterior(width, height, cell.x, cell.y) &&
       !layout.occupied.has(key(cell.x, cell.y)) &&
       doorClear(cell.x, cell.y) &&
-      fileClear(cell.x, cell.y)
+      fileClear(cell.x, cell.y) &&
+      fileClearOfWallFootprint(cell.x, cell.y, run.dir)
     );
     if (!canPlaceRun) continue;
     if (
@@ -538,6 +588,15 @@ function placeInteriorWalls(layout: Layout) {
       layout.decor.push({ kind, x, y });
       layout.occupied.add(key(x, y));
     }
+  }
+}
+
+function placeScrollWallLadders(layout: Layout) {
+  for (const file of layout.files) {
+    if (!generatedWallBlocks(layout.decor, file.x, file.y)) continue;
+    if (layout.decor.some((d) => d.x === file.x && d.y === file.y && d.kind === "ladder")) continue;
+    layout.decor.push({ kind: "ladder", x: file.x, y: file.y });
+    layout.occupied.add(key(file.x, file.y));
   }
 }
 
@@ -772,11 +831,6 @@ function placeEnvironmental(layout: Layout) {
     if (place(layout, "inscribed-floor", x, y)) ins++;
   }
 
-  if ((theme === "storage" || theme === "flooded" || theme === "prison") && rng() < 0.55) {
-    const x = rng() < 0.5 ? 1 : width - 2;
-    const y = 2 + Math.floor(rng() * Math.max(1, height - 4));
-    place(layout, "ladder", x, y);
-  }
 }
 
 // ---------- center accent: fill the empty middle of the room ----------
@@ -1030,6 +1084,7 @@ export function generateRoom(spec: RoomSpec, nonce = 0): Room {
   for (let x = 1; x < width - 1; x++) layout.occupied.add(key(x, 1));
 
   placeInteriorWalls(layout);
+  placeScrollWallLadders(layout);
 
   reservePaths(layout);
   placeFocal(layout);
@@ -1115,9 +1170,7 @@ function spawnMauTheCat(rooms: Record<string, Room>, rootPath: string): Record<s
       const vKey = `${curr.path}:${nx},${ny}`;
       if (visited.has(vKey)) continue;
 
-      // Check if tile is walkable floor
-      const tile = room.tiles.find(t => t.x === nx && t.y === ny);
-      if (tile && (tile.kind === "floor" || tile.kind === "torch")) {
+      if (isRoomWalkableForNpc(room, nx, ny)) {
         visited.add(vKey);
         queue.push({ path: curr.path, x: nx, y: ny, dist: curr.dist + 1 });
       }
@@ -1157,8 +1210,7 @@ function spawnMauTheCat(rooms: Record<string, Room>, rootPath: string): Record<s
 
   const targetRoom = result[targetPath];
   if (targetRoom) {
-    // Find all walkable floor tiles in this room
-    const walkableTiles = targetRoom.tiles.filter(t => t.kind === "floor");
+    const walkableTiles = targetRoom.tiles.filter((t) => isRoomWalkableForNpc(targetRoom, t.x, t.y));
     
     // Pick one at random using the room path as a seed base
     const rng = mulberry32(hashString("mau-pos-" + targetPath));
