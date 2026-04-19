@@ -7,30 +7,32 @@ export interface CharacterAnimation {
   mirror?: boolean;
 }
 
-const gif = (name: string) => new URL(`../../gifs/${name}`, import.meta.url).href;
+const fox = (name: string) => new URL(`../assets/characters/fox/${name}`, import.meta.url).href;
 
-const idleSouth = gif("breathing-idle_south.gif");
+const idleSouth = fox("breathing-idle_south.gif");
 
-const walkFrames: Partial<Record<Direction, CharacterAnimation>> = {
-  north: { src: gif("running-4-frames_north.gif") },
-  south: { src: gif("running-4-frames_south.gif") },
-  west: { src: gif("running-4-frames_west.gif") },
-  east: { src: gif("running-4-frames_west.gif"), mirror: true },
-  "north-west": { src: gif("running-4-frames_north-west.gif") },
-  "north-east": { src: gif("running-4-frames_north-west.gif"), mirror: true },
-  "south-west": { src: gif("running-4-frames_south-west.gif") },
-  "south-east": { src: gif("running-4-frames_south-west.gif"), mirror: true },
+const walkFrames: Record<Direction, CharacterAnimation> = {
+  north: { src: fox("running-4-frames_north.gif") },
+  south: { src: fox("running-4-frames_south.gif") },
+  west: { src: fox("running-4-frames_west.gif") },
+  east: { src: fox("running-4-frames_east.gif") },
+  // Fallbacks for diagonals as fox doesn't have them yet
+  "north-west": { src: fox("running-4-frames_west.gif") },
+  "north-east": { src: fox("running-4-frames_east.gif") },
+  "south-west": { src: fox("running-4-frames_west.gif") },
+  "south-east": { src: fox("running-4-frames_east.gif") },
 };
 
 const interactFrames: Record<Direction, CharacterAnimation> = {
-  north: { src: gif("picking-up_north.gif") },
-  south: { src: gif("picking-up_south.gif") },
-  west: { src: gif("picking-up_west.gif") },
-  east: { src: gif("picking-up_east.gif") },
-  "north-west": { src: gif("picking-up_north-west.gif") },
-  "north-east": { src: gif("picking-up_north-east.gif") },
-  "south-west": { src: gif("picking-up_south-west.gif") },
-  "south-east": { src: gif("picking-up_south-east.gif") },
+  north: { src: fox("picking-up_north.gif") },
+  south: { src: fox("picking-up_south.gif") },
+  west: { src: fox("picking-up_west.gif") },
+  east: { src: fox("picking-up_east.gif") },
+  // Fallbacks for diagonals
+  "north-west": { src: fox("picking-up_west.gif") },
+  "north-east": { src: fox("picking-up_east.gif") },
+  "south-west": { src: fox("picking-up_west.gif") },
+  "south-east": { src: fox("picking-up_east.gif") },
 };
 
 const animationCache = new Map<string, HTMLImageElement>();

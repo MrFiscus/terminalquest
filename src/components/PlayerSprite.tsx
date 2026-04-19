@@ -27,7 +27,7 @@ export function PlayerSprite({ anim, facing, size = 32 }: PlayerSpriteProps) {
 
   return (
     <div
-      className="relative flex items-center justify-center"
+      className="relative flex items-center justify-center overflow-visible"
       style={{ width: size, height: size }}
       data-facing={facing}
       aria-label={`adventurer ${anim} facing ${facing}`}
@@ -37,8 +37,10 @@ export function PlayerSprite({ anim, facing, size = 32 }: PlayerSpriteProps) {
         src={animation.src}
         alt=""
         aria-hidden
-        className="h-[145%] w-[145%] object-contain"
+        className="max-w-none max-h-none object-contain"
         style={{
+          width: "145%",
+          height: "145%",
           imageRendering: "pixelated",
           transform: animation.mirror ? "scaleX(-1)" : undefined,
           filter:
@@ -48,4 +50,3 @@ export function PlayerSprite({ anim, facing, size = 32 }: PlayerSpriteProps) {
     </div>
   );
 }
-

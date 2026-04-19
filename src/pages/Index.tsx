@@ -7,17 +7,25 @@ import { VictoryOverlay } from "@/components/VictoryOverlay";
 import { DifficultyMenu } from "@/components/DifficultyMenu";
 import { WizardPopup } from "@/components/WizardPopup";
 import { RoomFlavorSubtitle } from "@/components/RoomFlavorSubtitle";
+import { MauQuizOverlay } from "@/components/MauQuizOverlay";
+import { WizardDialog } from "@/components/WizardDialog";
 import { useGameState } from "@/hooks/useGameState";
+import { getRoom } from "@/game/dungeon";
 import { generateLevel, type Difficulty } from "@/game/aiLevelService";
 import { adaptationMessage, getWeakCommands } from "@/game/adaptiveDungeon";
 import { cn } from "@/lib/utils";
 import { useCallback, useState } from "react";
 import { UserRound } from "lucide-react";
+import { AnimatePresence } from "framer-motion";
 
 const Index = () => {
   const [profileOpen, setProfileOpen] = useState(false);
   const openProfile = useCallback(() => setProfileOpen(true), []);
-  const { state, submit, reset, dismissPopup, loadLevel, teachingTip, dismissTeaching, roomSubtitle } = useGameState({
+  const { 
+    state, submit, reset, dismissPopup, loadLevel, 
+    teachingTip, dismissTeaching, roomSubtitle,
+    submitMauQuiz, closeMauQuiz 
+  } = useGameState({
     onOpenProfile: openProfile,
   });
   const [generating, setGenerating] = useState<Difficulty | null>(null);
@@ -131,6 +139,25 @@ const Index = () => {
 
       {bookOpen && <BookOfSecrets onClose={() => setBookOpen(false)} />}
       {profileOpen && <ProfileModal onClose={() => setProfileOpen(false)} />}
+
+      <AnimatePresence>
+        {state.activeMauQuiz && (
+          <MauQuizOverlay
+            quiz={state.activeMauQuiz}
+            onSubmit={submitMauQuiz}
+            onClose={closeMauQuiz}
+          />
+        )}
+      </AnimatePresence>
+
+      <WizardDialog 
+        context={{
+          goal: state.goal,
+          requiredCommands: state.requiredCommands,
+          winCondition: state.winCondition,
+          currentRoom: getRoom(state.rooms, state.cwd)?.name || state.cwd,
+        }}
+      />
     </main>
   );
 };

@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
 import { getRoom } from "@/game/dungeon";
 import { PlayerSprite } from "@/components/PlayerSprite";
+import { MauSprite } from "@/components/MauSprite";
 import { ScrollPopup } from "@/components/ScrollPopup";
 import scrollItem from "@/assets/scroll-item.png";
 import type { DecorKind, GameState, Room, VfxPulse } from "@/game/types";
@@ -949,12 +950,48 @@ export function GameWorld({ state, onDismissPopup, headerRight }: GameWorldProps
           >
             <span className="ground-shadow" aria-hidden />
             <div
-              className="absolute left-1/2 -translate-x-1/2 flex items-end justify-center"
+              className="absolute left-1/2 -translate-x-1/2 flex items-end justify-center overflow-visible"
               style={{ bottom: 0, width: "100%", height: "100%" }}
             >
-              <PlayerSprite anim={state.playerAnim} facing={state.playerFacing} size={Math.min(TILE, 48)} />
+              <PlayerSprite anim={state.playerAnim} facing={state.playerFacing} size={TILE} />
             </div>
           </motion.div>
+
+          {/* ------- NPCs ------- */}
+          {(room.npcs || []).map((npc) => {
+            const dist = Math.abs(state.player.x - npc.x) + Math.abs(state.player.y - npc.y);
+            const isNear = dist <= 1;
+            return (
+              <div
+                key={npc.id}
+                className="pointer-events-none absolute flex items-center justify-center"
+                style={{
+                  left: npc.x * tileW,
+                  top: npc.y * tileH,
+                  width: tileW,
+                  height: tileH,
+                  zIndex: 20,
+                }}
+              >
+                <span className="ground-shadow" aria-hidden />
+                {npc.id === "mau" ? (
+                  <MauSprite size={Math.min(TILE * 3, 144)} className="-translate-y-2" />
+                ) : (
+                  <div className="h-8 w-8 bg-purple-500 rounded-full" />
+                )}
+                
+                {/* Proximity Prompt */}
+                {isNear && (
+                  <div 
+                    className="absolute -top-12 left-1/2 -translate-x-1/2 label-chip breathe z-30 whitespace-nowrap"
+                    style={{ fontSize: "10px" }}
+                  >
+                    Press [Enter] to Speak
+                  </div>
+                )}
+              </div>
+            );
+          })}
 
           {/* ------- Mini-map ------- */}
           {showMinimap && (

@@ -363,14 +363,26 @@ export function useGameState(options: UseGameStateOptions = {}) {
 
       appendLines([{ kind: "input", text: `user@dungeon:${s.cwd}$ ${raw}` }]);
 
-      if (!raw.trim()) return;
+      if (!raw.trim()) {
+        const room = getRoom(s.rooms, s.cwd);
+        // Interaction from anywhere in the room
+        const npc = (room?.npcs || []).find(n => n.id === "mau");
+        if (npc) {
+          if (npc.dialogue && npc.dialogue.length) {
+            appendLines(npc.dialogue.map(text => ({ kind: "npc", text: `${npc.name}: ${text}` })));
+          } else {
+            appendLines([{ kind: "npc", text: `${npc.name} watches you silently.` }]);
+          }
+        }
+        return;
+      }
 
       setState((cur) => ({
         ...cur,
         commandHistory: [...cur.commandHistory, raw],
       }));
 
-      const result = await runCommand(raw, s);
+      const result = await runCommand(raw, s, { startMauQuiz, submitMauQuiz, closeMauQuiz });
       const failed = Boolean(result.unknown || result.lines.some((line) => line.kind === "error"));
       const commandName = baseCommand(raw);
       if (commandName) {
@@ -544,5 +556,70 @@ export function useGameState(options: UseGameStateOptions = {}) {
     // no-op
   }, []);
 
-  return { state, submit, reset, dismissPopup, loadLevel, teachingTip, dismissTeaching, roomSubtitle };
+  const startMauQuiz = useCallback((quiz: MauQuiz) => {
+    setState((s) => ({ ...s, activeMauQuiz: quiz }));
+  }, []);
+
+  const closeMauQuiz = useCallback(() => {
+    setState((s) => ({ ...s, activeMauQuiz: undefined }));
+  }, []);
+
+  const submitMauQuiz = useCallback((answer: string) => {
+    const s = stateRef.current;
+    if (!s.activeMauQuiz) return;
+
+    const isCorrect = answer.toLowerCase() === s.activeMauQuiz.answer.toLowerCase();
+    appendLines([{ kind: "input", text: `> ${answer}` }]);
+    
+    if (isCorrect) {
+      appendLines([{ kind: "npc", text: "Mau: \"Purrfect! You have learned well. Take this key—it opens the path to what you seek.\"" }]);
+      
+      // Reward the Vault Key
+      const keyItem: FileItem = {
+        name: "Vault Key",
+        glyph: "🗝",
+        type: "key",
+        x: s.player.x,
+        y: s.player.y,
+        contents: "The key to Mau's Secret Vault."
+      };
+      
+      setState(cur => ({
+        ...cur,
+        inventory: [...cur.inventory, keyItem],
+        activeMauQuiz: undefined
+      }));
+      
+      appendLines([{ kind: "output", text: "'Vault Key' has been added to your inventory." }]);
+      triggerScreenEffect("aware", 1200);
+      
+      // Manifest VFX where the key "appears"
+      const id = nextId();
+      setState(cur => ({
+        ...cur,
+        vfx: [...cur.vfx, { id, kind: "manifest", cells: [{ x: s.player.x, y: s.player.y }], expiresAt: Date.now() + 1500 }]
+      }));
+      setTimeout(() => {
+        setState((s) => ({ ...s, vfx: s.vfx.filter((v) => v.id !== id) }));
+      }, 1500);
+
+    } else {
+      appendLines([{ kind: "npc", text: `Mau: \"Not quite. The true wisdom was '${s.activeMauQuiz.answer}'. Return when you have meditated more.\"` }]);
+      triggerScreenEffect("error", 800);
+      closeMauQuiz();
+    }
+  }, [appendLines, closeMauQuiz, triggerScreenEffect]);
+
+  return { 
+    state, 
+    submit, 
+    reset, 
+    dismissPopup, 
+    loadLevel, 
+    teachingTip, 
+    dismissTeaching, 
+    roomSubtitle,
+    submitMauQuiz,
+    closeMauQuiz
+  };
 }

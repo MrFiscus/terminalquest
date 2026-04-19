@@ -7,7 +7,7 @@ import tileFloor from "@/assets/tile-floor.png";
 import tileFloorAlt from "@/assets/tile-floor-alt.png";
 import archwayDoor from "@/assets/archway-door.png";
 
-const gif = (name: string) => new URL(`../../gifs/${name}`, import.meta.url).href;
+const gif = (name: string) => new URL(`../assets/characters/fox/${name}`, import.meta.url).href;
 
 // ── Looping command typewriter ────────────────────────────────────────────────
 function useCommandLoop(text: string, speed = 60) {

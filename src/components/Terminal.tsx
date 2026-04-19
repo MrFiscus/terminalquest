@@ -96,12 +96,17 @@ export function Terminal({ state, onSubmit }: TerminalProps) {
   }, [state.animating]);
 
   useEffect(() => {
-    const onKey = () => {
+    const onKey = (e: KeyboardEvent) => {
       if (state.animating || state.won) return;
+      
+      // Don't steal focus if user is already typing in an input
+      const target = document.activeElement;
+      if (target?.tagName === "INPUT" || target?.tagName === "TEXTAREA") return;
+
       if (document.activeElement !== inputRef.current) inputRef.current?.focus();
     };
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
+    window.addEventListener("keydown", onKey as any);
+    return () => window.removeEventListener("keydown", onKey as any);
   }, [state.animating, state.won]);
 
   const handleKey = (e: KeyboardEvent<HTMLInputElement>) => {

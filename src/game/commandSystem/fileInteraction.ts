@@ -52,8 +52,35 @@ export const fileCommands: CommandDefinition[] = [
     run: (args, { state, room }) => {
       const name = args[0];
       if (!name) return { lines: [err("cat: missing file")] };
+
+      // Mau Easter Egg
+      if (name.toLowerCase() === "mau") {
+        const hasMau = (room.npcs || []).some(n => n.id === "mau");
+        if (hasMau) {
+          return {
+            lines: [
+              out("Mau purrs loudly as you attempt to read his contents."),
+              out("  /\\_/\\  "),
+              out(" ( o.o ) "),
+              out("  > ^ <  "),
+              out("Mau is not a file, but he appreciates the attention.")
+            ],
+            vfx: { kind: "inspect", cells: (room.npcs || []).filter(n => n.id === "mau").map(n => ({ x: n.x, y: n.y })), durationMs: 2000 }
+          };
+        }
+      }
+
       const file = currentFile(state, room, name);
       if (!file) return { lines: [err(`cat: ${name}: no such file`)] };
+      
+      // Special win condition for Mau's Secret Vault
+      if (file.name === "relic.txt" && room.name === "Mau's Secret Vault") {
+        return {
+          lines: [out("As you read the relic, the room begins to glow with an otherworldly light...")],
+          effect: { type: "win", fileName: "relic.txt" }
+        };
+      }
+
       const body = file.contents ?? "(empty file)";
       return {
         lines: body.split("\n").map(out),

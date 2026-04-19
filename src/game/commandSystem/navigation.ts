@@ -1,4 +1,4 @@
-import { findDoor, getRoom, resolvePath } from "../dungeon";
+import { findDoor, getRoom, resolvePath, pathfind } from "../dungeon";
 import { out, relativePath } from "./helpers";
 import type { CommandDefinition } from "./types";
 import { err } from "./helpers";
@@ -15,10 +15,12 @@ export const navigationCommands: CommandDefinition[] = [
           door.locked ? `[locked] ${door.target}/` : `${door.target}/`,
         ),
         ...room.files.map((file) => file.name),
+        ...(room.npcs || []).map((npc) => npc.name),
       ];
       const cells = [
         ...room.doors.map((door) => ({ x: door.x, y: door.y })),
         ...room.files.map((file) => ({ x: file.x, y: file.y })),
+        ...(room.npcs || []).map((npc) => ({ x: npc.x, y: npc.y })),
       ];
       return {
         lines: entries.length ? entries.map(out) : [out("(empty)")],
@@ -116,24 +118,50 @@ export const navigationCommands: CommandDefinition[] = [
       if (!name) return { lines: [err("find: missing pattern")] };
       const hits: string[] = [];
       const cells: { x: number; y: number }[] = [];
+      let walkTo: { x: number; y: number } | undefined;
 
       for (const searchRoom of Object.values(state.rooms)) {
         const rel = relativePath(state.cwd, searchRoom.path);
+        const isCurrentRoom = searchRoom.path === state.cwd;
+
         for (const file of searchRoom.files) {
           if (!file.name.includes(name)) continue;
           hits.push(`${rel}/${file.name}`.replace(/^\.\//, "./"));
-          if (searchRoom.path === state.cwd) cells.push({ x: file.x, y: file.y });
+          if (isCurrentRoom) {
+            cells.push({ x: file.x, y: file.y });
+            const path = pathfind(room, state.player, { x: file.x, y: file.y });
+            if (path) cells.push(...path);
+          }
         }
         for (const door of searchRoom.doors) {
           if (!door.target.includes(name)) continue;
           hits.push(`${rel}/${door.target}/`.replace(/^\.\//, "./"));
-          if (searchRoom.path === state.cwd) cells.push({ x: door.x, y: door.y });
+          if (isCurrentRoom) {
+            cells.push({ x: door.x, y: door.y });
+            const path = pathfind(room, state.player, { x: door.x, y: door.y });
+            if (path) cells.push(...path);
+          }
+        }
+        for (const npc of (searchRoom.npcs || [])) {
+          if (!npc.name.toLowerCase().includes(name.toLowerCase())) continue;
+          hits.push(`${rel}/${npc.name}`.replace(/^\.\//, "./"));
+          if (isCurrentRoom) {
+            cells.push({ x: npc.x, y: npc.y });
+            const path = pathfind(room, state.player, { x: npc.x, y: npc.y });
+            if (path) cells.push(...path);
+
+            // Special Case: Walk to Mau specifically
+            if (npc.id === "mau") {
+              walkTo = { x: npc.x, y: npc.y };
+            }
+          }
         }
       }
 
       return {
         lines: hits.length ? [out("You sense something hidden..."), ...hits.map(out)] : [out(`(no matches in ${room.name})`)],
         vfx: cells.length ? { kind: "find", cells, durationMs: 2200 } : undefined,
+        walkTo,
       };
     },
   },

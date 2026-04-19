@@ -1,4 +1,4 @@
-import type { CommandResult, GameState, Room } from "../types";
+import type { CommandResult, GameState, MauQuiz, Room } from "../types";
 
 export interface CommandContext {
   raw: string;
@@ -6,6 +6,9 @@ export interface CommandContext {
   args: string[];
   state: GameState;
   room: Room;
+  startMauQuiz: (quiz: MauQuiz) => void;
+  submitMauQuiz: (answer: string) => void;
+  closeMauQuiz: () => void;
 }
 
 export interface CommandDefinition {

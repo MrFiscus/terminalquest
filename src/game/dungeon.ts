@@ -151,6 +151,10 @@ export function getRoom(rooms: Record<string, Room>, path: string): Room | undef
 
 export function isWalkable(room: Room, x: number, y: number): boolean {
   if (x < 0 || y < 0 || x >= room.width || y >= room.height) return false;
+  
+  // NPCs block movement
+  if ((room.npcs || []).some(n => n.x === x && n.y === y)) return false;
+
   const tile = room.tiles.find((t) => t.x === x && t.y === y);
   // Doors are walkable too (they sit on the wall ring)
   if (room.doors.some((d) => d.x === x && d.y === y)) return true;

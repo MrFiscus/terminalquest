@@ -77,6 +77,15 @@ export interface DecorItem {
   y: number;
 }
 
+export interface Npc {
+  id: string;
+  name: string;
+  x: number;
+  y: number;
+  sprite: string;
+  dialogue?: string[];
+}
+
 export interface Room {
   path: string;
   name: string;
@@ -86,12 +95,13 @@ export interface Room {
   tiles: Tile[];
   doors: DoorTile[];
   files: FileItem[];
+  npcs?: Npc[];
   decor?: DecorItem[];
   spawn: { x: number; y: number };
   returnSpawn?: { x: number; y: number };
 }
 
-export type LineKind = "input" | "output" | "error" | "dm" | "system" | "victory";
+export type LineKind = "input" | "output" | "error" | "dm" | "system" | "victory" | "npc";
 
 export interface TerminalLine {
   id: number;
@@ -120,6 +130,13 @@ export interface ScreenEffect {
   kind: "reveal" | "error" | "create" | "traverse" | "track" | "aware";
 }
 
+export interface MauQuiz {
+  question: string;
+  type: "choice" | "input";
+  options?: string[];
+  answer: string;
+}
+
 export interface GameState {
   cwd: string;
   rooms: Record<string, Room>;
@@ -143,6 +160,7 @@ export interface GameState {
   requiredCommands: string[];
   winCondition: string;
   completionMessage: string | null;
+  activeMauQuiz?: MauQuiz;
 }
 
 export interface CommandResult {

@@ -1,4 +1,5 @@
 import type { DecorItem, DecorKind, DoorTile, FileItem, Room, Tile } from "./types";
+import { findAdjacentWallSlot } from "./dungeon";
 
 /**
  * Procedural room/dungeon generator.
@@ -946,11 +947,167 @@ export function generateDungeon(
       }
     }
   }
-  for (const p of Object.keys(rooms)) {
+
+  const finalRooms = spawnMauTheCat(rooms, rootPath);
+
+  // --- Add Mau's Vault ---
+  // Pick a random reachable room for the vault door (NOT root, NOT Mau's room)
+  const reachablePaths = Object.keys(finalRooms).filter(p => p !== rootPath);
+  const mauRoomPath = Object.entries(finalRooms).find(([_, r]) => r.npcs?.some(n => n.id === "mau"))?.[0];
+  const possibleVaultPaths = reachablePaths.filter(p => p !== mauRoomPath);
+  
+  // Deterministic random selection for the vault room using nonce
+  const vaultRoomPath = possibleVaultPaths.length > 0 
+    ? possibleVaultPaths[Math.floor(mulberry32(hashString("vault" + nonce))() * possibleVaultPaths.length)]
+    : reachablePaths[0];
+
+  if (vaultRoomPath) {
+    const vaultRoom = finalRooms[vaultRoomPath];
+    const vaultPath = `${vaultRoomPath}/vault`;
+    
+    // 1. Create the Vault (1x1 interior, 5x5 with walls)
+    const vault: Room = {
+      path: vaultPath,
+      name: "Mau's Secret Vault",
+      description: "A tiny, glimmering chamber where the ultimate relic resides.",
+      width: 5,
+      height: 5,
+      tiles: [],
+      doors: [{ x: 0, y: 2, kind: "door", target: ".." }],
+      files: [{ name: "relic.txt", glyph: "🏆", x: 2, y: 2, contents: "The ancient text of the Linux Elders. It hums with power." }],
+      spawn: { x: 1, y: 2 },
+      returnSpawn: { x: 1, y: 2 }
+    };
+    
+    // Fill vault with walls and floor
+    for (let y = 0; y < 5; y++) {
+      for (let x = 0; x < 5; x++) {
+        const isEdge = x === 0 || y === 0 || x === 4 || y === 4;
+        vault.tiles.push({ x, y, kind: isEdge ? "wall" : "floor" });
+      }
+    }
+    
+    // 2. Add locked door in the selected room leading to the vault
+    const doorPos = findAdjacentWallSlot(vaultRoom, vaultRoom.spawn);
+    if (doorPos) {
+      vaultRoom.doors.push({
+        ...doorPos,
+        kind: "door",
+        target: "vault",
+        locked: true,
+        requiredKey: "Vault Key"
+      });
+      finalRooms[vaultPath] = vault;
+    }
+  }
+
+  for (const p of Object.keys(finalRooms)) {
     if (!seen.has(p)) {
       // eslint-disable-next-line no-console
       console.warn(`[dungeon] unreachable room: ${p}`);
     }
   }
-  return rooms;
+  return finalRooms;
+}
+
+/**
+ * BFS across the entire dungeon graph to find the walkable tile furthest from the start.
+ */
+function spawnMauTheCat(rooms: Record<string, Room>, rootPath: string): Record<string, Room> {
+  const startRoom = rooms[rootPath];
+  if (!startRoom) return rooms;
+
+  type State = { path: string; x: number; y: number; dist: number };
+  const queue: State[] = [{ path: rootPath, x: startRoom.spawn.x, y: startRoom.spawn.y, dist: 0 }];
+  const visited = new Set<string>([`${rootPath}:${startRoom.spawn.x},${startRoom.spawn.y}`]);
+  
+  let furthest: State = queue[0];
+
+  while (queue.length) {
+    const curr = queue.shift()!;
+    if (curr.dist > furthest.dist) furthest = curr;
+
+    const room = rooms[curr.path];
+    if (!room) continue;
+
+    // 1. Local movement
+    for (const [dx, dy] of [[0, 1], [0, -1], [1, 0], [-1, 0]]) {
+      const nx = curr.x + dx;
+      const ny = curr.y + dy;
+      const vKey = `${curr.path}:${nx},${ny}`;
+      if (visited.has(vKey)) continue;
+
+      // Check if tile is walkable floor
+      const tile = room.tiles.find(t => t.x === nx && t.y === ny);
+      if (tile && (tile.kind === "floor" || tile.kind === "torch")) {
+        visited.add(vKey);
+        queue.push({ path: curr.path, x: nx, y: ny, dist: curr.dist + 1 });
+      }
+    }
+
+    // 2. Through doors
+    const door = room.doors.find(d => d.x === curr.x && d.y === curr.y);
+    if (door) {
+      const nextPath = door.target === ".." 
+        ? curr.path.split("/").slice(0, -1).join("/") || "/" 
+        : `${curr.path}/${door.target}`;
+      const nextRoom = rooms[nextPath];
+      if (nextRoom) {
+        // Find corresponding entry door or use spawn
+        const spawn = door.target === ".." ? (nextRoom.returnSpawn || nextRoom.spawn) : nextRoom.spawn;
+        const vKey = `${nextPath}:${spawn.x},${spawn.y}`;
+        if (!visited.has(vKey)) {
+          visited.add(vKey);
+          queue.push({ path: nextPath, x: spawn.x, y: spawn.y, dist: curr.dist + 1 });
+        }
+      }
+    }
+  }
+
+  // Spawn Mau at the furthest tile (ensuring it's not the root room)
+  const result = { ...rooms };
+  
+  // If furthest is in root, try to find the next furthest not in root
+  let targetPath = furthest.path;
+  if (targetPath === rootPath) {
+    // This only happens in tiny dungeons. Try to find any other room.
+    const otherPaths = Object.keys(rooms).filter(p => p !== rootPath);
+    if (otherPaths.length > 0) {
+      targetPath = otherPaths[0]; // Just pick another one
+    }
+  }
+
+  const targetRoom = result[targetPath];
+  if (targetRoom) {
+    // Find all walkable floor tiles in this room
+    const walkableTiles = targetRoom.tiles.filter(t => t.kind === "floor");
+    
+    // Pick one at random using the room path as a seed base
+    const rng = mulberry32(hashString("mau-pos-" + targetPath));
+    const randomTile = walkableTiles.length > 0 
+      ? walkableTiles[Math.floor(rng() * walkableTiles.length)]
+      : { x: targetRoom.spawn.x, y: targetRoom.spawn.y };
+
+    result[targetPath] = {
+      ...targetRoom,
+      npcs: [
+        ...(targetRoom.npcs || []),
+        {
+          id: "mau",
+          name: "Mau",
+          x: randomTile.x,
+          y: randomTile.y,
+          sprite: "/src/assets/characters/cat-idle.gif",
+          dialogue: [
+            "Mrow? You look lost, little fox.",
+            "This dungeon is but a collection of directories.",
+            "Remember: 'cd ..' is how you climb back up the tree.",
+            "Be careful with 'rm'. Destruction is... permanent."
+          ]
+        }
+      ]
+    };
+  }
+
+  return result;
 }

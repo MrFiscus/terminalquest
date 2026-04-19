@@ -1,9 +1,19 @@
 import { commandRegistry } from "./commandSystem/registry";
 import { err } from "./commandSystem/helpers";
 import { getRoom } from "./dungeon";
-import type { CommandResult, GameState } from "./types";
+import type { CommandResult, GameState, MauQuiz } from "./types";
 
-export async function runCommand(raw: string, state: GameState): Promise<CommandResult> {
+export interface RunCommandContext {
+  startMauQuiz: (quiz: MauQuiz) => void;
+  submitMauQuiz: (answer: string) => void;
+  closeMauQuiz: () => void;
+}
+
+export async function runCommand(
+  raw: string, 
+  state: GameState,
+  ctx: RunCommandContext
+): Promise<CommandResult> {
   const trimmed = raw.trim();
   if (!trimmed) return { lines: [] };
 
@@ -15,5 +25,12 @@ export async function runCommand(raw: string, state: GameState): Promise<Command
   const handler = commandRegistry.get(cmd);
   if (!handler) return { lines: [], unknown: trimmed };
 
-  return handler.run(args, { raw: trimmed, command: cmd, args, state, room });
+  return handler.run(args, { 
+    raw: trimmed, 
+    command: cmd, 
+    args, 
+    state, 
+    room,
+    ...ctx
+  });
 }
