@@ -23,6 +23,7 @@ function state(): GameState {
     animating: false,
     transitioning: false,
     vfx: [],
+    screenEffect: null,
     popup: null,
     goal: `Find ${TARGET_FILE} and move it into your inventory.`,
     requiredCommands: ["ls", "cd", "find", "mv"],

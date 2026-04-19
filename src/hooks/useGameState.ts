@@ -18,6 +18,7 @@ import {
 } from "@/game/adaptiveDungeon";
 import { teachingForCommandInput, type TeachingTip } from "@/game/commandTeaching";
 import { magicLineForCommandInput } from "@/game/commandMagic";
+import { runCommandEffect } from "@/game/commandEffects";
 import { roomFlavor } from "@/game/roomFlavor";
 import { levelCompletionLine } from "@/game/levelCompletion";
 import {
@@ -34,7 +35,9 @@ import type {
 } from "@/game/types";
 
 const STEP_MS = 110;
-const PICKUP_MS = 520;
+const PICKUP_MS = 800;
+
+const delay = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
 function initialState(): GameState {
   const rooms = createDefaultRooms();
@@ -62,6 +65,7 @@ function initialState(): GameState {
     animating: false,
     transitioning: false,
     vfx: [],
+    screenEffect: null,
     popup: null,
     goal: `Find ${TARGET_FILE} and move it into your inventory.`,
     requiredCommands: ["ls", "cd", "find", "mv"],
@@ -97,6 +101,14 @@ export function useGameState() {
       ...s,
       history: [...s.history, ...lines.map((l) => ({ ...l, id: nextId() }))],
     }));
+  }, []);
+
+  const triggerScreenEffect = useCallback((kind: NonNullable<GameState["screenEffect"]>["kind"], durationMs = 650) => {
+    const id = nextId();
+    setState((s) => ({ ...s, screenEffect: { id, kind } }));
+    setTimeout(() => {
+      setState((s) => (s.screenEffect?.id === id ? { ...s, screenEffect: null } : s));
+    }, durationMs);
   }, []);
 
   const dismissTeaching = useCallback(() => {
@@ -241,6 +253,17 @@ export function useGameState() {
             ],
           };
         }
+        if (effect.type === "removeFile") {
+          const room = getRoom(s.rooms, s.cwd);
+          if (!room) return s;
+          const file = room.files.find((f) => f.name === effect.fileName);
+          if (!file) return s;
+          const newRoom = { ...room, files: room.files.filter((f) => f.name !== effect.fileName) };
+          return {
+            ...s,
+            rooms: { ...s.rooms, [room.path]: newRoom },
+          };
+        }
         if (effect.type === "win") {
           const room = getRoom(s.rooms, s.cwd);
           if (!room) return s;
@@ -290,6 +313,7 @@ export function useGameState() {
 
       const result = await runCommand(raw, s);
       const failed = Boolean(result.unknown || result.lines.some((line) => line.kind === "error"));
+      const commandEffect = runCommandEffect(raw, result, failed);
       const shouldRememberMistake =
         failed &&
         (Boolean(commandFromInput(raw)) ||
@@ -310,6 +334,7 @@ export function useGameState() {
       }
 
       if (result.unknown) {
+        if (commandEffect.screen) triggerScreenEffect(commandEffect.screen, 450);
         const room = getRoom(s.rooms, s.cwd);
         const message = await askDungeonMaster(result.unknown, {
           goal: s.goal,
@@ -355,9 +380,14 @@ export function useGameState() {
       const shouldShowMagic = magicLine && !magicCommandsRef.current.has(magicCommand);
       if (shouldShowMagic) magicCommandsRef.current.add(magicCommand);
 
+      if (commandEffect.screen) {
+        triggerScreenEffect(commandEffect.screen, failed ? 450 : 650);
+      }
+
       appendLines([
         ...(shouldShowMagic && magicLine ? [magicLine] : []),
         ...result.lines,
+        ...(commandEffect.feedback ? [commandEffect.feedback] : []),
         ...(reaction.line ? [reaction.line] : []),
       ]);
 
@@ -366,13 +396,14 @@ export function useGameState() {
         await animateWalk(result.walkTo);
         if (result.effect && (result.effect.type === "pickup" || result.effect.type === "win")) {
           await animatePickup();
+          if (commandEffect.delayedStateMs) await delay(Math.max(0, commandEffect.delayedStateMs - PICKUP_MS));
         }
         if (result.effect) {
           if (result.effect.type === "enterRoom") {
             setState((cur) => ({ ...cur, transitioning: true }));
-            await new Promise((r) => setTimeout(r, 200));
+            await delay(260);
             applyEffect(result.effect);
-            await new Promise((r) => setTimeout(r, 50));
+            await delay(80);
             setState((cur) => ({ ...cur, transitioning: false }));
           } else {
             applyEffect(result.effect);
@@ -380,10 +411,17 @@ export function useGameState() {
         }
         setState((cur) => ({ ...cur, animating: false }));
       } else if (result.effect) {
+        if (commandEffect.delayedStateMs) {
+          setState((cur) => ({ ...cur, animating: true }));
+          await delay(commandEffect.delayedStateMs);
+        }
         applyEffect(result.effect);
+        if (commandEffect.delayedStateMs) {
+          setState((cur) => ({ ...cur, animating: false }));
+        }
       }
     },
-    [animateWalk, animatePickup, appendLines, applyEffect, triggerTeaching],
+    [animateWalk, animatePickup, appendLines, applyEffect, triggerTeaching, triggerScreenEffect],
   );
 
   const dismissPopup = useCallback(() => {
@@ -416,6 +454,7 @@ export function useGameState() {
       playerAnim: "idle",
       playerFacing: "down",
       vfx: [],
+      screenEffect: null,
       popup: null,
       commandHistory: [],
       history: [
