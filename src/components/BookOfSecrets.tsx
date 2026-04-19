@@ -1,50 +1,26 @@
 import { useState, useMemo, useRef } from "react";
 import { commandLibrary, type CommandEntry, type DifficultyLevel } from "@/game/commandLibrary";
+import bookFrame from "@/assets/book-frame.png";
 
 // ── Constants ──────────────────────────────────────────────────────────────
 const PER_SPREAD = 4;
 const FLIP_MS    = 650;
 
-// ── Palette (Mossy stone-leather tome with silver brackets) ────────────────
+// ── Palette (oxblood/brown leather relic tome — matches the frame image) ──
 const C = {
-  // Parchment — cooler cream with stone pebble texture
-  parchLight:  "#f4e4bf",
-  parchMid:    "#e8d4a8",
-  parchDark:   "#b89668",
+  // Parchment — warm aged vellum (tinted to match the photo)
   parchText:   "#2a1a08",
-  parchRule:   "#8a6a3a",
+  parchRule:   "#7a5a2a",
+  parchInk:    "#3a2410",
 
-  // Binding — mossy green stone-leather (was leather*)
-  bind:        "#5a7a35",
-  bindDeep:    "#2a3a18",
-  bindMid:     "#3d5a22",
-  bindHigh:    "#8aa850",
-  bindRim:     "#1a2810",
+  // Gold accents
+  gold:        "#b8893a",
+  goldBright:  "#d8a848",
+  goldDark:    "#6a4818",
 
-  // Silver — brushed steel for corner brackets
-  silverHigh:  "#e8edf2",
-  silverMid:   "#9aa4ad",
-  silverDark:  "#5d6770",
-  silverRivet: "#2a3038",
-
-  // Wood — bookmark tabs
-  woodLight:   "#9b7340",
-  woodDark:    "#6b4a22",
-
-  // Gold accents (kept for badges/text legibility)
-  gold:        "#c8913a",
-  goldBright:  "#e8b84a",
-  goldDark:    "#8a5c1a",
-
-  // Entry separators — darker green-bronze
-  sepDark:     "#1a2810",
-  sepMid:      "#3d5a22",
-
-  // Legacy aliases (so existing references still resolve)
-  leather:     "#5a7a3500",
-  leatherDeep: "#2a3a18",
-  leatherMid:  "#3d5a22",
-  leatherRim:  "#1a2810",
+  // Entry separators — oxblood/brown
+  sepDark:     "#2a1408",
+  sepMid:      "#5a2a10",
 
   // Rank colours
   apprentice:  { text: "#1a5c2a", bg: "#d4f0da", border: "#2d7a3a" },
@@ -67,7 +43,7 @@ const DIFF_OPTIONS: Array<DifficultyLevel | "all"> = ["all", "beginner", "interm
 
 // ── CSS keyframes + Google Font ────────────────────────────────────────────
 const KEYFRAMES = `
-@import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=Pirata+One&display=swap');
 
 @keyframes bookFlipNext {
   0%   { transform: rotateY(0deg);    }
@@ -84,110 +60,19 @@ const KEYFRAMES = `
 }
 `;
 
-// ── Parchment background — cream with scattered stone pebbles ─────────────
+// ── Parchment background — transparent so the book frame shows through, but
+//    with subtle aging blotches to unify text overlays with the photo paper
 const PARCH_BG = `
-  radial-gradient(ellipse at 12% 18%, rgba(184,150,104,0.35) 0%, transparent 6%),
-  radial-gradient(ellipse at 78% 22%, rgba(184,150,104,0.30) 0%, transparent 5%),
-  radial-gradient(ellipse at 32% 62%, rgba(184,150,104,0.28) 0%, transparent 4%),
-  radial-gradient(ellipse at 64% 78%, rgba(184,150,104,0.32) 0%, transparent 5%),
-  radial-gradient(ellipse at 88% 52%, rgba(184,150,104,0.25) 0%, transparent 4%),
-  radial-gradient(ellipse at 22% 88%, rgba(184,150,104,0.28) 0%, transparent 4%),
-  radial-gradient(ellipse at 50% 35%, rgba(244,228,191,0.55) 0%, transparent 45%),
-  radial-gradient(ellipse at 18% 14%, rgba(255,245,210,0.40) 0%, transparent 52%),
-  radial-gradient(ellipse at 82% 88%, rgba(140,108,58,0.35)  0%, transparent 52%),
-  linear-gradient(175deg, #f0dcb0 0%, #e8d4a8 38%, #d4bc88 72%, #b89668 100%)
+  radial-gradient(ellipse at 18% 22%, rgba(120,80,30,0.10) 0%, transparent 35%),
+  radial-gradient(ellipse at 82% 78%, rgba(120,80,30,0.12) 0%, transparent 40%),
+  radial-gradient(ellipse at 50% 50%, rgba(255,240,200,0.06) 0%, transparent 60%)
 `;
-
-// ── Ornate crosshatch strip ────────────────────────────────────────────────
-const ORNATE_STRIP: React.CSSProperties = {
-  backgroundImage: `
-    repeating-linear-gradient( 45deg, rgba(138,168,80,0.55) 0, rgba(138,168,80,0.55) 1.5px, transparent 0, transparent 50%),
-    repeating-linear-gradient(-45deg, rgba(138,168,80,0.55) 0, rgba(138,168,80,0.55) 1.5px, transparent 0, transparent 50%)
-  `,
-  backgroundSize:  "6px 6px",
-  backgroundColor: "#2a3a1800",
-};
-
-// ── Silver Corner Bracket ──────────────────────────────────────────────────
-function SilverCorner({ corner }: { corner: "tl" | "tr" | "bl" | "br" }) {
-  const size = 46;
-  const isTop = corner === "tl" || corner === "tr";
-  const isLeft = corner === "tl" || corner === "bl";
-  // Rotate so the L hugs the correct corner
-  const rotate = corner === "tl" ? 0 : corner === "tr" ? 90 : corner === "bl" ? 270 : 180;
-  return (
-    <div style={{
-      position: "absolute",
-      [isTop ? "top" : "bottom"]: -6,
-      [isLeft ? "left" : "right"]: -6,
-      width: size, height: size,
-      zIndex: 30,
-      pointerEvents: "none",
-      transform: `rotate(${rotate}deg)`,
-      filter: "drop-shadow(0 2px 3px rgba(0,0,0,0.65)) drop-shadow(0 0 1px rgba(0,0,0,0.8))",
-    }}>
-      {/* Horizontal arm of L */}
-      <div style={{
-        position: "absolute", top: 0, left: 0,
-        width: size, height: 14,
-        background: `linear-gradient(180deg, ${C.silverHigh} 0%, ${C.silverMid} 55%, ${C.silverDark} 100%)`,
-        borderRadius: "3px 3px 0 0",
-        border: `1px solid ${C.silverDark}`,
-        borderBottom: "none",
-      }} />
-      {/* Vertical arm of L */}
-      <div style={{
-        position: "absolute", top: 0, left: 0,
-        width: 14, height: size,
-        background: `linear-gradient(90deg, ${C.silverHigh} 0%, ${C.silverMid} 55%, ${C.silverDark} 100%)`,
-        borderRadius: "3px 0 0 3px",
-        border: `1px solid ${C.silverDark}`,
-        borderRight: "none",
-      }} />
-      {/* Rivets */}
-      <div style={{
-        position: "absolute", top: 4, left: 22,
-        width: 5, height: 5, borderRadius: "50%",
-        background: `radial-gradient(circle at 35% 30%, ${C.silverMid}, ${C.silverRivet} 70%)`,
-        boxShadow: `inset 0 0 1px rgba(0,0,0,0.8)`,
-      }} />
-      <div style={{
-        position: "absolute", top: 22, left: 4,
-        width: 5, height: 5, borderRadius: "50%",
-        background: `radial-gradient(circle at 35% 30%, ${C.silverMid}, ${C.silverRivet} 70%)`,
-        boxShadow: `inset 0 0 1px rgba(0,0,0,0.8)`,
-      }} />
-    </div>
-  );
-}
-
-// ── Wooden bookmark tab ────────────────────────────────────────────────────
-function WoodTab({ leftPct }: { leftPct: number }) {
-  return (
-    <div style={{
-      position: "absolute",
-      bottom: -14,
-      left: `${leftPct}%`,
-      transform: "translateX(-50%)",
-      width: 32, height: 20,
-      zIndex: 25,
-      background: `
-        repeating-linear-gradient(90deg, rgba(0,0,0,0.18) 0 1px, transparent 1px 4px),
-        linear-gradient(180deg, ${C.woodLight} 0%, ${C.woodDark} 100%)
-      `,
-      borderRadius: "2px 2px 5px 5px",
-      border: `1px solid ${C.bindRim}`,
-      borderTop: "none",
-      boxShadow: "0 3px 5px rgba(0,0,0,0.6), inset 0 -2px 3px rgba(0,0,0,0.4)",
-    }} />
-  );
-}
 
 // ── GrudgeDivider ──────────────────────────────────────────────────────────
 function GrudgeDivider({ label }: { label: string }) {
   return (
     <div style={{ display: "flex", alignItems: "center", gap: 6, margin: "5px 0", flexShrink: 0 }}>
-      <div style={{ flex: 1, height: 1, background: C.parchRule }} />
+      <div style={{ flex: 1, height: 1, background: C.parchRule, opacity: 0.5 }} />
       <span style={{
         fontFamily: "'Cinzel', Georgia, serif",
         fontSize: 9, color: C.parchRule,
@@ -195,12 +80,12 @@ function GrudgeDivider({ label }: { label: string }) {
       }}>
         ⊲⊳ {label} ⊲⊳
       </span>
-      <div style={{ flex: 1, height: 1, background: C.parchRule }} />
+      <div style={{ flex: 1, height: 1, background: C.parchRule, opacity: 0.5 }} />
     </div>
   );
 }
 
-// ── SpellEntry (styled like a Grudge entry) ────────────────────────────────
+// ── SpellEntry ─────────────────────────────────────────────────────────────
 function SpellEntry({ entry, index }: { entry: CommandEntry; index: number }) {
   const [expanded, setExpanded] = useState(false);
   const rc = RANK_C[entry.difficulty];
@@ -212,52 +97,43 @@ function SpellEntry({ entry, index }: { entry: CommandEntry; index: number }) {
       overflow: "hidden", minHeight: 0,
       position: "relative",
     }}>
-      {/* ── Title row (badge · title · rank badge) ── */}
       <div style={{
         display: "flex", alignItems: "center",
         gap: 8, marginBottom: 5, flexShrink: 0,
       }}>
-        {/* Left number badge */}
         <CircleBadge label={String(index + 1)} />
-
-        {/* Title */}
         <div style={{
           flex: 1, textAlign: "center",
-          fontFamily: "'Cinzel', Georgia, serif",
-          fontWeight: "700", fontSize: 11,
-          color: C.parchText, letterSpacing: "0.1em", textTransform: "uppercase",
-          lineHeight: 1.25,
+          fontFamily: "'Pirata One', 'Cinzel', Georgia, serif",
+          fontWeight: "700", fontSize: 14,
+          color: C.parchText, letterSpacing: "0.06em",
+          lineHeight: 1.2,
         }}>
-          <span style={{ color: C.parchRule, fontWeight: 400, fontSize: 10 }}>⊲⊲⊲⊲⊲ </span>
+          <span style={{ color: C.parchRule, fontWeight: 400, fontSize: 10 }}>⊲⊲ </span>
           The {entry.name} Spell
-          <span style={{ color: C.parchRule, fontWeight: 400, fontSize: 10 }}> ⊳⊳⊳⊳⊳</span>
+          <span style={{ color: C.parchRule, fontWeight: 400, fontSize: 10 }}> ⊳⊳</span>
         </div>
-
-        {/* Right rank badge (I / II / III) */}
         <CircleBadge label={
           entry.difficulty === "beginner" ? "I" : entry.difficulty === "intermediate" ? "II" : "III"
         } />
       </div>
 
-      {/* ── Description ── */}
       <p style={{
         fontFamily: "'Cinzel', Georgia, serif",
-        fontSize: 9, color: C.parchText,
+        fontSize: 9, color: C.parchInk,
         textTransform: "uppercase", lineHeight: 1.5,
         margin: "0 0 4px", flexShrink: 0,
         textAlign: "justify",
-        // clamp to 3 lines
         overflow: "hidden",
         maxHeight: "4.5em",
       }}>
         {entry.longDescription}
       </p>
 
-      {/* ── Objectives section ── */}
       <GrudgeDivider label="Objectives" />
       <div style={{
         fontFamily: "Georgia, serif",
-        fontSize: 9, color: C.parchText, textTransform: "uppercase",
+        fontSize: 9, color: C.parchInk, textTransform: "uppercase",
         lineHeight: 1.45, flexShrink: 0,
         marginBottom: 2,
       }}>
@@ -273,12 +149,11 @@ function SpellEntry({ entry, index }: { entry: CommandEntry; index: number }) {
         </code>
       </div>
 
-      {/* ── Reward section ── */}
       <GrudgeDivider label="Reward" />
       <div style={{
         display: "flex", alignItems: "center", gap: 6,
         fontFamily: "'Cinzel', Georgia, serif",
-        fontSize: 9, color: C.parchText, textTransform: "uppercase",
+        fontSize: 9, color: C.parchInk, textTransform: "uppercase",
         flexShrink: 0,
       }}>
         <span style={{
@@ -290,12 +165,11 @@ function SpellEntry({ entry, index }: { entry: CommandEntry; index: number }) {
           {RANK[entry.difficulty]}
         </span>
         <span style={{ color: C.parchRule }}>·</span>
-        <span style={{ color: C.parchText, fontSize: 9 }}>
+        <span style={{ color: C.parchInk, fontSize: 9 }}>
           {entry.category.replace(/-/g, " ").toUpperCase()}
         </span>
       </div>
 
-      {/* ── Expand / Collapse toggle ── */}
       {entry.examples.length > 0 && (
         <button
           onClick={(e) => { e.stopPropagation(); setExpanded((p) => !p); }}
@@ -310,7 +184,6 @@ function SpellEntry({ entry, index }: { entry: CommandEntry; index: number }) {
         </button>
       )}
 
-      {/* ── Expanded examples ── */}
       {expanded && (
         <div style={{
           marginTop: 4,
@@ -321,7 +194,7 @@ function SpellEntry({ entry, index }: { entry: CommandEntry; index: number }) {
           {entry.examples.slice(0, 2).map((ex) => (
             <div key={ex} style={{
               fontFamily: "'Courier New', monospace",
-              fontSize: 9, color: C.parchText, lineHeight: 1.55,
+              fontSize: 9, color: C.parchInk, lineHeight: 1.55,
             }}>
               $ {ex}
             </div>
@@ -336,12 +209,12 @@ function CircleBadge({ label }: { label: string }) {
   return (
     <div style={{
       width: 22, height: 22, borderRadius: "50%", flexShrink: 0,
-      background: `radial-gradient(circle at 38% 32%, #2c1008, #0e0200)`,
+      background: `radial-gradient(circle at 38% 32%, #3a1808, #160600)`,
       border: `1.5px solid ${C.gold}`,
       boxShadow: `0 1px 4px rgba(0,0,0,0.7), inset 0 1px 2px rgba(255,220,120,0.12)`,
       display: "flex", alignItems: "center", justifyContent: "center",
       fontFamily: "'Cinzel', Georgia, serif",
-      fontWeight: "700", fontSize: 9, color: C.gold,
+      fontWeight: "700", fontSize: 9, color: C.goldBright,
     }}>
       {label}
     </div>
@@ -364,17 +237,16 @@ function Page({
       display: "flex", flexDirection: "column",
       overflow: "hidden", position: "relative",
       boxShadow: side === "left"
-        ? "inset -14px 0 28px rgba(0,0,0,0.22)"
-        : "inset  14px 0 28px rgba(0,0,0,0.22)",
+        ? "inset -14px 0 28px rgba(40,20,5,0.18)"
+        : "inset  14px 0 28px rgba(40,20,5,0.18)",
       ...extraStyle,
     }}>
-      {/* Ruled lines */}
       <div style={{
         position: "absolute", inset: 0, pointerEvents: "none",
         backgroundImage: `repeating-linear-gradient(
           0deg,
           transparent 0, transparent 22px,
-          rgba(90,56,8,0.07) 22px, rgba(90,56,8,0.07) 23px
+          rgba(90,56,8,0.05) 22px, rgba(90,56,8,0.05) 23px
         )`,
       }} />
 
@@ -391,11 +263,10 @@ function Page({
           <SpellEntry entry={spells[0]} index={startIndex} />
           {spells[1] && (
             <>
-              {/* Thick horizontal separator between entries (matches the image) */}
               <div style={{
-                height: 5, flexShrink: 0,
-                background: `linear-gradient(to right, ${C.leatherDeep}, ${C.sepMid} 20%, #7a3a10 50%, ${C.sepMid} 80%, ${C.leatherDeep})`,
-                boxShadow: "0 2px 6px rgba(0,0,0,0.45), 0 -1px 3px rgba(0,0,0,0.25)",
+                height: 2, flexShrink: 0, margin: "0 14px",
+                background: `linear-gradient(to right, transparent, ${C.sepMid} 20%, ${C.gold} 50%, ${C.sepMid} 80%, transparent)`,
+                opacity: 0.55,
               }} />
               <SpellEntry entry={spells[1]} index={startIndex + 1} />
             </>
@@ -406,7 +277,7 @@ function Page({
   );
 }
 
-// ── FlipPage (animation layer — only parchment colors updated) ─────────────
+// ── FlipPage ───────────────────────────────────────────────────────────────
 function FlipPage({
   direction, frontSpells, frontStartIndex,
 }: {
@@ -418,8 +289,8 @@ function FlipPage({
 
   const wrapStyle: React.CSSProperties = {
     position: "absolute", top: 0, bottom: 0,
-    [isNext ? "right" : "left"]: 26,
-    width: "calc(50% - 28px)",
+    [isNext ? "right" : "left"]: 0,
+    width: "50%",
     transformOrigin: isNext ? "left center" : "right center",
     transformStyle: "preserve-3d",
     animation: `${isNext ? "bookFlipNext" : "bookFlipPrev"} ${FLIP_MS}ms cubic-bezier(0.4,0,0.2,1) forwards`,
@@ -442,36 +313,29 @@ function FlipPage({
 
   return (
     <div style={wrapStyle}>
-      {/* Front face: the page being flipped away */}
       <div style={{
         ...faceBase,
-        background: `${frontFold}, ${PARCH_BG}`,
+        background: `${frontFold}, #efe0bc`,
         display: "flex", flexDirection: "column",
       }}>
-        <div style={{
-          position: "absolute", inset: 0, pointerEvents: "none",
-          backgroundImage: `repeating-linear-gradient(0deg,transparent 0,transparent 22px,rgba(90,56,8,0.07) 22px,rgba(90,56,8,0.07) 23px)`,
-        }} />
         {frontSpells[0] && <SpellEntry entry={frontSpells[0]} index={frontStartIndex} />}
         {frontSpells[1] && (
           <>
-            <div style={{ height: 5, flexShrink: 0, background: `linear-gradient(to right, ${C.leatherDeep}, ${C.sepMid} 20%, #7a3a10 50%, ${C.sepMid} 80%, ${C.leatherDeep})` }} />
+            <div style={{
+              height: 2, flexShrink: 0, margin: "0 14px",
+              background: `linear-gradient(to right, transparent, ${C.sepMid} 20%, ${C.gold} 50%, ${C.sepMid} 80%, transparent)`,
+              opacity: 0.55,
+            }} />
             <SpellEntry entry={frontSpells[1]} index={frontStartIndex + 1} />
           </>
         )}
       </div>
 
-      {/* Back face: underside of the page (darker aged parchment) */}
       <div style={{
         ...faceBase,
         transform: "rotateY(180deg)",
-        background: `${backFold}, linear-gradient(175deg, #c8a030 0%, #b08020 50%, #9a6a10 100%)`,
-      }}>
-        <div style={{
-          position: "absolute", inset: 0,
-          backgroundImage: `repeating-linear-gradient(0deg,transparent 0,transparent 22px,rgba(90,56,8,0.10) 22px,rgba(90,56,8,0.10) 23px)`,
-        }} />
-      </div>
+        background: `${backFold}, linear-gradient(175deg, #d8c090 0%, #c8a878 100%)`,
+      }} />
     </div>
   );
 }
@@ -482,8 +346,8 @@ function LandingShadow({ direction }: { direction: "next" | "prev" }) {
   return (
     <div style={{
       position: "absolute", top: 0, bottom: 0,
-      [isNext ? "left" : "right"]: 26,
-      width: "calc(50% - 28px)",
+      [isNext ? "left" : "right"]: 0,
+      width: "50%",
       background: isNext
         ? "linear-gradient(to right, rgba(0,0,0,0.28) 0%, rgba(0,0,0,0.10) 45%, transparent 80%)"
         : "linear-gradient(to left,  rgba(0,0,0,0.28) 0%, rgba(0,0,0,0.10) 45%, transparent 80%)",
@@ -542,20 +406,26 @@ export function BookOfSecrets({ onClose }: BookOfSecretsProps) {
     return {
       fontFamily: "'Cinzel', Georgia, serif", fontSize: 11,
       letterSpacing: "0.08em", textTransform: "uppercase" as const,
-      padding: "4px 22px", borderRadius: 2,
+      padding: "5px 22px", borderRadius: 3,
       cursor: enabled ? "pointer" : "not-allowed",
       border: `1px solid ${enabled ? C.goldDark : "#3a1804"}`,
-      background: enabled ? "rgba(200,145,58,0.13)" : "transparent",
-      color: enabled ? C.gold : "#4a2010",
+      background: enabled ? "rgba(40,20,8,0.55)" : "rgba(40,20,8,0.25)",
+      color: enabled ? C.goldBright : "#5a3a20",
       transition: "all 0.15s",
     };
   };
+
+  // The frame image's parchment area occupies roughly the inner ~78% width
+  // and ~82% height (centered) of the full image. We position the live
+  // content over that area.
+  const PAGE_INSET_X = "11%";  // left/right inset to land on parchment
+  const PAGE_INSET_TOP = "9%";
+  const PAGE_INSET_BOTTOM = "13%";
 
   return (
     <>
       <style>{KEYFRAMES}</style>
 
-      {/* ── Backdrop ── */}
       <div
         onClick={onClose}
         style={{
@@ -566,289 +436,171 @@ export function BookOfSecrets({ onClose }: BookOfSecretsProps) {
           padding: 12,
         }}
       >
-        {/* ── Book wrapper ── */}
         <div
           onClick={(e) => e.stopPropagation()}
           style={{
-            width: "min(1120px, 98vw)", height: "min(800px, 95vh)",
-            display: "flex", flexDirection: "column",
+            width: "min(1280px, 98vw)",
+            aspectRatio: "1920 / 1080",
+            maxHeight: "96vh",
             position: "relative",
+            backgroundImage: `url(${bookFrame})`,
+            backgroundSize: "100% 100%",
+            backgroundRepeat: "no-repeat",
+            filter: "drop-shadow(0 30px 60px rgba(0,0,0,0.85))",
           }}
         >
-          {/* ════════════════════════════════════════════════════
-              OUTER LEATHER COVER
-              Layer order (outermost → innermost):
-                dark outer frame (box-shadow rings)
-                gold trim line
-                ornate crosshatch strip
-                gold trim line
-                content area (bg #160604)
-          ════════════════════════════════════════════════════ */}
+          {/* ── Title floating above the book ── */}
           <div style={{
-            flex: 1, display: "flex", flexDirection: "column",
-            background: `
-              radial-gradient(ellipse at 25% 30%, ${C.bindHigh} 0%, transparent 18%),
-              radial-gradient(ellipse at 70% 60%, ${C.bindMid} 0%, transparent 22%),
-              radial-gradient(ellipse at 80% 20%, rgba(42,58,24,0.8) 0%, transparent 14%),
-              radial-gradient(ellipse at 18% 78%, rgba(42,58,24,0.7) 0%, transparent 16%),
-              repeating-linear-gradient(115deg, rgba(0,0,0,0.10) 0 1px, transparent 1px 7px),
-              repeating-linear-gradient(35deg, rgba(255,255,255,0.04) 0 1px, transparent 1px 9px),
-              linear-gradient(160deg, ${C.bind} 0%, ${C.bindMid} 55%, ${C.bindDeep} 100%)
-            `,
-            border: `2px solid ${C.silverDark}`,
-            boxShadow: `
-              0 0 0  2px ${C.silverMid},
-              0 0 0 16px ${C.bindDeep},
-              0 0 0 17px ${C.silverDark},
-              0 0 70px rgba(0,0,0,0.97),
-              inset 0 0 60px rgba(0,0,0,0.55),
-              inset 0 0 18px rgba(138,168,80,0.15)
-            `,
-            borderRadius: 6,
-            overflow: "hidden",
-            position: "relative",
+            position: "absolute", top: "-2px", left: 0, right: 0,
+            textAlign: "center",
+            fontFamily: "'Pirata One', 'Cinzel', Georgia, serif",
+            fontSize: 28, color: "#f0d68a",
+            letterSpacing: "0.25em", textTransform: "uppercase",
+            textShadow: "0 2px 8px rgba(0,0,0,0.95), 0 0 30px rgba(200,145,58,0.5)",
+            pointerEvents: "none",
+            zIndex: 5,
           }}>
+            ✦ The Book of Secrets ✦
+          </div>
 
-            {/* Ornate crosshatch strip — mossy lichen weave */}
-            <div style={{
-              position: "absolute", inset: 4, zIndex: 0,
-              ...ORNATE_STRIP,
-              borderRadius: 2,
-            }} />
-            {/* Inner dark mask — reveals only the border band of the crosshatch */}
-            <div style={{
-              position: "absolute", inset: 15, zIndex: 1,
-              background: `linear-gradient(160deg, ${C.bindDeep} 0%, #1a2810 100%)`,
-              borderRadius: 1,
-            }} />
-            {/* Silver inner accent line on top of the mask */}
-            <div style={{
-              position: "absolute", inset: 14, zIndex: 1,
-              border: `1px solid ${C.silverDark}`,
-              borderRadius: 2,
-              pointerEvents: "none",
-              boxShadow: `inset 0 0 1px ${C.silverHigh}`,
-            }} />
+          {/* ── Close button (top-right, outside parchment) ── */}
+          <button
+            onClick={onClose}
+            style={{
+              position: "absolute", top: 8, right: 8, zIndex: 40,
+              fontFamily: "'Cinzel', Georgia, serif", fontSize: 10,
+              letterSpacing: "0.1em", textTransform: "uppercase",
+              padding: "4px 12px", borderRadius: 3, cursor: "pointer",
+              border: `1px solid ${C.goldDark}`,
+              background: "rgba(20,8,4,0.85)",
+              color: C.goldBright,
+            }}
+          >
+            ✕ Close
+          </button>
 
-            {/* ── TITLE BAR ── z:2 so it sits above the crosshatch */}
-            <div style={{
-              position: "relative", zIndex: 2, flexShrink: 0,
-              background: `linear-gradient(180deg, #2c1008 0%, #1c0806 100%)`,
-              borderBottom: `3px solid ${C.gold}`,
-              padding: "0 80px",
-              display: "flex", flexDirection: "column", alignItems: "center",
+          {/* ── Filter bar (sits on top of the book's top binding strip) ── */}
+          <div style={{
+            position: "absolute",
+            top: "3.5%", left: PAGE_INSET_X, right: PAGE_INSET_X,
+            zIndex: 10,
+            display: "flex", gap: 6, alignItems: "center", justifyContent: "center",
+            flexWrap: "wrap",
+          }}>
+            {DIFF_OPTIONS.map((d) => {
+              const active = diffFilter === d;
+              const labels: Record<typeof d, string> = {
+                all: "All Ranks", beginner: "Apprentice", intermediate: "Journeyman", expert: "Archmage",
+              };
+              const cols: Record<typeof d, { a: string; b: string }> = {
+                all:          { a: C.gold,    b: C.goldDark },
+                beginner:     { a: "#5aa868", b: "#2a6038"  },
+                intermediate: { a: "#c89030", b: "#7a5018"  },
+                expert:       { a: "#c83838", b: "#7a1818"  },
+              };
+              const cm = cols[d];
+              return (
+                <button
+                  key={d}
+                  onClick={() => { setDiffFilter(d); setCurrentSpread(0); setFlipping(null); }}
+                  style={{
+                    fontFamily: "'Cinzel', Georgia, serif", fontSize: 9,
+                    letterSpacing: "0.1em", textTransform: "uppercase",
+                    padding: "3px 12px", borderRadius: 2, cursor: "pointer",
+                    border: `1px solid ${cm.b}`,
+                    background: active ? cm.a : "rgba(20,8,4,0.6)",
+                    color: active ? "#f0e0b0" : cm.a,
+                    transition: "all 0.15s",
+                    backdropFilter: "blur(2px)",
+                  }}
+                >
+                  {labels[d]}
+                </button>
+              );
+            })}
+            <span style={{
+              fontFamily: "'Cinzel', Georgia, serif", fontSize: 9,
+              color: C.goldBright, letterSpacing: "0.05em",
+              padding: "3px 10px", borderRadius: 2,
+              background: "rgba(20,8,4,0.6)",
+              border: `1px solid ${C.goldDark}`,
+              backdropFilter: "blur(2px)",
             }}>
-              {/* Decorative top rule */}
-              <div style={{
-                width: "100%", display: "flex", alignItems: "center", gap: 10,
-                padding: "8px 0 3px",
-              }}>
-                <div style={{ flex: 1, height: 1, background: `linear-gradient(to right, transparent, ${C.gold} 80%)` }} />
-                <span style={{ color: C.gold, fontSize: 14, letterSpacing: 4 }}>✦ ─ ✦ ─ ✦</span>
-                <div style={{ flex: 1, height: 1, background: `linear-gradient(to left, transparent, ${C.gold} 80%)` }} />
-              </div>
+              {spells.length} Spells
+            </span>
+          </div>
 
-              <span style={{
-                fontFamily: "'Cinzel', Georgia, serif", fontWeight: "700", fontSize: 24,
-                color: "#f0e0b0", letterSpacing: "0.3em", textTransform: "uppercase",
-                textShadow: `0 2px 8px rgba(0,0,0,0.95), 0 0 40px rgba(200,145,58,0.45)`,
-                lineHeight: 1,
-              }}>
-                The Book of Secrets
-              </span>
-
-              <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "3px 0 8px" }}>
-                <div style={{ flex: 1, height: 1, background: `linear-gradient(to right, transparent, ${C.goldDark} 80%)` }} />
-                <span style={{
-                  fontFamily: "'Cinzel', Georgia, serif", fontSize: 9,
-                  color: C.goldDark, letterSpacing: "0.35em", textTransform: "uppercase",
-                }}>
-                  Arcane Compendium of Terminal Sorcery
-                </span>
-                <div style={{ flex: 1, height: 1, background: `linear-gradient(to left, transparent, ${C.goldDark} 80%)` }} />
-              </div>
-
-              {/* Close button */}
-              <button
-                onClick={onClose}
-                style={{
-                  position: "absolute", top: 10, right: 16,
-                  fontFamily: "'Cinzel', Georgia, serif", fontSize: 10,
-                  letterSpacing: "0.1em", textTransform: "uppercase",
-                  padding: "3px 12px", borderRadius: 2, cursor: "pointer",
-                  border: `1px solid ${C.goldDark}`,
-                  background: "rgba(200,145,58,0.12)",
-                  color: C.gold,
-                }}
-              >
-                ✕ Close
-              </button>
+          {/* ── Open pages overlay (positioned over the parchment area of the image) ── */}
+          <div style={{
+            position: "absolute",
+            top: PAGE_INSET_TOP,
+            bottom: PAGE_INSET_BOTTOM,
+            left: PAGE_INSET_X,
+            right: PAGE_INSET_X,
+            display: "flex",
+            perspective: "1400px",
+            perspectiveOrigin: "50% 50%",
+          }}>
+            {/* Left page */}
+            <div style={{ flex: 1, overflow: "hidden", zIndex: 1, position: "relative" }}>
+              <Page spells={leftSpells} startIndex={pageStart} side="left" />
             </div>
 
-            {/* ── RANK FILTER BAR ── */}
-            <div style={{
-              position: "relative", zIndex: 2, flexShrink: 0,
-              background: `linear-gradient(180deg, #1c0806 0%, #140604 100%)`,
-              borderBottom: `2px solid ${C.goldDark}`,
-              padding: "5px 20px",
-              display: "flex", gap: 8, alignItems: "center",
-            }}>
-              <span style={{
-                fontFamily: "'Cinzel', Georgia, serif", fontSize: 9,
-                color: C.goldDark, letterSpacing: "0.14em", textTransform: "uppercase",
-                marginRight: 4,
-              }}>
-                Rank:
-              </span>
-              {DIFF_OPTIONS.map((d) => {
-                const active = diffFilter === d;
-                const labels: Record<typeof d, string> = {
-                  all: "All Ranks", beginner: "Apprentice", intermediate: "Journeyman", expert: "Archmage",
-                };
-                const cols: Record<typeof d, { a: string; b: string }> = {
-                  all:          { a: C.gold,    b: C.goldDark },
-                  beginner:     { a: "#3a8a48", b: "#1a5028"  },
-                  intermediate: { a: "#9a7020", b: "#5a4010"  },
-                  expert:       { a: "#9a2020", b: "#5a0808"  },
-                };
-                const cm = cols[d];
-                return (
-                  <button
-                    key={d}
-                    onClick={() => { setDiffFilter(d); setCurrentSpread(0); setFlipping(null); }}
-                    style={{
-                      fontFamily: "'Cinzel', Georgia, serif", fontSize: 9,
-                      letterSpacing: "0.1em", textTransform: "uppercase",
-                      padding: "2px 12px", borderRadius: 2, cursor: "pointer",
-                      border: `1px solid ${cm.b}`,
-                      background: active ? cm.a : "transparent",
-                      color: active ? "#f0e0b0" : cm.a,
-                      transition: "all 0.15s",
-                    }}
-                  >
-                    {labels[d]}
-                  </button>
-                );
-              })}
-              <span style={{
-                marginLeft: "auto",
-                fontFamily: "'Cinzel', Georgia, serif", fontSize: 9,
-                color: C.goldDark, letterSpacing: "0.04em",
-              }}>
-                {spells.length} Spells Recorded
-              </span>
-            </div>
-
-            {/* ── OPEN PAGES (perspective container for 3-D flip) ── */}
-            <div style={{
-              flex: 1, display: "flex", minHeight: 0,
-              position: "relative", zIndex: 2,
-              background: C.leatherDeep,
-              perspective: "1400px", perspectiveOrigin: "50% 50%",
-            }}>
-              {/* Page-stack edge left — simulates page thickness */}
+            {/* Center gutter (transparent — shows the book's spine shadow through) */}
+            <div style={{ width: 18, flexShrink: 0, zIndex: 5, position: "relative" }}>
               <div style={{
-                width: 7, flexShrink: 0,
-                background: `repeating-linear-gradient(0deg,
-                  #d4a03a 0, #d4a03a 1px,
-                  #b88028 1px, #b88028 2px
-                )`,
-                boxShadow: "inset -2px 0 4px rgba(0,0,0,0.4)",
+                position: "absolute", inset: 0,
+                background: "linear-gradient(to right, rgba(0,0,0,0.45) 0%, rgba(0,0,0,0.15) 50%, rgba(0,0,0,0.45) 100%)",
+                pointerEvents: "none",
               }} />
-
-              {/* Left page */}
-              <div style={{ flex: 1, overflow: "hidden", zIndex: 1 }}>
-                <Page spells={leftSpells} startIndex={pageStart} side="left" />
-              </div>
-
-              {/* Spine */}
-              <div style={{
-                width: 26, flexShrink: 0, zIndex: 5,
-                background: `linear-gradient(to right,
-                  #080100, #1c0804 28%, #2c1008 50%, #1c0804 72%, #080100)`,
-                boxShadow: "inset 0 0 12px rgba(0,0,0,0.95), -4px 0 10px rgba(0,0,0,0.8), 4px 0 10px rgba(0,0,0,0.8)",
-                position: "relative",
-              }}>
-                {/* Stitching marks along the spine */}
-                {Array.from({ length: 16 }).map((_, i) => (
-                  <div key={i} style={{
-                    position: "absolute", top: `${5 + i * 5.9}%`,
-                    left: "50%", transform: "translateX(-50%)",
-                    width: 10, height: 1,
-                    background: "rgba(200,145,58,0.38)", borderRadius: 1,
-                  }} />
-                ))}
-              </div>
-
-              {/* Right page */}
-              <div style={{ flex: 1, overflow: "hidden", zIndex: 1 }}>
-                <Page spells={rightSpells} startIndex={pageStart + 2} side="right" />
-              </div>
-
-              {/* Page-stack edge right */}
-              <div style={{
-                width: 7, flexShrink: 0,
-                background: `repeating-linear-gradient(0deg,
-                  #d4a03a 0, #d4a03a 1px,
-                  #b88028 1px, #b88028 2px
-                )`,
-                boxShadow: "inset 2px 0 4px rgba(0,0,0,0.4)",
-              }} />
-
-              {/* ── Animated flip overlay ── */}
-              {flipping && (
-                <>
-                  <LandingShadow direction={flipping} />
-                  <FlipPage
-                    direction={flipping}
-                    frontSpells={flipFrontRef.current}
-                    frontStartIndex={flipFrontIdxRef.current}
-                  />
-                </>
-              )}
             </div>
 
-            {/* ── FOOTER NAVIGATION (matches "1/10" bar in screenshot) ── */}
-            <div style={{
-              position: "relative", zIndex: 2, flexShrink: 0,
-              background: `linear-gradient(180deg, #1c0806 0%, #100402 100%)`,
-              borderTop: `3px solid ${C.gold}`,
-              padding: "7px 24px",
-              display: "flex", alignItems: "center", justifyContent: "center", gap: 20,
+            {/* Right page */}
+            <div style={{ flex: 1, overflow: "hidden", zIndex: 1, position: "relative" }}>
+              <Page spells={rightSpells} startIndex={pageStart + 2} side="right" />
+            </div>
+
+            {/* Animated flip overlay */}
+            {flipping && (
+              <>
+                <LandingShadow direction={flipping} />
+                <FlipPage
+                  direction={flipping}
+                  frontSpells={flipFrontRef.current}
+                  frontStartIndex={flipFrontIdxRef.current}
+                />
+              </>
+            )}
+          </div>
+
+          {/* ── Footer navigation (over the bottom binding) ── */}
+          <div style={{
+            position: "absolute",
+            bottom: "3%", left: 0, right: 0,
+            zIndex: 10,
+            display: "flex", alignItems: "center", justifyContent: "center", gap: 18,
+          }}>
+            <button disabled={!canPrev || !!flipping} onClick={() => navigate("prev")} style={navBtn("prev")}>
+              ◄ Prev Page
+            </button>
+            <div style={{ display: "flex", alignItems: "center", gap: 12,
+              padding: "4px 14px", borderRadius: 3,
+              background: "rgba(20,8,4,0.7)", border: `1px solid ${C.goldDark}`,
+              backdropFilter: "blur(2px)",
             }}>
-              <button disabled={!canPrev || !!flipping} onClick={() => navigate("prev")} style={navBtn("prev")}>
-                ◄ Prev Page
-              </button>
-
-              <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-                <div style={{ width: 36, height: 1, background: C.goldDark }} />
-                <span style={{
-                  fontFamily: "'Cinzel', Georgia, serif", fontWeight: "600", fontSize: 15,
-                  color: C.gold, letterSpacing: "0.12em",
-                }}>
-                  {safeSpread + 1} / {totalSpreads}
-                </span>
-                <div style={{ width: 36, height: 1, background: C.goldDark }} />
-              </div>
-
-              <button disabled={!canNext || !!flipping} onClick={() => navigate("next")} style={navBtn("next")}>
-                Next Page ►
-              </button>
+              <span style={{
+                fontFamily: "'Cinzel', Georgia, serif", fontWeight: "600", fontSize: 14,
+                color: C.goldBright, letterSpacing: "0.12em",
+              }}>
+                {safeSpread + 1} / {totalSpreads}
+              </span>
             </div>
-
-          </div>{/* end leather cover */}
-
-          {/* Silver corner brackets */}
-          <SilverCorner corner="tl" />
-          <SilverCorner corner="tr" />
-          <SilverCorner corner="bl" />
-          <SilverCorner corner="br" />
-
-          {/* Wooden bookmark tabs */}
-          <WoodTab leftPct={30} />
-          <WoodTab leftPct={70} />
-        </div>{/* end book wrapper */}
-      </div>{/* end backdrop */}
+            <button disabled={!canNext || !!flipping} onClick={() => navigate("next")} style={navBtn("next")}>
+              Next Page ►
+            </button>
+          </div>
+        </div>
+      </div>
     </>
   );
 }
