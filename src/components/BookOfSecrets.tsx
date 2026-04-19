@@ -5,29 +5,46 @@ import { commandLibrary, type CommandEntry, type DifficultyLevel } from "@/game/
 const PER_SPREAD = 4;
 const FLIP_MS    = 650;
 
-// ── Palette (matches Great Book of Grudges warmth) ─────────────────────────
+// ── Palette (Mossy stone-leather tome with silver brackets) ────────────────
 const C = {
-  // Parchment
-  parchLight:  "#f2dc84",
-  parchMid:    "#d6a43c",
-  parchDark:   "#b8882a",
-  parchText:   "#1a0800",
-  parchRule:   "#6a3808",
+  // Parchment — cooler cream with stone pebble texture
+  parchLight:  "#f4e4bf",
+  parchMid:    "#e8d4a8",
+  parchDark:   "#b89668",
+  parchText:   "#2a1a08",
+  parchRule:   "#8a6a3a",
 
-  // Leather / frame
-  leather:     "#16040200",   // used only as bg reference
-  leatherDeep: "#0e0200",
-  leatherMid:  "#260c04",
-  leatherRim:  "#1c0804",
+  // Binding — mossy green stone-leather (was leather*)
+  bind:        "#5a7a35",
+  bindDeep:    "#2a3a18",
+  bindMid:     "#3d5a22",
+  bindHigh:    "#8aa850",
+  bindRim:     "#1a2810",
 
-  // Gold accents
+  // Silver — brushed steel for corner brackets
+  silverHigh:  "#e8edf2",
+  silverMid:   "#9aa4ad",
+  silverDark:  "#5d6770",
+  silverRivet: "#2a3038",
+
+  // Wood — bookmark tabs
+  woodLight:   "#9b7340",
+  woodDark:    "#6b4a22",
+
+  // Gold accents (kept for badges/text legibility)
   gold:        "#c8913a",
   goldBright:  "#e8b84a",
   goldDark:    "#8a5c1a",
 
-  // Entry separators
-  sepDark:     "#3a1604",
-  sepMid:      "#5a2a08",
+  // Entry separators — darker green-bronze
+  sepDark:     "#1a2810",
+  sepMid:      "#3d5a22",
+
+  // Legacy aliases (so existing references still resolve)
+  leather:     "#5a7a3500",
+  leatherDeep: "#2a3a18",
+  leatherMid:  "#3d5a22",
+  leatherRim:  "#1a2810",
 
   // Rank colours
   apprentice:  { text: "#1a5c2a", bg: "#d4f0da", border: "#2d7a3a" },
