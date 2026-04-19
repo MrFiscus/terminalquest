@@ -7,6 +7,13 @@ interface DifficultyMenuProps {
   busy?: boolean;
 }
 
+const TAGLINES = [
+  "CHOOSE THY PERIL",
+  "EVERY COMMAND IS A SPELL",
+  "THE DUNGEON ADAPTS TO THEE",
+  "TURN BACK, OR PRESS ONWARD",
+];
+
 const tierFor = (v: number): { label: string; difficulty: Difficulty } => {
   if (v < 34) return { label: "Novice", difficulty: "easy" };
   if (v < 67) return { label: "Adept", difficulty: "medium" };
@@ -58,13 +65,12 @@ export const DifficultyMenu = ({ onConfirm, busy }: DifficultyMenuProps) => {
 
   const handleManifest = () => {
     if (busy || fading) return;
-    console.log("[DifficultyMenu] dungeonDifficulty =", dungeonDifficulty);
     setFading(true);
     window.setTimeout(() => onConfirm(tier.difficulty, dungeonDifficulty), 1000);
   };
 
-  // Hover glow color: amber by default, deep red on Master tier
-  const glowHue = isMaster ? "0 85% 50%" : "30 100% 50%";
+  // Master tier subtly shifts the ember glow toward deep red
+  const glowHue = isMaster ? "0 85% 50%" : "33 100% 50%";
 
   return (
     <div
@@ -72,61 +78,136 @@ export const DifficultyMenu = ({ onConfirm, busy }: DifficultyMenuProps) => {
       style={{
         width: "100vw",
         height: "100vh",
-        background: "#000",
         zIndex: 100,
+        backgroundColor: "hsl(230 18% 5%)",
+        backgroundImage: `radial-gradient(ellipse at 50% 30%, hsl(230 14% 14%) 0%, hsl(230 18% 7%) 55%, hsl(230 22% 3%) 100%), url(${slateTexture})`,
+        backgroundRepeat: "no-repeat, no-repeat",
+        backgroundSize: "100% 100%, cover",
+        backgroundPosition: "center, center",
+        backgroundBlendMode: "multiply, normal",
         ["--glow" as string]: glowHue,
       }}
     >
-      {/* Seamless slate stone background */}
+      {/* Global vignette */}
       <div
-        className="absolute inset-0"
+        className="absolute inset-0 pointer-events-none"
         aria-hidden
-        style={{
-          backgroundImage: `url(${slateTexture})`,
-          backgroundRepeat: "repeat",
-          backgroundSize: "512px 512px",
-        }}
+        style={{ background: "radial-gradient(ellipse at center, transparent 38%, hsl(0 0% 0% / 0.85) 100%)" }}
       />
-      {/* Darkening + central torch wash */}
+      {/* Grain overlay */}
       <div
         className="absolute inset-0 pointer-events-none"
         aria-hidden
         style={{
-          background: `
-            radial-gradient(ellipse 70% 55% at 50% 42%,
-              hsl(33 40% 30% / 0.35) 0%,
-              hsl(0 0% 0% / 0.0) 45%,
-              hsl(0 0% 0% / 0.55) 80%,
-              hsl(0 0% 0% / 0.9) 100%)
-          `,
-          mixBlendMode: "multiply",
+          opacity: 0.35,
+          mixBlendMode: "overlay",
+          backgroundImage:
+            "radial-gradient(hsl(0 0% 100% / 0.06) 1px, transparent 1.4px), radial-gradient(hsl(0 0% 0% / 0.4) 1px, transparent 1.4px)",
+          backgroundSize: "5px 5px, 7px 7px",
+          backgroundPosition: "0 0, 2px 3px",
         }}
       />
-      {/* Soft top torch glow */}
+      {/* Breathing torch wash */}
       <div
-        className="absolute inset-0 pointer-events-none"
+        className="lp-breathe absolute inset-0 pointer-events-none"
         aria-hidden
         style={{
-          background: `radial-gradient(circle at 50% 14%, hsl(${glowHue} / 0.18) 0%, transparent 42%)`,
+          background: `radial-gradient(ellipse 80% 60% at 50% 45%, hsl(${glowHue} / 0.22) 0%, transparent 60%)`,
+          mixBlendMode: "screen",
           transition: "background 400ms ease",
         }}
       />
+      <div
+        className="lp-breathe absolute inset-0 pointer-events-none"
+        aria-hidden
+        style={{
+          background: `radial-gradient(circle at 50% 12%, hsl(${glowHue} / 0.16) 0%, transparent 44%)`,
+          animationDelay: "1.2s",
+        }}
+      />
+
+      {/* Ember particles */}
+      {Array.from({ length: 10 }).map((_, i) => {
+        const left = 6 + (i * 11) % 90;
+        const dur = 6 + (i % 4) * 1.2;
+        const delay = (i * 0.9) % 7;
+        const drift = (i % 2 === 0 ? 1 : -1) * (6 + (i % 3) * 4);
+        const bottom = 8 + (i * 7) % 30;
+        return (
+          <span key={i} className="lp-ember" style={{
+            left: `${left}%`,
+            bottom: `${bottom}%`,
+            animationDuration: `${dur}s`,
+            animationDelay: `${delay}s`,
+            ["--ember-drift" as never]: `${drift}px`,
+          }} />
+        );
+      })}
 
       {/* Content */}
-      <div className="relative z-10 h-full flex flex-col items-center justify-center px-8 pt-16">
-        <h1 className="engraved engraved-hover text-center" style={{ fontSize: 92, lineHeight: 1.05 }}>
+      <div className="relative z-10 h-full flex flex-col items-center justify-center px-8">
+        <h1
+          className="lp-silver-cast lp-hero-in text-center"
+          style={{
+            margin: 0,
+            fontFamily: "'Cinzel', 'Pirata One', serif",
+            fontWeight: 900,
+            letterSpacing: "0.05em",
+            fontSize: "clamp(48px, 7.5vw, 104px)",
+            lineHeight: 1,
+            animationDelay: "0ms",
+          }}
+        >
           TERMINAL QUEST
         </h1>
-        <div className="mt-3 engraved engraved-muted text-center" style={{ fontSize: 22, letterSpacing: "0.3em" }}>
-          ☩ CHOOSE THY PERIL ☩
+
+        <p
+          className="lp-eng lp-hero-in text-center"
+          style={{
+            fontSize: "clamp(11px, 1.5vw, 16px)",
+            letterSpacing: "0.32em",
+            marginTop: 18,
+            color: "hsl(0 0% 26%)",
+            fontWeight: 600,
+            animationDelay: "220ms",
+          }}
+        >
+          ☩ DON'T JUST PLAY THE GAME. WRITE THE REALITY. ☩
+        </p>
+
+        {/* Tagline rotator */}
+        <div
+          className="lp-hero-in"
+          style={{ height: 26, marginTop: 14, position: "relative", width: "100%", maxWidth: 560, animationDelay: "420ms" }}
+        >
+          {TAGLINES.map((t, i) => (
+            <span
+              key={i}
+              className="lp-tagline lp-eng"
+              style={{
+                position: "absolute", inset: 0,
+                display: "flex", alignItems: "center", justifyContent: "center",
+                fontSize: "clamp(10px, 1.3vw, 14px)", letterSpacing: "0.22em",
+                color: `hsl(${glowHue.split(" ")[0]} 70% 52%)`,
+                fontWeight: 600,
+                textShadow: `0 0 10px hsl(${glowHue} / 0.35), 0 1px 0 hsl(0 0% 0% / 0.8)`,
+                animationDelay: `${i * 4}s`,
+                animationDuration: `${TAGLINES.length * 4}s`,
+                opacity: 0,
+                transition: "color 300ms ease, text-shadow 300ms ease",
+              }}
+            >
+              {t}
+            </span>
+          ))}
         </div>
 
         {/* Engraved slider */}
-        <div className="mt-14 w-full max-w-3xl select-none">
+        <div className="lp-hero-in mt-14 w-full max-w-3xl select-none" style={{ animationDelay: "640ms" }}>
           <div className="relative px-6 pt-20 pb-2">
             {/* Floating engraved counter above thumb */}
             <div
-              className="absolute pointer-events-none transition-[left] duration-75 engraved engraved-hover"
+              className="absolute pointer-events-none transition-[left] duration-75 lp-eng-glow"
               style={{
                 left: `calc(28px + (100% - 56px) * ${dungeonDifficulty / 100})`,
                 top: 0,
@@ -139,7 +220,7 @@ export const DifficultyMenu = ({ onConfirm, busy }: DifficultyMenuProps) => {
               {dungeonDifficulty}
             </div>
 
-            {/* Engraved groove channel */}
+            {/* Carved channel */}
             <div
               ref={trackRef}
               role="slider"
@@ -150,10 +231,8 @@ export const DifficultyMenu = ({ onConfirm, busy }: DifficultyMenuProps) => {
               aria-label="Dungeon difficulty"
               onPointerDown={onTrackPointerDown}
               onKeyDown={onKeyDown}
-              className="relative h-14 cursor-pointer outline-none focus-visible:ring-2 rounded-sm"
-              style={{ ["--ring" as string]: `hsl(${glowHue} / 0.5)` }}
+              className="relative h-14 cursor-pointer outline-none rounded-sm"
             >
-              {/* Carved channel */}
               <div className="absolute left-0 right-0 top-1/2 -translate-y-1/2 h-7 rounded-sm" style={{
                 background: "linear-gradient(180deg, hsl(0 0% 0% / 0.85) 0%, hsl(0 0% 0% / 0.55) 50%, hsl(220 8% 22% / 0.4) 100%)",
                 boxShadow: [
@@ -179,7 +258,7 @@ export const DifficultyMenu = ({ onConfirm, busy }: DifficultyMenuProps) => {
                 }} />
               ))}
 
-              {/* Molten fill in the engraved channel */}
+              {/* Molten fill */}
               <div className="absolute top-1/2 -translate-y-1/2 h-3 rounded-sm pointer-events-none"
                 style={{
                   left: 6,
@@ -212,42 +291,61 @@ export const DifficultyMenu = ({ onConfirm, busy }: DifficultyMenuProps) => {
                     "inset 0 -3px 4px hsl(0 0% 0% / 0.55)",
                     "0 3px 0 hsl(0 0% 0% / 0.8)",
                     "0 6px 12px hsl(0 0% 0% / 0.7)",
-                    `0 0 16px hsl(${glowHue} / 0.4)`,
+                    `0 0 16px hsl(${glowHue} / 0.5)`,
                   ].join(", "),
                   display: "grid",
                   placeItems: "center",
                   transition: "box-shadow 300ms ease",
                 }}>
-                  <span className="engraved" style={{ fontSize: 26, fontWeight: 900 }}>✦</span>
+                  <span className="lp-eng-glow" style={{ fontSize: 26, fontWeight: 900 }}>✦</span>
                 </div>
               </div>
             </div>
 
-            {/* End labels: numbers at bar ends, descriptions beneath */}
+            {/* End labels */}
             <div className="mt-3 flex items-start justify-between px-1">
               <div className="flex flex-col items-start">
-                <span className="engraved engraved-hover" style={{ fontSize: 24, fontWeight: 900 }}>0</span>
-                <span className="engraved engraved-hover mt-1" style={{ fontSize: 16, letterSpacing: "0.12em" }}>NOVICE'S PATH</span>
+                <span className="lp-eng" style={{ fontSize: 22, fontWeight: 900, color: "hsl(0 0% 28%)" }}>0</span>
+                <span className="lp-eng mt-1" style={{ fontSize: 12, letterSpacing: "0.22em", color: "hsl(0 0% 26%)" }}>NOVICE'S PATH</span>
               </div>
               <div className="flex flex-col items-end">
-                <span className="engraved engraved-hover" style={{ fontSize: 24, fontWeight: 900 }}>100</span>
-                <span className="engraved engraved-hover mt-1" style={{ fontSize: 16, letterSpacing: "0.12em" }}>MASTER'S CHALLENGE</span>
+                <span className="lp-eng" style={{ fontSize: 22, fontWeight: 900, color: "hsl(0 0% 28%)" }}>100</span>
+                <span className="lp-eng mt-1" style={{ fontSize: 12, letterSpacing: "0.22em", color: "hsl(0 0% 26%)" }}>MASTER'S CHALLENGE</span>
               </div>
             </div>
-
           </div>
         </div>
 
-        {/* Manifest button — engraved into stone */}
+        {/* Manifest button — landing page stone button */}
         <button
           type="button"
           disabled={busy || fading}
           onClick={handleManifest}
-          className="manifest-btn engraved engraved-hover mt-12 px-12 py-5"
-          style={{ fontSize: 22, fontWeight: 700, letterSpacing: "0.18em" }}
+          className="lp-stone-btn lp-stone-btn-sweep lp-hero-in mt-12"
+          style={{
+            padding: "16px 40px",
+            fontSize: "clamp(11px, 1.5vw, 15px)",
+            animationDelay: "860ms",
+            opacity: busy || fading ? 0.6 : 1,
+            cursor: busy || fading ? "not-allowed" : "pointer",
+          }}
         >
-          {busy || fading ? "MANIFESTING…" : "⚔  MANIFEST THE DUNGEON  ⚔"}
+          <span className="lp-eng-glow">
+            {busy || fading ? "⚔  MANIFESTING…  ⚔" : "⚔  MANIFEST THE DUNGEON  ⚔"}
+          </span>
         </button>
+
+        {/* Scroll cue */}
+        <div
+          className="lp-scroll-cue lp-eng"
+          style={{
+            marginTop: 36, fontSize: 9, letterSpacing: "0.3em", color: "hsl(0 0% 26%)",
+            fontWeight: 600, display: "flex", flexDirection: "column", alignItems: "center", gap: 4,
+          }}
+        >
+          <span>DRAG THE STONE TO CHOOSE</span>
+          <span style={{ fontSize: 14, lineHeight: 1 }}>◆</span>
+        </div>
       </div>
 
       {/* Fade-to-black overlay */}
@@ -257,68 +355,6 @@ export const DifficultyMenu = ({ onConfirm, busy }: DifficultyMenuProps) => {
         transition: "opacity 1000ms ease-in",
         zIndex: 50,
       }} />
-
-      <style>{`
-        .engraved-menu .engraved {
-          font-family: 'Cinzel', 'MedievalSharp', serif;
-          font-weight: 700;
-          color: hsl(0 0% 18%);
-          /* Letter-press: dark top-left shadow + light bottom-right highlight */
-          text-shadow:
-            -1px -1px 0 hsl(0 0% 0% / 0.85),
-            -1px -1px 2px hsl(0 0% 0% / 0.6),
-             1px  1px 0 hsl(0 0% 100% / 0.22),
-             1px  2px 2px hsl(0 0% 100% / 0.12);
-          transition: color 300ms ease, filter 300ms ease, text-shadow 300ms ease;
-        }
-        .engraved-menu .engraved-muted {
-          color: hsl(0 0% 28%);
-          font-weight: 600;
-        }
-        .engraved-menu .engraved-sm { font-weight: 600; }
-
-        /* Molten-rune hover: glow from within with tier-colored drop-shadow */
-        .engraved-menu .engraved-hover:hover,
-        .engraved-menu .engraved-hover:focus-visible {
-          color: hsl(var(--glow) / 0.92);
-          text-shadow:
-            -1px -1px 0 hsl(0 0% 0% / 0.9),
-             1px  1px 0 hsl(0 0% 100% / 0.18),
-             0 0 6px hsl(var(--glow) / 0.85),
-             0 0 14px hsl(var(--glow) / 0.55),
-             0 0 28px hsl(var(--glow) / 0.35);
-          filter: drop-shadow(0 0 6px hsl(var(--glow) / 0.6));
-        }
-
-        .engraved-menu .manifest-btn {
-          position: relative;
-          background-color: hsl(0 0% 8%);
-          background-image:
-            linear-gradient(180deg, hsl(0 0% 100% / 0.06), transparent 40%),
-            linear-gradient(0deg, hsl(0 0% 0% / 0.6), transparent 50%);
-          border: 2px solid hsl(0 0% 4%);
-          border-radius: 4px;
-          box-shadow:
-            inset 1px 1px 0 hsl(0 0% 100% / 0.12),
-            inset -1px -1px 0 hsl(0 0% 0% / 0.85),
-            inset 0 2px 6px hsl(0 0% 0% / 0.6),
-            inset 0 -3px 5px hsl(0 0% 0% / 0.55),
-            0 2px 0 hsl(0 0% 0% / 0.7),
-            0 6px 14px hsl(0 0% 0% / 0.65);
-          cursor: pointer;
-          transition: box-shadow 250ms ease, transform 120ms ease;
-        }
-        .engraved-menu .manifest-btn:hover:not(:disabled) {
-          box-shadow:
-            inset 1px 1px 0 hsl(0 0% 100% / 0.12),
-            inset -1px -1px 0 hsl(0 0% 0% / 0.85),
-            inset 0 0 24px hsl(var(--glow) / 0.45),
-            0 0 18px hsl(var(--glow) / 0.55),
-            0 0 36px hsl(var(--glow) / 0.35);
-        }
-        .engraved-menu .manifest-btn:active:not(:disabled) { transform: translateY(2px); }
-        .engraved-menu .manifest-btn:disabled { opacity: 0.6; cursor: not-allowed; }
-      `}</style>
     </div>
   );
 };
