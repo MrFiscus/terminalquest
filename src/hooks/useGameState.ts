@@ -481,11 +481,16 @@ export function useGameState(options: UseGameStateOptions = {}) {
         }
         if (result.effect) {
           if (result.effect.type === "enterRoom") {
-            setState((cur) => ({ ...cur, transitioning: true }));
-            await delay(260);
-            applyEffect(result.effect);
-            await delay(80);
-            setState((cur) => ({ ...cur, transitioning: false }));
+            const isDifferentRoom = result.effect.path !== s.cwd;
+            if (isDifferentRoom) {
+              setState((cur) => ({ ...cur, transitioning: true }));
+              await delay(260);
+              applyEffect(result.effect);
+              await delay(80);
+              setState((cur) => ({ ...cur, transitioning: false }));
+            } else {
+              applyEffect(result.effect);
+            }
           } else {
             applyEffect(result.effect);
           }

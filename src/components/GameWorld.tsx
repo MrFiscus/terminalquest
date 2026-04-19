@@ -524,36 +524,38 @@ export function GameWorld({ state, onDismissPopup, headerRight }: GameWorldProps
       </div>
 
       <div ref={stageRef} className="relative flex-1 overflow-hidden grid place-items-center">
-        <div
-          key={room.path}
-          className={cn(
-            "relative pixelate-in overflow-visible",
-            state.screenEffect?.kind === "error" && "command-error-shake",
-            state.screenEffect?.kind === "reveal" && "command-reveal-pulse",
-            state.screenEffect?.kind === "create" && "command-create-pulse",
-            state.screenEffect?.kind === "traverse" && "command-traverse-pulse",
-            state.screenEffect?.kind === "track" && "command-track-pulse",
-            state.screenEffect?.kind === "aware" && "command-aware-pulse",
-          )}
-          style={{
-            width: boardW,
-            height: boardH,
-            background:
-              "radial-gradient(circle at 48% 42%, rgba(82,88,98,0.62) 0%, rgba(40,45,52,0.58) 50%, rgba(12,15,20,0.95) 100%)",
-            boxShadow: "var(--shadow-pit), inset 0 0 60px 10px rgba(0,0,0,0.35)",
-          }}
-        >
-          {/* ------- Grid: floor + wall tiles ------- */}
+        {/* This container handles the stable room key and the one-time entry animation */}
+        <div key={state.cwd} className="pixelate-in relative overflow-visible">
+          {/* This inner div handles the dynamic command pulses/shakes without re-triggering the blur */}
           <div
-            className="grid relative pointer-events-none"
+            className={cn(
+              "relative overflow-visible",
+              state.screenEffect?.kind === "error" && "command-error-shake",
+              state.screenEffect?.kind === "reveal" && "command-reveal-pulse",
+              state.screenEffect?.kind === "create" && "command-create-pulse",
+              state.screenEffect?.kind === "traverse" && "command-traverse-pulse",
+              state.screenEffect?.kind === "track" && "command-track-pulse",
+              state.screenEffect?.kind === "aware" && "command-aware-pulse",
+            )}
             style={{
-              gridTemplateColumns: `repeat(${room.width}, ${tileW}px)`,
-              gridTemplateRows: `repeat(${room.height}, ${tileH}px)`,
-              zIndex: 2,
+              width: boardW,
+              height: boardH,
+              background:
+                "radial-gradient(circle at 48% 42%, rgba(82,88,98,0.62) 0%, rgba(40,45,52,0.58) 50%, rgba(12,15,20,0.95) 100%)",
+              boxShadow: "var(--shadow-pit), inset 0 0 60px 10px rgba(0,0,0,0.35)",
             }}
           >
-            {grid}
-          </div>
+            {/* ------- Grid: floor + wall tiles ------- */}
+            <div
+              className="grid relative pointer-events-none"
+              style={{
+                gridTemplateColumns: `repeat(${room.width}, ${tileW}px)`,
+                gridTemplateRows: `repeat(${room.height}, ${tileH}px)`,
+                zIndex: 2,
+              }}
+            >
+              {grid}
+            </div>
 
           {/* (Top-wall soil overhang removed — outer ring tiles now use Top-Soil-Wall composites directly.) */}
 
@@ -1032,6 +1034,7 @@ export function GameWorld({ state, onDismissPopup, headerRight }: GameWorldProps
           {state.popup && (
             <ScrollPopup title={state.popup.title} body={state.popup.body} onDismiss={onDismissPopup} />
           )}
+        </div>
         </div>
       </div>
     </div>
