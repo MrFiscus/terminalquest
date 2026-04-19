@@ -964,7 +964,7 @@ export function GameWorld({ state, onDismissPopup, headerRight }: GameWorldProps
             return (
               <div
                 key={npc.id}
-                className="pointer-events-none absolute flex items-center justify-center"
+                className="pointer-events-none absolute flex items-end justify-center overflow-visible"
                 style={{
                   left: npc.x * tileW,
                   top: npc.y * tileH,
@@ -975,7 +975,7 @@ export function GameWorld({ state, onDismissPopup, headerRight }: GameWorldProps
               >
                 <span className="ground-shadow" aria-hidden />
                 {npc.id === "mau" ? (
-                  <MauSprite size={Math.min(TILE * 3, 144)} className="-translate-y-2" />
+                  <MauSprite size={TILE} />
                 ) : (
                   <div className="h-8 w-8 bg-purple-500 rounded-full" />
                 )}
@@ -983,7 +983,7 @@ export function GameWorld({ state, onDismissPopup, headerRight }: GameWorldProps
                 {/* Proximity Prompt */}
                 {isNear && (
                   <div 
-                    className="absolute -top-12 left-1/2 -translate-x-1/2 label-chip breathe z-30 whitespace-nowrap"
+                    className="absolute -top-10 left-1/2 -translate-x-1/2 label-chip breathe z-30 whitespace-nowrap"
                     style={{ fontSize: "10px" }}
                   >
                     Press [Enter] to Speak

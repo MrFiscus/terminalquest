@@ -5,18 +5,22 @@ interface MauSpriteProps {
   size?: number;
 }
 
-export function MauSprite({ className, size = 128 }: MauSpriteProps) {
+export function MauSprite({ className, size = 32 }: MauSpriteProps) {
   return (
     <div 
-      className={cn("relative flex items-center justify-center", className)}
+      className={cn("relative flex items-center justify-center overflow-visible", className)}
       style={{ width: size, height: size }}
     >
       <img
         src="/src/assets/characters/cat-idle.gif"
         alt="Mau the Cat"
         draggable={false}
-        className="h-full w-full object-contain"
-        style={{ imageRendering: "pixelated" }}
+        className="max-w-none max-h-none object-contain"
+        style={{ 
+          width: "145%",
+          height: "145%",
+          imageRendering: "pixelated" 
+        }}
       />
     </div>
   );
