@@ -32,30 +32,28 @@ export function InventoryBar({ items, slots = 5, activeIndex = 0, onOpenBook }: 
         <span className="font-pixel carved-gold text-[12px]">~/inventory</span>
       </div>
 
-      <div className="flex items-center justify-center">
-        <div className="grid grid-cols-[64px_auto_64px] items-center gap-4">
-          <div className="flex justify-center">
-            {onOpenBook && (
-              <button
-                type="button"
-                onClick={onOpenBook}
-                title="Open the Book of Secrets"
-                aria-label="Open the Book of Secrets"
-                className="group relative flex h-14 w-14 items-center justify-center rounded-sm border border-[hsl(var(--torch-glow)/0.45)] bg-[hsl(230_20%_7%/0.72)] shadow-[inset_0_1px_0_hsl(42_70%_70%/0.12),0_2px_8px_hsl(0_0%_0%/0.55)] transition hover:scale-105 hover:border-[hsl(var(--torch-glow)/0.85)] hover:shadow-[0_0_14px_hsl(var(--torch-glow)/0.45)]"
-              >
-                <img
-                  src={hintBookImage}
-                  alt=""
-                  className="h-12 w-12 object-contain drop-shadow-[0_2px_2px_hsl(0_0%_0%/0.8)]"
-                  draggable={false}
-                />
-                <span className="pointer-events-none absolute -top-7 left-1/2 -translate-x-1/2 whitespace-nowrap rounded bg-stone-slab-edge px-1.5 py-0.5 font-pixel text-[7px] text-primary opacity-0 transition-opacity group-hover:opacity-100">
-                  Book of Secrets
-                </span>
-              </button>
-            )}
-          </div>
+      {onOpenBook && (
+        <button
+          type="button"
+          onClick={onOpenBook}
+          title="Open the Book of Secrets"
+          aria-label="Open the Book of Secrets"
+          className="group absolute left-4 bottom-3 flex h-14 w-14 items-center justify-center rounded-sm border border-[hsl(var(--torch-glow)/0.45)] bg-[hsl(230_20%_7%/0.72)] shadow-[inset_0_1px_0_hsl(42_70%_70%/0.12),0_2px_8px_hsl(0_0%_0%/0.55)] transition hover:scale-105 hover:border-[hsl(var(--torch-glow)/0.85)] hover:shadow-[0_0_14px_hsl(var(--torch-glow)/0.45)]"
+        >
+          <img
+            src={hintBookImage}
+            alt=""
+            className="h-12 w-12 object-contain drop-shadow-[0_2px_2px_hsl(0_0%_0%/0.8)]"
+            draggable={false}
+          />
+          <span className="pointer-events-none absolute -top-7 left-0 whitespace-nowrap rounded bg-stone-slab-edge px-1.5 py-0.5 font-pixel text-[7px] text-primary opacity-0 transition-opacity group-hover:opacity-100">
+            Book of Secrets
+          </span>
+        </button>
+      )}
 
+      <div className="flex items-center justify-center">
+        <div className="grid grid-cols-[auto] items-center">
           <div className="flex justify-center gap-3">
             {displaySlots.map((slot, idx) => {
               const isActive = slot.kind === "filled" && slot.i === activeIndex;
@@ -95,8 +93,6 @@ export function InventoryBar({ items, slots = 5, activeIndex = 0, onOpenBook }: 
               );
             })}
           </div>
-
-          <div aria-hidden />
         </div>
       </div>
     </div>

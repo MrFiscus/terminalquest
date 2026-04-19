@@ -58,7 +58,7 @@ export function WizardDialog({ context, externalMessage }: WizardDialogProps) {
   }, [isChatting, isOpen, message]);
 
   return (
-    <div className="fixed bottom-0 right-0 z-40 pointer-events-none flex items-end justify-end p-2 gap-0 h-64 w-full max-w-2xl">
+    <div className="fixed bottom-[118px] right-0 z-40 pointer-events-none flex h-44 w-full max-w-4xl items-end justify-end gap-0 p-2">
       
       {/* Parchment Dialog Box */}
       <AnimatePresence>
@@ -67,11 +67,11 @@ export function WizardDialog({ context, externalMessage }: WizardDialogProps) {
             initial={{ opacity: 0, scale: 0.8, x: 20 }}
             animate={{ opacity: 1, scale: 1, x: 0 }}
             exit={{ opacity: 0, scale: 0.8, x: 20 }}
-            className="relative flex justify-end mb-12 -mr-8 pointer-events-auto"
+            className="relative mb-4 -mr-8 flex justify-end pointer-events-auto"
           >
             <div
               className={cn(
-                "relative p-6 min-w-[240px] max-w-sm cursor-pointer transition-all hover:shadow-[4px_8px_20px_rgba(0,0,0,0.6)]",
+                "relative min-w-[340px] max-w-2xl cursor-pointer p-5 transition-all hover:shadow-[4px_8px_20px_rgba(0,0,0,0.6)]",
                 isChatting && "cursor-default scale-100 shadow-[4px_8px_25px_rgba(0,0,0,0.7)]"
               )}
               style={{
@@ -101,7 +101,7 @@ export function WizardDialog({ context, externalMessage }: WizardDialogProps) {
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
                     exit={{ opacity: 0 }}
-                    className="font-sans text-base text-[#3e2723] leading-relaxed font-semibold drop-shadow-sm"
+                    className="max-h-28 overflow-y-auto font-sans text-base text-[#3e2723] leading-relaxed font-semibold drop-shadow-sm"
                   >
                     {isLoading ? (
                       <div className="flex gap-1 py-2">
@@ -169,7 +169,7 @@ export function WizardDialog({ context, externalMessage }: WizardDialogProps) {
 
       {/* The Wizard (Permanent Anchor) */}
       <div 
-        className="relative w-48 h-48 flex-shrink-0 pointer-events-auto z-10 translate-x-4 cursor-pointer group"
+        className="relative z-10 h-40 w-40 flex-shrink-0 translate-x-4 cursor-pointer pointer-events-auto group"
         onClick={() => setIsOpen(true)}
       >
         <img 
