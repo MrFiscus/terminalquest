@@ -47,7 +47,7 @@ export const navigationCommands: CommandDefinition[] = [
       ];
       return {
         lines: entries.length ? entries.map(out) : [out("(empty)")],
-        vfx: { kind: "ls", cells, durationMs: 5000 },
+        vfx: { kind: "ls", cells, durationMs: 25000 },
       };
     },
   },
@@ -60,7 +60,7 @@ export const navigationCommands: CommandDefinition[] = [
         "[cd] current room doors:",
         state.rooms[state.cwd]?.doors.map((d) => `${d.target}(locked=${d.locked})`),
       );
-      const arg = args[0];
+      const arg = (args[0] ?? "").replace(/\/+$/, "");
       if (!arg) return { lines: [err("cd: missing argument")] };
       const targetPath = resolvePath(state.cwd, arg);
       let doorTarget: string | undefined;

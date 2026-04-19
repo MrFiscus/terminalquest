@@ -122,7 +122,7 @@ const Index = () => {
         level,
         `${difficulty} (${level.rooms.length} rooms)`,
         showcaseMode
-          ? "First, find Mau with: find Mau"
+          ? "The dungeon whispers: type ls to survey your surroundings."
           : playMode === "guided" ? adaptationMessage(weakCommands) : null,
         playMode,
         { showcaseMode, weakCommands },

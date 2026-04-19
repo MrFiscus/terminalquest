@@ -79,7 +79,8 @@ Available commands: ls, cd, cat, mv, mkdir, find, pwd
 The target file is relic.txt.
 The key NPC is Mau who gives mkdir privilege after quiz.
 The obstacle is a broken door that needs mkdir to repair.
-If the player seems lost, tell them to type find mau first.
+If the player has just entered or has not surveyed the room, tell them to type ls first.
+Once the player is searching for Mau or reaches Mau's room, tell them to type find mau.
 Guide the player toward the next step they need to take.
 Be helpful, medieval in tone, and concise.`;
 
@@ -662,6 +663,7 @@ export function useGameState(options: UseGameStateOptions = {}) {
 
       if (result.unknown) {
         if (commandEffect.screen) triggerScreenEffect(commandEffect.screen, 450);
+        appendLines([{ kind: "error", text: `command not found: ${result.unknown}` }]);
         const message = await askDungeonMaster(result.unknown, {
           ...sharedAiContext,
         });
@@ -795,7 +797,7 @@ export function useGameState(options: UseGameStateOptions = {}) {
           ? commandName === "ls" || (commandName === "find" && raw.toLowerCase().includes("mau"))
             ? (currentRoom?.npcs ?? []).some((npc) => npc.id === "mau")
               ? "Mau's eyes glimmer. Speak with Mau by typing: cat mau"
-              : "First, find Mau with: find Mau"
+              : "A faint pawprint trail appears. Try: find mau"
             : null
           : null;
       if (wizardPrompt) showDungeonMasterTip(wizardPrompt);
@@ -946,7 +948,7 @@ export function useGameState(options: UseGameStateOptions = {}) {
     if (playMode === "guided") {
       const fallbackIntro =
         options.showcaseMode
-          ? "First, find Mau with: find Mau"
+          ? "The dungeon whispers: type ls to survey your surroundings."
           : adaptation || "This dungeon adapts to your command history. Start with ls.";
       if (options.showcaseMode) {
         showDungeonMasterTip(fallbackIntro);

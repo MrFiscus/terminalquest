@@ -443,7 +443,7 @@
     color: hsl(42 40% 76%);
   }
   .term-line-error {
-    color: hsl(0 75% 65%);
+    color: #ff4444;
   }
   .term-line-dm {
     color: hsl(30 15% 55%);
