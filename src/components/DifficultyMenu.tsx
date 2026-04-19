@@ -16,6 +16,7 @@ const tierFor = (v: number): { label: string; difficulty: Difficulty } => {
 export const DifficultyMenu = ({ onConfirm, busy }: DifficultyMenuProps) => {
   const [dungeonDifficulty, setDungeonDifficulty] = useState<number>(50);
   const [fading, setFading] = useState(false);
+  const [dragging, setDragging] = useState(false);
   const trackRef = useRef<HTMLDivElement>(null);
   const draggingRef = useRef(false);
   const tier = tierFor(dungeonDifficulty);
@@ -35,7 +36,10 @@ export const DifficultyMenu = ({ onConfirm, busy }: DifficultyMenuProps) => {
       e.preventDefault();
       setFromClientX(e.clientX);
     };
-    const onUp = () => { draggingRef.current = false; };
+    const onUp = () => {
+      draggingRef.current = false;
+      setDragging(false);
+    };
     window.addEventListener("pointermove", onMove);
     window.addEventListener("pointerup", onUp);
     return () => {
@@ -46,6 +50,7 @@ export const DifficultyMenu = ({ onConfirm, busy }: DifficultyMenuProps) => {
 
   const onTrackPointerDown = (e: React.PointerEvent) => {
     draggingRef.current = true;
+    setDragging(true);
     setFromClientX(e.clientX);
   };
 
@@ -168,7 +173,7 @@ export const DifficultyMenu = ({ onConfirm, busy }: DifficultyMenuProps) => {
           <div className="relative px-6 pt-20 pb-2">
             {/* Floating engraved counter above thumb */}
             <div
-              className="absolute pointer-events-none transition-[left] duration-75 engraved engraved-hover"
+              className={`absolute pointer-events-none transition-[left] duration-75 engraved engraved-hover ${dragging ? "engraved-active" : ""}`}
               style={{
                 left: `calc(28px + (100% - 56px) * ${dungeonDifficulty / 100})`,
                 top: 0,
@@ -321,7 +326,8 @@ export const DifficultyMenu = ({ onConfirm, busy }: DifficultyMenuProps) => {
 
         /* Molten-rune hover: glow from within with tier-colored drop-shadow */
         .engraved-menu .engraved-hover:hover,
-        .engraved-menu .engraved-hover:focus-visible {
+        .engraved-menu .engraved-hover:focus-visible,
+        .engraved-menu .engraved-active {
           color: hsl(var(--glow) / 0.92);
           text-shadow:
             -1px -1px 0 hsl(0 0% 0% / 0.9),
