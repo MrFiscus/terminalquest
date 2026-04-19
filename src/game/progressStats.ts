@@ -2,6 +2,8 @@ import type { LinuxCommand } from "./types";
 
 export const RUNS_STORAGE_KEY = "terminalquest_runs";
 export const PLAYER_STORAGE_KEY = "terminalquest_player";
+export const ACTIVE_RUN_STORAGE_KEY = "terminalquest_active_run";
+const PROFILE_SCOPE_STORAGE_KEY = "terminalquest_profile_scope";
 
 export const PROFILE_COMMANDS = ["ls", "cd", "mv", "cat", "find", "mkdir", "rm", "pwd", "file"] as const;
 export type ProfileCommand = typeof PROFILE_COMMANDS[number];
@@ -23,8 +25,23 @@ export interface RunRecord {
   targetFile: string;
 }
 
+export interface ActiveRunRecord {
+  difficulty: string;
+  startedAt: number;
+  updatedAt: number;
+  totalCommands: number;
+  commands: string[];
+  commandCounts: Record<string, number>;
+  mistakes: string[];
+  roomsVisited: number;
+  lockedDoorsUnlocked: number;
+  keysFound: number;
+  targetFile: string;
+}
+
 export interface ProgressSummary {
   runs: RunRecord[];
+  activeRun: ActiveRunRecord | null;
   playerName: string;
   totalLevels: number;
   bestTimeByDifficulty: Record<string, number | null>;
@@ -45,22 +62,75 @@ function storage() {
   return typeof localStorage === "undefined" ? null : localStorage;
 }
 
-export function readRuns(): RunRecord[] {
+function scopedKey(base: string) {
+  const scope = storage()?.getItem(PROFILE_SCOPE_STORAGE_KEY);
+  return scope ? `${base}:${scope}` : base;
+}
+
+function readJson<T>(keyName: string, fallback: T): T {
   try {
-    const raw = storage()?.getItem(RUNS_STORAGE_KEY);
-    if (!raw) return [];
-    const parsed = JSON.parse(raw);
-    if (!Array.isArray(parsed)) return [];
-    return parsed
-      .filter((run): run is RunRecord => Boolean(run && typeof run === "object" && typeof run.completedAt === "number"))
-      .slice(-20);
+    const raw = storage()?.getItem(keyName);
+    if (!raw) return fallback;
+    return JSON.parse(raw) as T;
   } catch {
-    return [];
+    return fallback;
   }
 }
 
+function userScope(userId: string) {
+  return userId.replace(/[^a-zA-Z0-9_-]/g, "");
+}
+
+export function setProgressProfileUser(
+  user: { id: string; email?: string | null; user_metadata?: Record<string, unknown> } | null,
+) {
+  const store = storage();
+  if (!store) return;
+  if (!user) {
+    store.removeItem(PROFILE_SCOPE_STORAGE_KEY);
+    return;
+  }
+
+  const scope = userScope(user.id);
+  const nextRunsKey = `${RUNS_STORAGE_KEY}:${scope}`;
+  const nextPlayerKey = `${PLAYER_STORAGE_KEY}:${scope}`;
+  const guestRuns = store.getItem(RUNS_STORAGE_KEY);
+  const guestName = store.getItem(PLAYER_STORAGE_KEY);
+
+  store.setItem(PROFILE_SCOPE_STORAGE_KEY, scope);
+
+  if (!store.getItem(nextRunsKey) && guestRuns) {
+    store.setItem(nextRunsKey, guestRuns);
+  }
+
+  const guestActiveRun = store.getItem(ACTIVE_RUN_STORAGE_KEY);
+  const nextActiveRunKey = `${ACTIVE_RUN_STORAGE_KEY}:${scope}`;
+
+  if (guestActiveRun && !store.getItem(nextActiveRunKey)) {
+    store.setItem(nextActiveRunKey, guestActiveRun);
+  }
+
+  if (!store.getItem(nextPlayerKey)) {
+    const metaName =
+      typeof user.user_metadata?.username === "string" ? user.user_metadata.username :
+      typeof user.user_metadata?.full_name === "string" ? user.user_metadata.full_name :
+      typeof user.user_metadata?.name === "string" ? user.user_metadata.name :
+      null;
+    const fallbackName = guestName || user.email?.split("@")[0] || "Adventurer";
+    store.setItem(nextPlayerKey, (metaName || fallbackName).trim().slice(0, 28) || "Adventurer");
+  }
+}
+
+export function readRuns(): RunRecord[] {
+  const parsed = readJson<unknown>(scopedKey(RUNS_STORAGE_KEY), []);
+  if (!Array.isArray(parsed)) return [];
+  return parsed
+    .filter((run): run is RunRecord => Boolean(run && typeof run === "object" && typeof run.completedAt === "number"))
+    .slice(-20);
+}
+
 export function saveRuns(runs: RunRecord[]) {
-  storage()?.setItem(RUNS_STORAGE_KEY, JSON.stringify(runs.slice(-20)));
+  storage()?.setItem(scopedKey(RUNS_STORAGE_KEY), JSON.stringify(runs.slice(-20)));
 }
 
 export function appendRun(run: RunRecord) {
@@ -69,13 +139,45 @@ export function appendRun(run: RunRecord) {
   return runs;
 }
 
+export function readActiveRun(): ActiveRunRecord | null {
+  const parsed = readJson<unknown>(scopedKey(ACTIVE_RUN_STORAGE_KEY), null);
+  if (!parsed || typeof parsed !== "object") return null;
+  const run = parsed as Partial<ActiveRunRecord>;
+  if (typeof run.startedAt !== "number") return null;
+  return {
+    difficulty: typeof run.difficulty === "string" ? run.difficulty : "default",
+    startedAt: run.startedAt,
+    updatedAt: typeof run.updatedAt === "number" ? run.updatedAt : run.startedAt,
+    totalCommands: typeof run.totalCommands === "number" ? run.totalCommands : Array.isArray(run.commands) ? run.commands.length : 0,
+    commands: Array.isArray(run.commands) ? run.commands.filter((cmd): cmd is string => typeof cmd === "string") : [],
+    commandCounts: run.commandCounts && typeof run.commandCounts === "object" ? run.commandCounts as Record<string, number> : {},
+    mistakes: Array.isArray(run.mistakes) ? run.mistakes.filter((cmd): cmd is string => typeof cmd === "string") : [],
+    roomsVisited: typeof run.roomsVisited === "number" ? run.roomsVisited : 1,
+    lockedDoorsUnlocked: typeof run.lockedDoorsUnlocked === "number" ? run.lockedDoorsUnlocked : 0,
+    keysFound: typeof run.keysFound === "number" ? run.keysFound : 0,
+    targetFile: typeof run.targetFile === "string" ? run.targetFile : "relic.txt",
+  };
+}
+
+export function saveActiveRun(run: ActiveRunRecord | null) {
+  const store = storage();
+  if (!store) return;
+  const keyName = scopedKey(ACTIVE_RUN_STORAGE_KEY);
+  if (!run) store.removeItem(keyName);
+  else store.setItem(keyName, JSON.stringify(run));
+}
+
+export function clearActiveRun() {
+  saveActiveRun(null);
+}
+
 export function readPlayerName() {
-  return storage()?.getItem(PLAYER_STORAGE_KEY) || "Adventurer";
+  return storage()?.getItem(scopedKey(PLAYER_STORAGE_KEY)) || "Adventurer";
 }
 
 export function savePlayerName(name: string) {
   const cleaned = name.trim().slice(0, 28) || "Adventurer";
-  storage()?.setItem(PLAYER_STORAGE_KEY, cleaned);
+  storage()?.setItem(scopedKey(PLAYER_STORAGE_KEY), cleaned);
   return cleaned;
 }
 
@@ -103,7 +205,7 @@ export function formatDuration(ms: number | null | undefined) {
   return minutes ? `${minutes}m ${seconds.toString().padStart(2, "0")}s` : `${seconds}s`;
 }
 
-export function summarizeProgress(runs = readRuns(), playerName = readPlayerName()): ProgressSummary {
+export function summarizeProgress(runs = readRuns(), playerName = readPlayerName(), activeRun = readActiveRun()): ProgressSummary {
   const commandTotals = emptyCounts();
   const commandMistakes = emptyCounts();
   const bestTimeByDifficulty: Record<string, number | null> = {
@@ -134,6 +236,19 @@ export function summarizeProgress(runs = readRuns(), playerName = readPlayerName
     }
   }
 
+  if (activeRun) {
+    totalCommands += activeRun.totalCommands;
+    totalKeysFound += activeRun.keysFound ?? 0;
+    totalLockedDoorsUnlocked += activeRun.lockedDoorsUnlocked ?? 0;
+    for (const [cmd, count] of Object.entries(activeRun.commandCounts ?? {})) {
+      commandTotals[cmd] = (commandTotals[cmd] ?? 0) + count;
+    }
+    for (const mistake of activeRun.mistakes ?? []) {
+      const cmd = baseCommand(mistake);
+      if (cmd) commandMistakes[cmd] = (commandMistakes[cmd] ?? 0) + 1;
+    }
+  }
+
   const favoriteCommand =
     Object.entries(commandTotals).sort((a, b) => b[1] - a[1])[0]?.[1] > 0
       ? Object.entries(commandTotals).sort((a, b) => b[1] - a[1])[0][0]
@@ -144,6 +259,7 @@ export function summarizeProgress(runs = readRuns(), playerName = readPlayerName
 
   return {
     runs,
+    activeRun,
     playerName,
     totalLevels: runs.length,
     bestTimeByDifficulty,

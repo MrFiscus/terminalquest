@@ -1,6 +1,7 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
+import { setProgressProfileUser } from "@/game/progressStats";
 import loginBg from "@/assets/background_login.png";
 import lampSprite from "@/assets/lamp.png";
 
@@ -49,11 +50,20 @@ export default function Auth() {
   const [info, setInfo] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data }) => {
+      if (!data.session) return;
+      setProgressProfileUser(data.session.user);
+      navigate("/play", { replace: true });
+    });
+  }, [navigate]);
+
   const handleGoogle = async () => {
     setError(null);
+    setInfo(null);
     const { error } = await supabase.auth.signInWithOAuth({
       provider: "google",
-      options: { redirectTo: window.location.origin },
+      options: { redirectTo: `${window.location.origin}/play` },
     });
     if (error) setError(error.message);
   };
@@ -65,12 +75,23 @@ export default function Auth() {
     setLoading(true);
 
     if (mode === "login") {
-      const { error } = await supabase.auth.signInWithPassword({ email, password });
+      const { data, error } = await supabase.auth.signInWithPassword({ email, password });
       if (error) setError(error.message);
-      else navigate("/");
+      else {
+        setProgressProfileUser(data.user);
+        navigate("/play");
+      }
     } else {
-      const { error } = await supabase.auth.signUp({ email, password });
+      const { data, error } = await supabase.auth.signUp({
+        email,
+        password,
+        options: { emailRedirectTo: `${window.location.origin}/play` },
+      });
       if (error) setError(error.message);
+      else if (data.session) {
+        setProgressProfileUser(data.session.user);
+        navigate("/play");
+      }
       else {
         setInfo("Check your email to confirm your account, then log in.");
         setMode("login");

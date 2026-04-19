@@ -91,6 +91,7 @@ describe("command registry", () => {
     const blocked = await runCommand("cd vault", s);
     expect(blocked.effect).toBeUndefined();
     expect(blocked.lines[0].kind).toBe("error");
+    expect(blocked.walkTo).toEqual({ x: 7, y: 1 });
 
     const key = DEFAULT_ROOMS["/home/user/hallway"].files.find((file) => file.name === "skeleton.key");
     expect(key).toBeDefined();

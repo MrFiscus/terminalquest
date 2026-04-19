@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { isWalkable, pathfind } from "@/game/dungeon";
-import { generateRoom, type RoomSpec } from "@/game/generator";
+import { generateDungeon, generateRoom, type RoomSpec } from "@/game/generator";
 import type { DoorTile, Room } from "@/game/types";
 
 function insideDoorPos(door: DoorTile, room: Room) {
@@ -25,6 +25,15 @@ function spec(name: string): RoomSpec {
     width: 18,
     height: 12,
   };
+}
+
+function dungeonSpecs(): RoomSpec[] {
+  return [
+    { ...spec("Root Hall"), path: "/home/user", hasParent: false, exits: ["storage-gallery", "vault-room"] },
+    { ...spec("Storage Gallery"), path: "/home/user/storage-gallery", hasParent: true, exits: ["deep-archive"] },
+    { ...spec("Vault Room"), path: "/home/user/vault-room", hasParent: true, exits: [] },
+    { ...spec("Deep Archive"), path: "/home/user/storage-gallery/deep-archive", hasParent: true, exits: [] },
+  ];
 }
 
 describe("generated room architecture", () => {
@@ -83,6 +92,66 @@ describe("generated room architecture", () => {
     }
     for (const file of room.files) {
       expect(pathfind(room, room.spawn, file)).not.toBeNull();
+    }
+  });
+
+  it("keeps generated scrolls off blocked walls and only uses ladders for wall scrolls", () => {
+    for (let nonce = 0; nonce < 12; nonce++) {
+      const room = generateRoom(spec("Storage Gallery"), nonce);
+      const fileCells = new Set(room.files.map((file) => `${file.x},${file.y}`));
+
+      for (const file of room.files) {
+        expect(isWalkable(room, file.x, file.y)).toBe(true);
+        expect(pathfind(room, room.spawn, file)).not.toBeNull();
+      }
+
+      for (const ladder of (room.decor ?? []).filter((d) => d.kind === "ladder")) {
+        expect(fileCells.has(`${ladder.x},${ladder.y}`)).toBe(true);
+      }
+    }
+  });
+
+  it("blocks pathing onto generated wall cells", () => {
+    const room = generateRoom(spec("Storage Gallery"), 3);
+    const wall = room.decor?.find((d) => d.kind === "interior-wall");
+
+    expect(wall).toBeTruthy();
+    expect(wall ? pathfind(room, room.spawn, wall) : null).toBeNull();
+  });
+
+  it("blocks the visual footprint above horizontal generated walls", () => {
+    const room = generateRoom(spec("Storage Gallery"), 3);
+    const runCells = new Set(
+      (room.decor ?? [])
+        .filter((d) => d.kind === "interior-wall" || d.kind === "interior-door")
+        .map((d) => `${d.x},${d.y}`),
+    );
+    const horizontalWall = room.decor?.find(
+      (d) =>
+        d.kind === "interior-wall" &&
+        d.y > 1 &&
+        (runCells.has(`${d.x - 1},${d.y}`) || runCells.has(`${d.x + 1},${d.y}`)),
+    );
+
+    expect(horizontalWall).toBeTruthy();
+    expect(horizontalWall ? isWalkable(room, horizontalWall.x, horizontalWall.y - 1) : true).toBe(false);
+  });
+
+  it("keeps generated NPCs off structural walls and reachable floor", () => {
+    for (let nonce = 0; nonce < 12; nonce++) {
+      const rooms = generateDungeon(dungeonSpecs(), "/home/user", nonce);
+      for (const room of Object.values(rooms)) {
+        for (const npc of room.npcs ?? []) {
+          const roomWithoutNpc = {
+            ...room,
+            npcs: (room.npcs ?? []).filter((other) => other.id !== npc.id),
+          };
+
+          expect(isWalkable(roomWithoutNpc, npc.x, npc.y)).toBe(true);
+          expect(room.files.some((file) => file.x === npc.x && file.y === npc.y)).toBe(false);
+          expect(pathfind(roomWithoutNpc, room.spawn, { x: npc.x, y: npc.y })).not.toBeNull();
+        }
+      }
     }
   });
 });
