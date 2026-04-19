@@ -316,7 +316,7 @@ export const DifficultyMenu = ({ onConfirm, busy }: DifficultyMenuProps) => {
           </div>
         </div>
 
-        {/* Manifest button — landing page stone button */}
+        {/* Manifest button — exact landing page hero CTA */}
         <button
           type="button"
           disabled={busy || fading}
@@ -328,10 +328,11 @@ export const DifficultyMenu = ({ onConfirm, busy }: DifficultyMenuProps) => {
             animationDelay: "860ms",
             opacity: busy || fading ? 0.6 : 1,
             cursor: busy || fading ? "not-allowed" : "pointer",
+            border: "none",
           }}
         >
           <span className="lp-eng-glow">
-            {busy || fading ? "⚔  MANIFESTING…  ⚔" : "⚔  MANIFEST THE DUNGEON  ⚔"}
+            {busy || fading ? "▶  MANIFESTING…" : "▶  MANIFEST THE DUNGEON"}
           </span>
         </button>
 
