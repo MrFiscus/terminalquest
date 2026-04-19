@@ -410,15 +410,6 @@ export function BookOfSecrets({ onClose }: BookOfSecretsProps) {
                 </button>
               );
             })}
-            <span style={{
-              fontFamily: "'Cinzel', Georgia, serif", fontSize: 10,
-              color: C.goldBright, letterSpacing: "0.06em",
-              padding: "4px 12px", borderRadius: 3,
-              background: "rgba(20,8,4,0.75)",
-              border: `1px solid ${C.goldDark}`,
-            }}>
-              {spells.length} Spells
-            </span>
           </div>
 
           {/* ── The Book ── */}
