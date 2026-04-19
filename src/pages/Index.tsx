@@ -2,7 +2,6 @@ import { GameWorld } from "@/components/GameWorld";
 import { InventoryBar } from "@/components/InventoryBar";
 import { Terminal } from "@/components/Terminal";
 import { BookOfSecrets } from "@/components/BookOfSecrets";
-import { LoreBookOverlay } from "@/components/LoreBookOverlay";
 import { VictoryOverlay } from "@/components/VictoryOverlay";
 import { DifficultyMenu } from "@/components/DifficultyMenu";
 import { WizardPopup } from "@/components/WizardPopup";
@@ -113,14 +112,6 @@ const Index = () => {
       <WizardPopup tip={teachingTip} onDismiss={dismissTeaching} />
 
       {bookOpen && <BookOfSecrets onClose={() => setBookOpen(false)} />}
-
-      {state.popup && (
-        <LoreBookOverlay
-          title={state.popup.title}
-          body={state.popup.body}
-          onClose={dismissPopup}
-        />
-      )}
     </main>
   );
 };
