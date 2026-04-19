@@ -112,15 +112,6 @@ export const DifficultyMenu = ({ onConfirm, busy }: DifficultyMenuProps) => {
         }}
       />
 
-      {/* Title bar */}
-      <div className="absolute top-0 left-0 right-0 border-b border-black/70 px-4 py-2 flex items-center gap-3 z-10"
-        style={{ background: "hsl(0 0% 0% / 0.55)", backdropFilter: "blur(2px)" }}>
-        <span className="engraved engraved-sm text-[12px] tracking-wider">Claude Dungeon</span>
-        <span className="ml-auto engraved engraved-muted text-[10px] uppercase tracking-[0.25em]">
-          Chamber of Selection
-        </span>
-      </div>
-
       {/* Content */}
       <div className="relative z-10 h-full flex flex-col items-center justify-center px-8 pt-16">
         <h1 className="engraved engraved-hover text-center" style={{ fontSize: 92, lineHeight: 1.05 }}>
