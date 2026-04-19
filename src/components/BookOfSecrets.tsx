@@ -88,25 +88,25 @@ function SpellEntry({ entry, index }: { entry: CommandEntry; index: number }) {
   return (
     <div style={{
       flex: 1, display: "flex", flexDirection: "column",
-      padding: "10px 16px 8px",
+      padding: "12px 26px 10px",
       overflow: "hidden", minHeight: 0,
       position: "relative",
     }}>
       <div style={{
         display: "flex", alignItems: "center",
-        gap: 8, marginBottom: 5, flexShrink: 0,
+        gap: 8, marginBottom: 6, flexShrink: 0,
       }}>
         <CircleBadge label={String(index + 1)} />
         <div style={{
           flex: 1, textAlign: "center",
           fontFamily: "'Pirata One', 'Cinzel', Georgia, serif",
-          fontWeight: "700", fontSize: 14,
-          color: C.parchText, letterSpacing: "0.06em",
+          fontWeight: "700", fontSize: 16,
+          color: C.parchText, letterSpacing: "0.05em",
           lineHeight: 1.2,
         }}>
-          <span style={{ color: C.parchRule, fontWeight: 400, fontSize: 10 }}>⊲⊲ </span>
+          <span style={{ color: C.parchRule, fontWeight: 400, fontSize: 11 }}>⊲⊲ </span>
           The {entry.name} Spell
-          <span style={{ color: C.parchRule, fontWeight: 400, fontSize: 10 }}> ⊳⊳</span>
+          <span style={{ color: C.parchRule, fontWeight: 400, fontSize: 11 }}> ⊳⊳</span>
         </div>
         <CircleBadge label={
           entry.difficulty === "beginner" ? "I" : entry.difficulty === "intermediate" ? "II" : "III"
@@ -114,13 +114,15 @@ function SpellEntry({ entry, index }: { entry: CommandEntry; index: number }) {
       </div>
 
       <p style={{
-        fontFamily: "'Cinzel', Georgia, serif",
-        fontSize: 9, color: C.parchInk,
-        textTransform: "uppercase", lineHeight: 1.5,
+        fontFamily: "Georgia, 'Times New Roman', serif",
+        fontSize: 11, color: C.parchInk,
+        lineHeight: 1.45,
         margin: "0 0 4px", flexShrink: 0,
         textAlign: "justify",
         overflow: "hidden",
-        maxHeight: "4.5em",
+        display: "-webkit-box",
+        WebkitLineClamp: 3,
+        WebkitBoxOrient: "vertical",
       }}>
         {entry.longDescription}
       </p>
@@ -128,9 +130,10 @@ function SpellEntry({ entry, index }: { entry: CommandEntry; index: number }) {
       <GrudgeDivider label="Objectives" />
       <div style={{
         fontFamily: "Georgia, serif",
-        fontSize: 9, color: C.parchInk, textTransform: "uppercase",
+        fontSize: 10, color: C.parchInk,
         lineHeight: 1.45, flexShrink: 0,
         marginBottom: 2,
+        overflow: "hidden",
       }}>
         <code style={{
           fontFamily: "'Courier New', monospace",
@@ -139,6 +142,10 @@ function SpellEntry({ entry, index }: { entry: CommandEntry; index: number }) {
           border: "1px solid rgba(90,42,8,0.2)",
           borderRadius: 2, padding: "1px 6px",
           display: "inline-block",
+          maxWidth: "100%",
+          overflow: "hidden",
+          textOverflow: "ellipsis",
+          whiteSpace: "nowrap",
         }}>
           $ {entry.usage}
         </code>
@@ -148,8 +155,8 @@ function SpellEntry({ entry, index }: { entry: CommandEntry; index: number }) {
       <div style={{
         display: "flex", alignItems: "center", gap: 6,
         fontFamily: "'Cinzel', Georgia, serif",
-        fontSize: 9, color: C.parchInk, textTransform: "uppercase",
-        flexShrink: 0,
+        fontSize: 10, color: C.parchInk, textTransform: "uppercase",
+        flexShrink: 0, flexWrap: "wrap",
       }}>
         <span style={{
           padding: "1px 7px", borderRadius: 2,
@@ -160,7 +167,7 @@ function SpellEntry({ entry, index }: { entry: CommandEntry; index: number }) {
           {RANK[entry.difficulty]}
         </span>
         <span style={{ color: C.parchRule }}>·</span>
-        <span style={{ color: C.parchInk, fontSize: 9 }}>
+        <span style={{ color: C.parchInk, fontSize: 10 }}>
           {entry.category.replace(/-/g, " ").toUpperCase()}
         </span>
       </div>
@@ -170,7 +177,7 @@ function SpellEntry({ entry, index }: { entry: CommandEntry; index: number }) {
           onClick={(e) => { e.stopPropagation(); setExpanded((p) => !p); }}
           style={{
             alignSelf: "flex-end", marginTop: "auto", paddingTop: 3,
-            fontFamily: "'Cinzel', Georgia, serif", fontSize: 8,
+            fontFamily: "'Cinzel', Georgia, serif", fontSize: 9,
             color: C.parchRule, background: "none", border: "none",
             cursor: "pointer", textTransform: "uppercase", letterSpacing: "0.1em",
           }}
@@ -185,11 +192,15 @@ function SpellEntry({ entry, index }: { entry: CommandEntry; index: number }) {
           background: "rgba(90,42,8,0.09)",
           border: "1px solid rgba(90,42,8,0.22)",
           borderRadius: 2, padding: "4px 8px", flexShrink: 0,
+          overflow: "hidden",
         }}>
           {entry.examples.slice(0, 2).map((ex) => (
             <div key={ex} style={{
               fontFamily: "'Courier New', monospace",
-              fontSize: 9, color: C.parchInk, lineHeight: 1.55,
+              fontSize: 10, color: C.parchInk, lineHeight: 1.55,
+              overflow: "hidden",
+              textOverflow: "ellipsis",
+              whiteSpace: "nowrap",
             }}>
               $ {ex}
             </div>
