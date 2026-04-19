@@ -290,9 +290,16 @@ export function BookOfSecrets({ onClose }: BookOfSecretsProps) {
       : Math.max(0, safeSpread - 1);
     if (next === safeSpread) return;
 
+    // Phase 1: fade out current
     setFading(true);
-    setTimeout(() => setCurrentSpread(next), FADE_MS);
-    setTimeout(() => setFading(false), FADE_MS + 20);
+    // Phase 2: after fade-out completes, swap content (still invisible)
+    setTimeout(() => {
+      setCurrentSpread(next);
+      // Phase 3: next frame, fade back in
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => setFading(false));
+      });
+    }, FADE_MS);
   }
 
   const navBtn = (dir: "prev" | "next") => {
