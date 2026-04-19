@@ -142,11 +142,6 @@ export function CommandLibraryPanel() {
     <div className="flex h-full flex-col scriptorium-bg scriptorium-frame iron-rivets font-mono-clean">
       {/* Title bar — mirrors Terminal style */}
       <div className="flex items-center justify-between px-3 py-1.5 border-b border-[hsl(var(--terminal-frame))] bg-[hsl(0_0%_6%)]">
-        <div className="flex items-center gap-1.5">
-          <div className="h-2.5 w-2.5 rounded-full bg-[hsl(0_0%_18%)] shadow-[inset_0_0_2px_hsl(0_0%_0%/0.9)]" />
-          <div className="h-2.5 w-2.5 rounded-full bg-[hsl(0_0%_18%)] shadow-[inset_0_0_2px_hsl(0_0%_0%/0.9)]" />
-          <div className="h-2.5 w-2.5 rounded-full bg-[hsl(0_0%_18%)] shadow-[inset_0_0_2px_hsl(0_0%_0%/0.9)]" />
-        </div>
         <span className="text-[11px] text-[hsl(var(--terminal-text)/0.7)]">Command Library</span>
         <span className="text-[11px] text-[#6b7280]">{shown}/{total}</span>
       </div>
