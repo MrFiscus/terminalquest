@@ -55,11 +55,19 @@ export interface FileItem {
 export type DecorKind =
   | "barrel"
   | "chest"
+  | "chest-empty"
+  | "chest-full"
   | "crack"
   | "crate"
+  | "inscribed-floor"
+  | "interior-door"
+  | "interior-wall"
   | "ladder"
   | "lamp"
+  | "banner"
+  | "pillar"
   | "sack"
+  | "statue"
   | "water";
 
 export interface DecorItem {
