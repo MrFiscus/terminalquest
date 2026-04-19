@@ -136,9 +136,25 @@ export async function generateMauQuiz(
     if (mechanic && hasRepeatedMechanicAnswer(mechanic, data.answer)) {
       return withQuestionMemory(fallbackMechanicQuiz(mechanic), mechanic);
     }
+    const answer = data.answer.trim();
+    // Demo mode: present as multiple choice with a simple decoy
+    if (difficulty === 0) {
+      const decoys: Record<string, string> = {
+        rm: "ls", mkdir: "cd", chmod: "cat", ls: "rm", cd: "pwd", pwd: "cat", cat: "ls", touch: "mkdir",
+      };
+      const decoy = decoys[answer.toLowerCase()] ?? (answer === "ls" ? "cd" : "ls");
+      return withQuestionMemory({
+        question: data.question.trim(),
+        answer,
+        hint: typeof data.hint === "string" ? data.hint.trim() : undefined,
+        type: "choice",
+        options: Math.random() < 0.5 ? [answer, decoy] : [decoy, answer],
+        rewardCommand: mechanic,
+      }, mechanic);
+    }
     return withQuestionMemory({
       question: data.question.trim(),
-      answer: data.answer.trim(),
+      answer,
       hint: typeof data.hint === "string" ? data.hint.trim() : undefined,
       type: "input",
       rewardCommand: mechanic,
@@ -157,6 +173,44 @@ export async function generateMauQuiz(
 }
 
 function fallbackMauQuiz(difficulty: number): MauQuiz {
+  if (difficulty === 0) {
+    // Demo mode: ultra-simple multiple choice, 2 options, complete beginner
+    const demoQuizzes = [
+      {
+        question: "Which command shows the files in a folder?",
+        options: ["ls", "rm"],
+        answer: "ls",
+      },
+      {
+        question: "Which command moves you into a different folder?",
+        options: ["cd", "pwd"],
+        answer: "cd",
+      },
+      {
+        question: "Which command prints your current location?",
+        options: ["pwd", "cat"],
+        answer: "pwd",
+      },
+      {
+        question: "Which command displays the contents of a file?",
+        options: ["cat", "mkdir"],
+        answer: "cat",
+      },
+      {
+        question: "Which command creates a new folder?",
+        options: ["mkdir", "touch"],
+        answer: "mkdir",
+      },
+      {
+        question: "Which command creates a new empty file?",
+        options: ["touch", "ls"],
+        answer: "touch",
+      },
+    ];
+    const pick = pickFresh(demoQuizzes);
+    return { ...pick, type: "choice" };
+  }
+
   if (difficulty <= 40) {
     // Low Difficulty: Multiple Choice (2 options)
     const lowQuizzes = [

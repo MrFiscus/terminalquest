@@ -102,6 +102,8 @@ async function generateQuiz(
   const ANTHROPIC_MODEL = Deno.env.get("ANTHROPIC_MODEL") ?? "claude-haiku-4-5-20251001";
   if (!ANTHROPIC_API_KEY) return fallbackQuiz(mechanic, difficulty, previousQuestions, previousAnswers);
 
+  const isDemoMode = difficulty === 0;
+
   const system = `You are Mau, a wise mystical cat who guards a Linux dungeon.
 You ask adventurers quiz questions about Linux commands to test their knowledge before granting them special powers.
 
@@ -112,9 +114,12 @@ The question must:
 - Not repeat any previously asked questions
 - Have a clear single-word or short answer
 - Be appropriate for the difficulty level:
-  0-33: very beginner, simple direct questions
+  0: DEMO MODE — absolute beginner. Ask the most basic possible question about what the command does. Plain English, no jargon. The answer must be the command name itself (e.g. "rm", "mkdir"). Keep it so simple a first-time computer user could answer it.
+  1-33: very beginner, simple direct questions
   34-67: intermediate, slightly more creative phrasing
   68-100: advanced, more conceptual questions
+
+${isDemoMode ? `IMPORTANT: This is demo mode (difficulty 0). Ask something like "Which command removes a file?" with answer "rm", or "Which command creates a directory?" with answer "mkdir". Maximum simplicity.` : ""}
 
 Mechanic context:
 - rm: questions about removing/deleting files
