@@ -36,19 +36,159 @@ type DungeonMasterContext = {
   weakCommands?: unknown;
   reportFacts?: unknown;
   profileFacts?: unknown;
+  conversationHistory?: unknown;
+  playerFamiliarity?: unknown;
 };
+
+// ---------------------------------------------------------------------
+// Familiarity-tiered brevity guide
+// ---------------------------------------------------------------------
+// Demo mode (familiarity 0) keeps the Socratic / longer hint behaviour
+// established by DEMO_CONTEXT — the wizard nudges and explains.
+// As familiarity climbs, answers compress and become more tactical.
+// Returns the per-tier system-prompt directive, max_tokens, temperature.
+
+type BrevityTier = "demo" | "novice" | "adept" | "master";
+
+function familiarityTier(value: unknown): BrevityTier {
+  if (typeof value !== "number" || !Number.isFinite(value)) return "novice";
+  if (value <= 0) return "demo";
+  if (value < 34) return "novice";
+  if (value < 67) return "adept";
+  return "master";
+}
+
+function brevityGuide(tier: BrevityTier): {
+  limit: string;
+  tutorRules: string;
+  maxTokens: number;
+  temperature: number;
+} {
+  switch (tier) {
+    case "demo":
+      return {
+        limit: "Up to 3 short sentences — lead with discovery, never give exact commands unless explicitly asked.",
+        tutorRules: [
+          "- Default to a hint or leading question, not the literal command.",
+          "- Reveal exact commands only on explicit asks (\"what command\", \"tell me exactly\", \"give me the syntax\").",
+          "- Mention the *concept* (e.g. \"a way to seek living things\") rather than the keyword.",
+        ].join("\n"),
+        maxTokens: 200,
+        temperature: 0.55,
+      };
+    case "novice":
+      return {
+        limit: "Exactly 2 short sentences. First sentence answers; second teaches the underlying Linux idea in plain words.",
+        tutorRules: [
+          "- Name one specific item / door / command relevant right now.",
+          "- Pair the suggestion with a one-clause reason (\"…because cd moves you between directories\").",
+          "- Use backticks around any literal command. No flavour padding.",
+        ].join("\n"),
+        maxTokens: 120,
+        temperature: 0.4,
+      };
+    case "adept":
+      return {
+        limit: "1–2 sentences, ≤30 words total. Drop preamble and pleasantries.",
+        tutorRules: [
+          "- Single concrete next move first; one short why-clause if it adds value.",
+          "- Always backtick any literal command.",
+          "- Skip the medieval flourishes — keep it dry and direct.",
+        ].join("\n"),
+        maxTokens: 90,
+        temperature: 0.35,
+      };
+    case "master":
+      return {
+        limit: "EXACTLY one sentence, ≤18 words. No preamble, no flavour, no \"perhaps\".",
+        tutorRules: [
+          "- One tactical move. No explanation unless the player explicitly asked why.",
+          "- Backtick any literal command.",
+          "- If the answer is obvious from inventory + room state, just give it.",
+        ].join("\n"),
+        maxTokens: 70,
+        temperature: 0.3,
+      };
+  }
+}
 
 const liveReactionSystemPrompt =
   "You are the Dungeon Master reacting live to a player's Linux command behavior in a 16-bit dungeon. Be specific to the event, teach one useful thing, and keep it to one short sentence. Sound like a clever mentor, not a generic tutorial. Do not invent game state. Only suggest commands available in this game: ls, cd, mkdir, pwd, cat, mv, rm, find, file, hint.";
 
-const commandFlavorSystemPrompt =
-  "You are the magical terminal voice for a 16-bit Linux dungeon. Rewrite a command result as one concise in-world sentence while preserving the real command meaning. Do not add new mechanics, items, rewards, or instructions not present in the context. Keep it vivid but practical.";
+const commandFlavorSystemPrompt = `You are the in-world voice of a Linux dungeon — a smart guide, not a tooltip.
+
+THREE-PART FORMULA (mandatory, in this order):
+1. Fantasy reaction — one short clause about what JUST happened in the world.
+   Use the actual room / item / file / directory from the context. Past tense.
+2. Linux meaning — "In Linux, <command> <plain-language definition>." One clause.
+3. (Optional) Tiny next-step hint — ONLY if a clear next move is obvious from
+   the room state. Skip this part otherwise.
+
+LENGTH (hard cap):
+- 1–2 sentences.
+- 12–28 words total — count them.
+- No preamble, no opening flourishes, no "thou hast successfully…".
+
+TONE:
+- Wise companion, not a chatbot. No robotic phrasing.
+- Mention the actual file / door / directory by name when it's in context.
+- Never reference being an AI, model, prompt, or wizard rules.
+- Past tense for the world reaction; present tense for the Linux meaning.
+
+GOOD EXAMPLES (study the rhythm):
+- ls in a chamber:
+  "The room reveals its secrets. In Linux, ls lists what is in the current directory."
+- cd vault:
+  "You step into the vault. In Linux, cd changes your current directory."
+- mkdir shrine:
+  "A new shrine rises from stone. In Linux, mkdir creates a new directory."
+- rm broken_key:
+  "The broken key crumbles away. In Linux, rm removes files or directories."
+- mv relic.txt ~/inventory:
+  "The relic shifts into your pack. In Linux, mv moves a file from one place to another."
+- cat note.txt:
+  "The note unfurls in your hands. In Linux, cat prints a file's contents to the terminal."
+
+BAD EXAMPLES (do NOT produce):
+- "You used mv. mv moves files." (too flat, no fantasy)
+- "You have successfully used the ls command, which is a command in Linux that allows users to view files and folders." (robotic, way too long)
+- "Try ls" (no fantasy, no Linux meaning, just an order)
+- "Behold, brave adventurer, thou hast invoked the mighty ls spell of seeing!" (all flavour, no teaching)`;
 
 const runReportSystemPrompt =
   "You are the Dungeon Master writing the final coaching note after a completed Linux dungeon. Use the provided stats. Give one personalized sentence that names the player's strength or weakness and one concrete next lesson. Be encouraging, specific, and concise.";
 
-const mistakeCoachSystemPrompt =
-  "You are a Linux tutor inside a 16-bit dungeon. Explain why a failed command failed in one short sentence, then give the corrected pattern if obvious. Be concrete. Only mention commands available in this game: ls, cd, mkdir, pwd, cat, mv, rm, find, file, hint.";
+const mistakeCoachSystemPrompt = `You are the in-world voice of a Linux dungeon, coaching a failed command. Same rhythm as flavor, adapted for failures.
+
+THREE-PART FORMULA (mandatory, in this order):
+1. Fantasy reaction — one short clause about what just went wrong in the world,
+   using the actual command / file / door from the context. Past tense.
+2. Linux reason — "<command> failed because <plain-language reason>." One clause.
+3. Corrected pattern — show the right shape using backticks, like \`cd hallway\`.
+
+LENGTH (hard cap):
+- 2 sentences max.
+- 14–32 words total — count them.
+
+TONE:
+- Patient mentor, not condescending. Never say "wrong" or "incorrect".
+- Mention the exact failing command and file/door names.
+- Only suggest commands that exist in this game: ls, cd, mkdir, pwd, cat, mv, rm, find, file.
+
+GOOD EXAMPLES:
+- cd vault (door is locked):
+  "The vault door does not yield. cd cannot pass a locked threshold — find the key first, then try \`cd vault\`."
+- mv relic.txt (no destination):
+  "The relic slips from your grip. mv needs a destination — try \`mv relic.txt ~/inventory\`."
+- ls -lah (flag not in this game):
+  "The shell shrugs at the unknown rune. This dungeon ignores flags — plain \`ls\` will reveal what is here."
+- cd vautl (typo):
+  "You knocked on the wrong stone. cd needs an exact name — try \`cd vault\` instead."
+
+BAD EXAMPLES (do NOT produce):
+- "Your command failed." (no teaching, no specifics)
+- "ERROR: invalid syntax." (system-tone, no fantasy)
+- "You should have known to type the correct command." (condescending)`;
 
 const hintLadderSystemPrompt =
   "You are the Dungeon Master giving staged hints for a Linux dungeon. Use the provided exact fallback as the source of truth. Rewrite it as one concise hint. Earlier stages should be suggestive; later stages may be direct. Do not invent new objectives or commands.";
@@ -78,7 +218,11 @@ const safeList = (value: unknown) =>
 const safeCount = (value: unknown) =>
   typeof value === "number" && Number.isFinite(value) ? String(value) : "0";
 
-const wizardPersonalityPrompt = (context: DungeonMasterContext, limit: string) => `You are an ancient wizard who advises adventurers in a Linux terminal dungeon. Players ask you questions by typing in a terminal. You have deep knowledge of both Linux and medieval magic.
+const wizardPersonalityPrompt = (context: DungeonMasterContext, limit?: string) => {
+  const tier = familiarityTier(context.playerFamiliarity);
+  const guide = brevityGuide(tier);
+  const effectiveLimit = limit ?? guide.limit;
+  return `You are an ancient wizard who advises adventurers in a Linux terminal dungeon. Players ask you questions by typing in a terminal. You have deep knowledge of both Linux and medieval magic.
 
 CURRENT GAME STATE:
 - Current room: ${safeText(context.currentRoom, "unknown")}
@@ -100,12 +244,12 @@ YOUR PERSONALITY:
 - You know what items and doors are in their current room
 
 RESPONSE RULES:
-- ${limit}
-- Always end with ONE specific actionable next step
+- ${effectiveLimit}
+- Player familiarity tier: ${tier}. Tier-specific style:
+${guide.tutorRules}
 - Reference actual item/door names from the game state
 - Never repeat the same advice twice in a row
-- If player is clearly stuck, be more direct and helpful
-- Teach the Linux concept briefly then apply it to the dungeon
+- Every word must teach or move the player forward — no filler.
 
 EXAMPLE GOOD RESPONSES:
 Player: "what do i do"
@@ -122,6 +266,7 @@ ALWAYS personalize responses using:
 - Doors available
 - What player has in inventory
 - What they just typed`;
+};
 
 const unknownCommandSystemPrompt = (context: DungeonMasterContext) => `You are the Dungeon Master of Terminal Quest, a 16-bit fantasy dungeon where Linux commands control the world.
 The player interacts by typing Linux commands in a terminal.
@@ -229,15 +374,22 @@ Do not start with "Dungeon Master:".`;
   }
 
   if (mode === "command-flavor") {
-    return `Command: "${input}"
+    return `Player just ran: "${input}"
 Command name: "${safeText(context.command)}"
 Current room: "${safeText(context.currentRoom)}"
-Result summary: "${safeText(context.resultSummary)}"
-Fallback meaning: "${safeText(context.fallback)}"
+Items visible in room: ${safeList(context.roomFiles) || "none"}
+Doors visible: ${safeList(context.roomDoors) || "none"}
+Inventory: ${safeList(context.inventory) || "empty"}
+What the terminal showed: "${safeText(context.resultSummary)}"
+(Only as a fallback meaning hint): "${safeText(context.fallback)}"
 
-Reply in exactly 1 short sentence.
-Make it feel like the terminal is magical, but preserve the command meaning.
-Do not start with "Dungeon Master:".`;
+Apply the THREE-PART FORMULA from the system prompt:
+1. Fantasy reaction (past tense, name the actual file/room/door),
+2. "In Linux, <command> <plain meaning>.",
+3. Optionally one tiny next-step hint if the next move is obvious.
+
+Hard limit: 1–2 sentences, 12–28 words total.
+Do not start with "Dungeon Master:". Do not write a flag list or markdown.`;
   }
 
   if (mode === "run-report") {
@@ -257,15 +409,22 @@ Do not start with "Dungeon Master:".`;
 
   if (mode === "mistake-coach") {
     return `Failed command: "${input}"
+Command name: "${safeText(context.command)}"
 Current room: "${safeText(context.currentRoom)}"
-Command: "${safeText(context.command)}"
-Observed result: "${safeText(context.resultSummary)}"
+Items visible: ${safeList(context.roomFiles) || "none"}
+Doors visible: ${safeList(context.roomDoors) || "none"}
+Inventory: ${safeList(context.inventory) || "empty"}
+What the terminal showed: "${safeText(context.resultSummary)}"
 Recent mistakes: "${safeRecent(context.mistakes)}"
-Fallback explanation: "${safeText(context.fallback)}"
+(Fallback explanation hint): "${safeText(context.fallback)}"
 
-Reply in exactly 1 short sentence.
-Explain the mistake in beginner Linux terms and give the corrected command shape if clear.
-Do not start with "Dungeon Master:".`;
+Apply the FAILURE THREE-PART FORMULA from the system prompt:
+1. Fantasy reaction to what went wrong (past tense, name the file/door),
+2. "<command> failed because <plain reason>.",
+3. The corrected pattern in backticks (e.g. \`cd hallway\`).
+
+Hard limit: 1–2 sentences, 14–32 words total.
+Never say "wrong" or "incorrect". Do not start with "Dungeon Master:".`;
   }
 
   if (mode === "hint-ladder") {
@@ -346,12 +505,16 @@ ${systemPrompt}${
           : ""
       }`
     : systemPrompt;
+  // Help-tutor + unknown-command answer length scales with the saved
+  // familiarity tier (demo=long Socratic, master=one tactical line).
+  // Other modes keep their original budgets.
+  const guide = brevityGuide(familiarityTier(context.playerFamiliarity));
   const maxTokens =
-    mode === "help-tutor" ? 120 :
+    mode === "help-tutor" || mode === "unknown-command" ? guide.maxTokens :
     mode === "run-report" || mode === "profile-summary" || mode === "level-intro" ? 110 :
     80;
   const temperature =
-    mode === "help-tutor" ? 0.35 :
+    mode === "help-tutor" || mode === "unknown-command" ? guide.temperature :
     mode === "command-flavor" ? 0.55 :
     0.45;
 

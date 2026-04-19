@@ -568,11 +568,24 @@ const Index = () => {
 
       <WizardDialog
         externalMessage={dungeonMasterTip || teachingTip?.message || null}
+        playerFamiliarity={linuxFamiliarity}
         context={{
           goal: state.goal,
           requiredCommands: state.requiredCommands,
           winCondition: state.winCondition,
           currentRoom: currentRoom?.name || state.cwd,
+          currentPath: state.cwd,
+          // Inventory and visible room contents — letting the wizard
+          // reference these directly is what turns generic answers into
+          // ones that point at the right item or door.
+          inventory: state.inventory.map((file) => file.name),
+          roomFiles: currentRoom?.files.map((file) => file.name) ?? [],
+          roomDoors: currentRoom?.doors.map((door) =>
+            door.locked ? `${door.target}(locked)` : door.target,
+          ) ?? [],
+          recentCommands: state.commandHistory.slice(-6),
+          mistakes: state.recentMistakes.slice(-4),
+          weakCommands: nextLevelWeakCommands(state.commandStats, state.completionReport),
           brokenDoorName: brokenDoor?.target,
           repairCommand,
           roomHintFiles,

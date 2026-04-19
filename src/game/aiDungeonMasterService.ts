@@ -52,6 +52,19 @@ export interface DungeonMasterContext {
     weakCommands?: string[];
     recentMistakes?: number;
   };
+  /**
+   * Recent back-and-forth between the player and the wizard. The most
+   * recent exchange comes last. Lets the model produce continuous,
+   * follow-up-aware answers instead of treating every question as if
+   * it were the first.
+   */
+  conversationHistory?: Array<{ role: "player" | "wizard"; text: string }>;
+  /**
+   * 0–100 Linux familiarity slider value. The wizard tunes verbosity
+   * with this — beginners get walked through the steps, experts get
+   * single-sentence tactical hints.
+   */
+  playerFamiliarity?: number;
 }
 
 const fallbackReplies: Record<string, string> = {
@@ -66,6 +79,7 @@ const fallbackReplies: Record<string, string> = {
 };
 
 const replyCache = new Map<string, string>();
+const isTestRuntime = import.meta.env.MODE === "test";
 
 const shortCommand = (input: string) => input.trim().split(/\s+/)[0]?.toLowerCase() ?? "";
 
@@ -207,6 +221,10 @@ async function askDungeonMasterMode(
     context,
   });
   if (replyCache.has(cacheKey)) return replyCache.get(cacheKey)!;
+
+  if (isTestRuntime) {
+    return sanitizeDungeonMasterReply(fallbackDungeonMasterReply(cleanInput, mode, context));
+  }
 
   try {
     const { data, error } = await supabase.functions.invoke("dungeon-master", {

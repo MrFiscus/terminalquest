@@ -75,26 +75,38 @@ import type {
 
 const STEP_MS = 180;
 const PICKUP_MS = 800;
-export const DEMO_CONTEXT = `This is a guided demo dungeon.
-The player must complete these steps in order:
-1. Type ls to see the room contents
-2. When they reach the room with mau type: find mau to locate Mau the cat
-5. Mau will ask a quiz question about mkdir
-6. Player must answer: mkdir
-7. Mau grants mkdir power and tells player about broken door
-8. Player navigates to the broken door room using cd
-9. Player types: mkdir door to repair the broken door
-10. Player cd's through the repaired door
-11. Player finds relic.txt inside
-12. Player types: mv relic.txt ~/inventory to win
-Available commands: ls, cd, cat, mv, mkdir, find, pwd
-The target file is relic.txt.
-The key NPC is Mau who gives mkdir privilege after quiz.
-The obstacle is a broken door that needs mkdir to repair.
-If the player has just entered or has not surveyed the room, tell them to type ls first.
-Once the player is searching for Mau or reaches Mau's room, tell them to type find mau.
-Guide the player toward the next step they need to take.
-Be helpful, medieval in tone, and concise.`;
+export const DEMO_CONTEXT = `This is a guided demo dungeon. The player is brand new to Linux.
+
+CRITICAL TEACHING RULE — read carefully:
+- DEFAULT to gentle hints that point in the right direction, NOT exact commands.
+- Encourage the player to explore and form their own guess first.
+- ONLY give an exact command (with backticks) when the player EXPLICITLY asks.
+  Explicit asks include: "what command", "what should I type", "give me the
+  command", "tell me exactly", "the exact syntax", "show me", or similar.
+- When the player asks a vague question ("what now?", "I'm stuck", "help"),
+  reply with a leading question or sensory hint, NOT the literal command.
+- If the player has already tried something close, acknowledge it and nudge
+  the next move — don't restart from scratch.
+
+LEVEL OUTLINE (for your private reference — never read these aloud):
+- Player must: survey rooms → locate Mau → answer Mau's quiz → repair the
+  broken door → retrieve relic.txt → move it to ~/inventory.
+- Available commands: ls, cd, cat, mv, mkdir, find, pwd
+- Mau is a cat NPC who gates the mkdir power behind a quiz.
+- A broken door blocks the way to the relic; mkdir mends it.
+
+GOOD HINT EXAMPLES (use this style by default):
+- Instead of "type ls" → "Have you taken stock of what's in this chamber yet?"
+- Instead of "type find mau" → "A creature stirs somewhere in the dungeon. The shell offers a way to seek living things by name."
+- Instead of "type mkdir door" → "The door is broken — what kind of action might *make* a way through?"
+- Instead of "type mv relic.txt ~/inventory" → "You hold the prize. Now it must travel home, into your pack."
+
+REPLY TO AN EXPLICIT ASK (only then):
+- "Try \`find mau\` — find searches by name."
+- "The exact rune is \`mkdir door\` — mkdir creates what wasn't there."
+
+Tone: warm, medieval, mentor-like. 1–2 short sentences. Empower discovery,
+not dependency.`;
 
 const delay = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
@@ -501,14 +513,15 @@ export function useGameState(options: UseGameStateOptions = {}) {
           playGameSound("room");
           showDungeonMasterTip(`You enter ${next.name}. ${next.description}`);
           if (stateRef.current.showcaseMode && next.files.some((file) => file.name === stateRef.current.targetFile)) {
-            showDungeonMasterTip("Almost there! Type: mv relic.txt ~/inventory");
+            // Hint, not a command — let the demo player work out the move.
+            showDungeonMasterTip("The relic glints on the floor. It must travel home with you.");
           }
           const mauIsHere =
             (next.npcs ?? []).some((npc) => npc.id === "mau" || npc.name.toLowerCase() === "mau") ||
             next.files.some((file) => file.name.toLowerCase() === "mau");
           const hasUsedCatMau = stateRef.current.commandHistory.some((command) => command.trim().toLowerCase() === "cat mau");
           if (isDemoState(stateRef.current) && mauIsHere && !hasUsedCatMau) {
-            showDungeonMasterTip("A presence stirs nearby. Type: find mau");
+            showDungeonMasterTip("A presence stirs nearby. Reach out with a seeking spell — but only if you can name what you seek.");
           }
         }
       }
@@ -985,8 +998,11 @@ export function useGameState(options: UseGameStateOptions = {}) {
         s.showcaseMode && !failed
           ? commandName === "ls" || (commandName === "find" && raw.toLowerCase().includes("mau"))
             ? (currentRoom?.npcs ?? []).some((npc) => npc.id === "mau")
-              ? "Mau's eyes glimmer. Speak with Mau by typing: cat mau"
-              : "A faint pawprint trail appears. Try: find mau"
+              // Hint instead of "type cat mau" — guide the player to think
+              // about reading or addressing the creature.
+              ? "Mau's eyes glimmer at you. There are ways to read what a creature carries — what tool inspects contents?"
+              // Hint instead of "try find mau".
+              : "A faint pawprint trail catches your eye. Perhaps a seeking command can chase it."
             : null
           : null;
       if (wizardPrompt) showDungeonMasterTip(wizardPrompt);
@@ -1232,7 +1248,9 @@ export function useGameState(options: UseGameStateOptions = {}) {
           : []),
       ]);
       if (s.showcaseMode && reward === "mkdir") {
-        showDungeonMasterTip("The stones listen: type mkdir door to mend the doorway.");
+        // Hint, not command — let the player connect the dots between
+        // their new mkdir power and the broken doorway.
+        showDungeonMasterTip("Mau grants you the spell to *create* what is missing. A broken door, perhaps, can be re-made.");
       }
       if (releaseMauTarget) applyEffect({ type: "releaseMau", target: releaseMauTarget });
       triggerScreenEffect("aware", 1200);
