@@ -1,12 +1,47 @@
 import { supabase } from "@/integrations/supabase/client";
 
-export type DungeonMasterMode = "unknown-command" | "help-tutor";
+export type DungeonMasterMode =
+  | "unknown-command"
+  | "help-tutor"
+  | "live-reaction"
+  | "command-flavor"
+  | "run-report"
+  | "mistake-coach"
+  | "hint-ladder"
+  | "level-intro"
+  | "profile-summary";
 
 export interface DungeonMasterContext {
   goal?: string;
   requiredCommands?: string[];
   winCondition?: string;
   currentRoom?: string;
+  command?: string;
+  resultSummary?: string;
+  recentCommands?: string[];
+  mistakes?: string[];
+  eventKind?: string;
+  fallback?: string;
+  hintStage?: number;
+  weakCommands?: string[];
+  reportFacts?: {
+    title?: string;
+    time?: string;
+    commandsUsed?: number;
+    mistakesMade?: number;
+    strongestCommand?: string;
+    weakestCommand?: string;
+    skillUnlocked?: string;
+    nextLesson?: string;
+  };
+  profileFacts?: {
+    playerName?: string;
+    totalLevels?: number;
+    totalCommands?: number;
+    favoriteCommand?: string;
+    weakCommands?: string[];
+    recentMistakes?: number;
+  };
 }
 
 const fallbackReplies: Record<string, string> = {
@@ -107,8 +142,47 @@ export function fallbackDungeonMasterReply(
   if (mode === "unknown-command") {
     return fallbackReplies[base] ?? `The rune '${base || input}' is unknown here. Try ls, cd, mkdir, rm, or mv.`;
   }
+  if (
+    mode === "command-flavor" ||
+    mode === "live-reaction" ||
+    mode === "run-report" ||
+    mode === "mistake-coach" ||
+    mode === "hint-ladder" ||
+    mode === "level-intro" ||
+    mode === "profile-summary"
+  ) {
+    return context.fallback || "The dungeon listens, then answers in a low, practical whisper.";
+  }
 
   return fallbackTutorReply(input, context);
+}
+
+async function askDungeonMasterMode(
+  input: string,
+  mode: DungeonMasterMode,
+  context: DungeonMasterContext = {},
+): Promise<string> {
+  const cleanInput = input.trim();
+  const cacheKey = JSON.stringify({
+    mode,
+    input: normalizeInput(cleanInput),
+    context,
+  });
+  if (replyCache.has(cacheKey)) return replyCache.get(cacheKey)!;
+
+  try {
+    const { data, error } = await supabase.functions.invoke("dungeon-master", {
+      body: { input: cleanInput, mode, context },
+    });
+    if (error) throw error;
+
+    const message = typeof data?.message === "string" ? data.message.trim() : "";
+    const reply = message || fallbackDungeonMasterReply(cleanInput, mode, context);
+    replyCache.set(cacheKey, reply);
+    return reply;
+  } catch {
+    return fallbackDungeonMasterReply(cleanInput, mode, context);
+  }
 }
 
 export async function askDungeonMaster(input: string, context: DungeonMasterContext = {}): Promise<string> {
@@ -125,24 +199,86 @@ export async function askDungeonMaster(input: string, context: DungeonMasterCont
     return fallbackReplies[base];
   }
 
-  const cacheKey = JSON.stringify({
-    mode,
-    input: normalizeInput(cleanInput),
-    context: mode === "help-tutor" ? context : undefined,
+  return askDungeonMasterMode(cleanInput, mode, mode === "help-tutor" ? context : {});
+}
+
+export function stripDungeonMasterPrefix(text: string) {
+  return text.replace(/^Dungeon Master:\s*/i, "").trim();
+}
+
+export async function askCommandFlavor(
+  input: string,
+  context: DungeonMasterContext,
+  fallback: string,
+): Promise<string> {
+  return askDungeonMasterMode(input, "command-flavor", {
+    ...context,
+    fallback: stripDungeonMasterPrefix(fallback),
   });
-  if (replyCache.has(cacheKey)) return replyCache.get(cacheKey)!;
+}
 
-  try {
-    const { data, error } = await supabase.functions.invoke("dungeon-master", {
-      body: { input: cleanInput, mode, context: mode === "help-tutor" ? context : undefined },
-    });
-    if (error) throw error;
+export async function askLiveDungeonMasterReaction(
+  input: string,
+  context: DungeonMasterContext,
+  fallback: string,
+): Promise<string> {
+  return askDungeonMasterMode(input, "live-reaction", {
+    ...context,
+    fallback: stripDungeonMasterPrefix(fallback),
+  });
+}
 
-    const message = typeof data?.message === "string" ? data.message.trim() : "";
-    const reply = message || fallbackDungeonMasterReply(cleanInput, mode, context);
-    replyCache.set(cacheKey, reply);
-    return reply;
-  } catch {
-    return fallbackDungeonMasterReply(cleanInput, mode, context);
-  }
+export async function askRunReportFeedback(
+  input: string,
+  context: DungeonMasterContext,
+  fallback: string,
+): Promise<string> {
+  return askDungeonMasterMode(input, "run-report", {
+    ...context,
+    fallback: stripDungeonMasterPrefix(fallback),
+  });
+}
+
+export async function askMistakeCoach(
+  input: string,
+  context: DungeonMasterContext,
+  fallback: string,
+): Promise<string> {
+  return askDungeonMasterMode(input, "mistake-coach", {
+    ...context,
+    fallback: stripDungeonMasterPrefix(fallback),
+  });
+}
+
+export async function askHintLadder(
+  input: string,
+  context: DungeonMasterContext,
+  fallback: string,
+): Promise<string> {
+  return askDungeonMasterMode(input, "hint-ladder", {
+    ...context,
+    fallback: stripDungeonMasterPrefix(fallback),
+  });
+}
+
+export async function askLevelIntro(
+  input: string,
+  context: DungeonMasterContext,
+  fallback: string,
+): Promise<string> {
+  return askDungeonMasterMode(input, "level-intro", {
+    ...context,
+    fallback: stripDungeonMasterPrefix(fallback),
+  });
+}
+
+export async function askProfileSummary(
+  input: string,
+  context: DungeonMasterContext,
+  fallback: string,
+): Promise<string> {
+  return askDungeonMasterMode(input, "profile-summary", {
+    ...context,
+    fallback: stripDungeonMasterPrefix(fallback),
+  });
 }

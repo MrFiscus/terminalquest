@@ -18,6 +18,14 @@ export function mechanicForDifficulty(value: number | undefined): DifficultyMech
   return "chmod";
 }
 
+function mechanicForWeakness(value: number | undefined, weakCommands: string[] = []): DifficultyMechanic {
+  const weak = new Set(weakCommands);
+  if (weak.has("cat") || weak.has("chmod")) return "chmod";
+  if (weak.has("mkdir") || weak.has("cd")) return "mkdir";
+  if (weak.has("rm") || weak.has("mv") || weak.has("find")) return "rm";
+  return mechanicForDifficulty(value);
+}
+
 function roomNamesForDifficulty(value: number | undefined) {
   const v = Number.isFinite(value) ? Math.max(0, Math.min(100, Math.round(value as number))) : 50;
   const [mauRoomId, challengeRoomId, vaultRoomId] = ROOM_NAME_SETS[v % ROOM_NAME_SETS.length];
@@ -154,17 +162,21 @@ function withMau(room: Room, mau: Pick<Npc, "x" | "y" | "blocksDoorTarget">): Ro
   };
 }
 
-export function generateDifficultyMechanicLevel(difficulty: Difficulty, value: number | undefined): GeneratedLevel {
-  const mechanic = mechanicForDifficulty(value);
+export function generateDifficultyMechanicLevel(difficulty: Difficulty, value: number | undefined, weakCommands: string[] = []): GeneratedLevel {
+  const mechanic = mechanicForWeakness(value, weakCommands);
   const lockedCommand: LinuxCommand = mechanic;
   const { mauRoomId, challengeRoomId, vaultRoomId, mauRoomPath, challengeRoomPath, vaultRoomPath } = roomNamesForDifficulty(value);
+  const weak = new Set(weakCommands);
+  const needsFindPractice = weak.has("find");
+  const sideRoomId = "echo-nook";
+  const sideRoomPath = `${START_PATH}/${sideRoomId}`;
   const specs: RoomSpec[] = [
     {
       path: START_PATH,
       name: "Entry Hall",
       description: "A cold chamber where the dungeon listens for commands.",
       hasParent: false,
-      exits: [mauRoomId],
+      exits: needsFindPractice ? [mauRoomId, sideRoomId] : [mauRoomId],
       files: [
         {
           name: "readme.txt",
@@ -173,6 +185,27 @@ export function generateDifficultyMechanicLevel(difficulty: Difficulty, value: n
         },
       ],
     },
+    ...(needsFindPractice
+      ? [{
+          path: sideRoomPath,
+          name: "Echo Nook",
+          description: "A side chamber full of almost-useful names.",
+          hasParent: true,
+          exits: [],
+          files: [
+            {
+              name: "relic-map.txt",
+              glyph: "📜",
+              contents: "Close, but not relic.txt. `find relic.txt` is sharper than wandering.",
+            },
+            {
+              name: "decoy.txt",
+              glyph: "📜",
+              contents: "A decoy scroll placed by the dungeon.",
+            },
+          ],
+        } satisfies RoomSpec]
+      : []),
     {
       path: mauRoomPath,
       name: "Mau's Crossing",
@@ -303,12 +336,25 @@ export function generateDifficultyMechanicLevel(difficulty: Difficulty, value: n
     mkdir: "Answer Mau, read door-note.txt, then repair the broken door with mkdir <door name>.",
     chmod: "Answer Mau, chmod +r scroll, cat scroll, then tell Mau the key.",
   };
+  const weaknessHint =
+    needsFindPractice ? " This dungeon has a side chamber; use find to avoid chasing decoys." :
+    weak.has("cat") ? " Read scrolls before trusting doors." :
+    weak.has("mv") ? " Watch for decoys, then move only the real relic." :
+    weak.has("cd") ? " Door names matter; ls before every cd." :
+    "";
 
   return {
     goal: "find and move relic.txt",
     required: ["ls", "cd", "find", lockedCommand, "mv"],
     rooms: [
-      { id: "home", items: ["readme.txt"], exits: [mauRoomId] },
+      { id: "home", items: ["readme.txt"], exits: needsFindPractice ? [mauRoomId, sideRoomId] : [mauRoomId] },
+      ...(needsFindPractice
+        ? [{
+            id: sideRoomId,
+            items: ["relic-map.txt", "decoy.txt"],
+            exits: [],
+          }]
+        : []),
       {
         id: mauRoomId,
         items: mechanic === "chmod" ? [{ name: "scroll" }] : [],
@@ -327,7 +373,7 @@ export function generateDifficultyMechanicLevel(difficulty: Difficulty, value: n
       { id: vaultRoomId, items: ["relic.txt"], exits: [] },
     ],
     start: "home",
-    hint: mechanicHints[mechanic],
+    hint: `${mechanicHints[mechanic]}${weaknessHint}`,
     roomMap,
     targetFile: "relic.txt",
     difficultyValue: value,

@@ -8,7 +8,17 @@ import {
   getRoom,
   pathfind,
 } from "@/game/dungeon";
-import { askDungeonMaster, classifyTerminalInput } from "@/game/aiDungeonMasterService";
+import {
+  askCommandFlavor,
+  askDungeonMaster,
+  askHintLadder,
+  askLevelIntro,
+  askLiveDungeonMasterReaction,
+  askMistakeCoach,
+  askRunReportFeedback,
+  classifyTerminalInput,
+  stripDungeonMasterPrefix,
+} from "@/game/aiDungeonMasterService";
 import { type GeneratedLevel, levelToStatePatch } from "@/game/aiLevelService";
 import {
   createCommandStats,
@@ -19,6 +29,8 @@ import {
 import { teachingForCommandInput, type TeachingTip } from "@/game/commandTeaching";
 import { magicLineForCommandInput } from "@/game/commandMagic";
 import { runCommandEffect } from "@/game/commandEffects";
+import { detectCommandCombo } from "@/game/commandCombos";
+import { buildVictoryReport, liveMentorReaction } from "@/game/liveMentor";
 import { roomFlavor } from "@/game/roomFlavor";
 import { levelCompletionLine } from "@/game/levelCompletion";
 import {
@@ -42,6 +54,7 @@ import type {
   CommandResult,
   GameState,
   LinuxCommand,
+  PlayMode,
   PlayerFacing,
   TerminalLine,
 } from "@/game/types";
@@ -64,6 +77,11 @@ interface RunTracker {
 
 interface UseGameStateOptions {
   onOpenProfile?: () => void;
+}
+
+interface LoadLevelOptions {
+  demoMode?: boolean;
+  weakCommands?: string[];
 }
 
 function createRunTracker(difficulty = "default"): RunTracker {
@@ -127,6 +145,9 @@ function initialState(): GameState {
     requiredCommands: ["ls", "cd", "find", "mv"],
     winCondition: `mv ${TARGET_FILE} ~/inventory`,
     completionMessage: null,
+    completionReport: null,
+    playMode: "guided",
+    hintStage: 0,
     lockedCommands: [],
     mauSecretKnown: false,
   };
@@ -146,22 +167,27 @@ export function useGameState(options: UseGameStateOptions = {}) {
   const { onOpenProfile } = options;
   const [state, setState] = useState<GameState>(initialState);
   const [teachingTip, setTeachingTip] = useState<TeachingTip | null>(null);
+  const [dungeonMasterTip, setDungeonMasterTip] = useState<string | null>(null);
   const [roomSubtitle, setRoomSubtitle] = useState<string | null>(null);
   const idRef = useRef(100);
   const performanceRef = useRef<PerformanceSummary>(createPerformanceSummary());
   const taughtCommandsRef = useRef(new Set<string>());
   const magicCommandsRef = useRef(new Set<string>());
+  const comboRef = useRef(new Set<string>());
+  const mentorShownRef = useRef(new Set<string>());
+  const mistakeCoachShownRef = useRef(new Set<string>());
   const teachingTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const roomSubtitleTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const runTrackerRef = useRef<RunTracker>(createRunTracker());
+  const aiReportFeedbackRef = useRef<string | null>(null);
   const stateRef = useRef(state);
   stateRef.current = state;
 
   const nextId = () => ++idRef.current;
 
-  const completeRun = useCallback((targetFile: string) => {
+  const completeRun = useCallback((targetFile: string, title = "Dungeon Trial", aiFeedback?: string | null) => {
     const tracker = runTrackerRef.current;
-    if (tracker.completed) return;
+    if (tracker.completed) return null;
     tracker.completed = true;
     const completedAt = Date.now();
     const run: RunRecord = {
@@ -180,17 +206,39 @@ export function useGameState(options: UseGameStateOptions = {}) {
       keysFound: tracker.keysFound,
       targetFile,
     };
+    const report = buildVictoryReport({
+      title,
+      durationMs: run.durationMs,
+      commands: run.commands,
+      mistakes: run.mistakes,
+      roomsVisited: run.roomsVisited,
+      keysFound: run.keysFound,
+      lockedDoorsUnlocked: run.lockedDoorsUnlocked,
+    });
     appendRun(run);
     clearActiveRun();
+    return aiFeedback ? { ...report, feedback: aiFeedback } : report;
+  }, []);
+
+  const showDungeonMasterTip = useCallback((text: string) => {
+    const clean = stripDungeonMasterPrefix(text);
+    if (!clean) return;
+    setDungeonMasterTip(clean);
   }, []);
 
   const appendLines = useCallback((lines: Omit<TerminalLine, "id">[]) => {
     if (!lines.length) return;
+    const terminalLines = lines.filter((line) => line.kind !== "dm");
+    const dmLines = lines.filter((line) => line.kind === "dm");
+    if (dmLines.length) {
+      showDungeonMasterTip(dmLines.map((line) => stripDungeonMasterPrefix(line.text)).join("\n"));
+    }
+    if (!terminalLines.length) return;
     setState((s) => ({
       ...s,
-      history: [...s.history, ...lines.map((l) => ({ ...l, id: nextId() }))],
+      history: [...s.history, ...terminalLines.map((l) => ({ ...l, id: nextId() }))],
     }));
-  }, []);
+  }, [showDungeonMasterTip]);
 
   const triggerScreenEffect = useCallback((kind: NonNullable<GameState["screenEffect"]>["kind"], durationMs = 650) => {
     const id = nextId();
@@ -206,6 +254,10 @@ export function useGameState(options: UseGameStateOptions = {}) {
       teachingTimerRef.current = null;
     }
     setTeachingTip(null);
+  }, []);
+
+  const dismissDungeonMasterTip = useCallback(() => {
+    setDungeonMasterTip(null);
   }, []);
 
   const triggerTeaching = useCallback((commandInput: string) => {
@@ -431,7 +483,8 @@ export function useGameState(options: UseGameStateOptions = {}) {
           const file = room.files.find((f) => f.name === effect.fileName);
           if (!file) return s;
           if (file.type === "key") return s;
-          completeRun(effect.fileName);
+          const report = completeRun(effect.fileName, room.name, aiReportFeedbackRef.current);
+          aiReportFeedbackRef.current = null;
           const newRoom = { ...room, files: room.files.filter((f) => f.name !== effect.fileName) };
           const completionMessage = levelCompletionLine(effect.fileName, s.goal);
           return {
@@ -440,6 +493,7 @@ export function useGameState(options: UseGameStateOptions = {}) {
             inventory: [...s.inventory, file],
             won: true,
             completionMessage,
+            completionReport: report,
             history: [
               ...s.history,
               {
@@ -509,6 +563,7 @@ export function useGameState(options: UseGameStateOptions = {}) {
         closeScroll
       });
       const failed = Boolean(result.unknown || result.lines.some((line) => line.kind === "error"));
+      const previousCommands = [...runTrackerRef.current.commands];
       const commandName = baseCommand(raw);
       if (commandName) {
         runTrackerRef.current.commands.push(raw.trim());
@@ -516,6 +571,7 @@ export function useGameState(options: UseGameStateOptions = {}) {
         saveActiveRun(activeRunFromTracker(runTrackerRef.current, s.targetFile));
       }
       const commandEffect = runCommandEffect(raw, result, failed);
+      const currentRoom = getRoom(s.rooms, s.cwd);
       const shouldRememberMistake =
         failed &&
         (Boolean(commandFromInput(raw)) ||
@@ -529,6 +585,21 @@ export function useGameState(options: UseGameStateOptions = {}) {
       performanceRef.current = updatePerformanceSummary(performanceRef.current, raw, failed);
       const reaction = personalityReaction(performanceRef.current, raw);
       performanceRef.current = reaction.summary;
+      const guided = s.playMode !== "real";
+      const mentorLine = guided
+        ? liveMentorReaction({
+            state: s,
+            raw,
+            failed,
+            result,
+            commands: runTrackerRef.current.commands,
+            mistakes: runTrackerRef.current.mistakes,
+            shown: mentorShownRef.current,
+          })
+        : null;
+      const combo = !failed ? detectCommandCombo(previousCommands, raw, result) : null;
+      const shouldShowCombo = Boolean(combo && !comboRef.current.has(combo.id));
+      if (combo && shouldShowCombo) comboRef.current.add(combo.id);
 
       if (result.clear) {
         setState((cur) => ({ ...cur, history: [] }));
@@ -537,19 +608,18 @@ export function useGameState(options: UseGameStateOptions = {}) {
 
       if (result.unknown) {
         if (commandEffect.screen) triggerScreenEffect(commandEffect.screen, 450);
-        const room = getRoom(s.rooms, s.cwd);
         const message = await askDungeonMaster(result.unknown, {
           goal: s.goal,
           requiredCommands: s.requiredCommands,
           winCondition: s.winCondition,
-          currentRoom: room?.name ?? s.cwd.split("/").filter(Boolean).pop() ?? "home",
+          currentRoom: currentRoom?.name ?? s.cwd.split("/").filter(Boolean).pop() ?? "home",
         });
         appendLines([{ kind: "dm", text: `Dungeon Master: ${message}` }]);
         if (reaction.line) appendLines([reaction.line]);
         return;
       }
 
-      if (!failed) {
+      if (!failed && guided) {
         triggerTeaching(raw);
       }
 
@@ -557,7 +627,7 @@ export function useGameState(options: UseGameStateOptions = {}) {
         setState((cur) => ({ ...cur, ...result.patch }));
       }
 
-      if (result.vfx) {
+      if (result.vfx && (guided || ["rm", "manifest", "inspect"].includes(result.vfx.kind))) {
         const id = nextId();
         const dur = result.vfx.durationMs ?? 1000;
         const vfx = {
@@ -579,19 +649,142 @@ export function useGameState(options: UseGameStateOptions = {}) {
 
       const magicLine = magicLineForCommandInput(raw);
       const magicCommand = raw.trim().split(/\s+/)[0]?.toLowerCase() ?? "";
-      const shouldShowMagic = magicLine && !magicCommandsRef.current.has(magicCommand);
+      const shouldShowMagic = guided && magicLine && !magicCommandsRef.current.has(magicCommand);
       if (shouldShowMagic) magicCommandsRef.current.add(magicCommand);
 
       if (commandEffect.screen) {
         triggerScreenEffect(commandEffect.screen, failed ? 450 : 650);
       }
 
+      const aiContext = {
+        goal: s.goal,
+        requiredCommands: s.requiredCommands,
+        winCondition: s.winCondition,
+        currentRoom: currentRoom?.name ?? s.cwd.split("/").filter(Boolean).pop() ?? "home",
+        command: commandName,
+        recentCommands: runTrackerRef.current.commands.slice(-8),
+        mistakes: runTrackerRef.current.mistakes.slice(-8),
+      };
+      const resultSummary = result.lines.map((line) => line.text).join(" ").slice(0, 160);
+      const isHintCommand = commandName === "hint";
+      const aiResultLines =
+        guided && isHintCommand && result.lines[0]?.kind === "dm"
+          ? [
+              {
+                ...result.lines[0],
+                text: `Dungeon Master: ${await askHintLadder(
+                  raw,
+                  {
+                    ...aiContext,
+                    resultSummary,
+                    hintStage: (s.hintStage ?? 0) + 1,
+                  },
+                  result.lines[0].text,
+                )}`,
+              },
+              ...result.lines.slice(1),
+            ]
+          : result.lines;
+      const aiCommandFeedback =
+        guided && isHintCommand
+          ? null
+          : guided && commandEffect.feedback
+          ? {
+              ...commandEffect.feedback,
+              text: `Dungeon Master: ${await askCommandFlavor(
+                raw,
+                { ...aiContext, resultSummary },
+                commandEffect.feedback.text,
+              )}`,
+            }
+          : commandEffect.feedback;
+      const shouldCoachMistake =
+        guided &&
+        failed &&
+        !isHintCommand &&
+        Boolean(commandName) &&
+        !mistakeCoachShownRef.current.has(commandName) &&
+        result.lines.some((line) => line.kind === "error");
+      if (shouldCoachMistake) mistakeCoachShownRef.current.add(commandName);
+      const aiMistakeLine = shouldCoachMistake
+        ? {
+            kind: "dm" as const,
+            text: `Dungeon Master: ${await askMistakeCoach(
+              raw,
+              {
+                ...aiContext,
+                resultSummary,
+                eventKind: "failed-command",
+              },
+              resultSummary || "That command did not match what the dungeon expected.",
+            )}`,
+          }
+        : null;
+      const aiMentorLine =
+        mentorLine
+          ? {
+              ...mentorLine,
+              text: `Dungeon Master: ${await askLiveDungeonMasterReaction(
+                raw,
+                {
+                  ...aiContext,
+                  resultSummary,
+                  eventKind: mentorLine.text.replace(/^Dungeon Master:\s*/i, "").slice(0, 80),
+                },
+                mentorLine.text,
+              )}`,
+            }
+          : null;
+
+      aiReportFeedbackRef.current = null;
+      if (guided && result.effect?.type === "win") {
+        const completedAt = Date.now();
+        const previewReport = buildVictoryReport({
+          title: currentRoom?.name ?? "Dungeon Trial",
+          durationMs: completedAt - runTrackerRef.current.startedAt,
+          commands: runTrackerRef.current.commands,
+          mistakes: runTrackerRef.current.mistakes,
+          roomsVisited: runTrackerRef.current.visitedRooms.size,
+          keysFound: runTrackerRef.current.keysFound,
+          lockedDoorsUnlocked: runTrackerRef.current.lockedDoorsUnlocked,
+        });
+        aiReportFeedbackRef.current = await askRunReportFeedback(
+          raw,
+          {
+            ...aiContext,
+            reportFacts: {
+              title: previewReport.title,
+              time: previewReport.time,
+              commandsUsed: previewReport.commandsUsed,
+              mistakesMade: previewReport.mistakesMade,
+              strongestCommand: previewReport.strongestCommand,
+              weakestCommand: previewReport.weakestCommand,
+              skillUnlocked: previewReport.skillUnlocked,
+              nextLesson: previewReport.nextLesson,
+            },
+          },
+          previewReport.feedback,
+        );
+      }
+
       appendLines([
         ...(shouldShowMagic && magicLine ? [magicLine] : []),
-        ...result.lines,
-        ...(commandEffect.feedback ? [commandEffect.feedback] : []),
-        ...(reaction.line ? [reaction.line] : []),
+        ...aiResultLines,
+        ...(guided && aiCommandFeedback ? [aiCommandFeedback] : []),
+        ...(aiMistakeLine ? [aiMistakeLine] : []),
+        ...(shouldShowCombo && combo ? [combo.line] : []),
+        ...(aiMentorLine ? [aiMentorLine] : []),
+        ...(guided && reaction.line ? [reaction.line] : []),
       ]);
+
+      if (guided && shouldShowCombo) {
+        const id = nextId();
+        const cells = [{ x: s.player.x, y: s.player.y }];
+        setState((cur) => ({ ...cur, vfx: [...cur.vfx, { id, kind: "combo", cells, expiresAt: Date.now() + 1500 }] }));
+        setTimeout(() => {
+          setState((cur) => ({ ...cur, vfx: cur.vfx.filter((v) => v.id !== id) }));
+        }, 1500);
+      }
 
       if (result.openProfile) {
         onOpenProfile?.();
@@ -646,23 +839,39 @@ export function useGameState(options: UseGameStateOptions = {}) {
     performanceRef.current = createPerformanceSummary();
     taughtCommandsRef.current.clear();
     magicCommandsRef.current.clear();
+    comboRef.current.clear();
+    mentorShownRef.current.clear();
+    mistakeCoachShownRef.current.clear();
+    setDungeonMasterTip(null);
     dismissTeaching();
     dismissRoomSubtitle();
     clearActiveRun();
     setState(initialState());
   }, [dismissTeaching, dismissRoomSubtitle]);
 
-  const loadLevel = useCallback((level: GeneratedLevel, label: string, adaptation?: string | null) => {
+  const loadLevel = useCallback((
+    level: GeneratedLevel,
+    label: string,
+    adaptation?: string | null,
+    playMode: PlayMode = "guided",
+    options: LoadLevelOptions = {},
+  ) => {
     const patch = levelToStatePatch(level);
     idRef.current = 100;
     const difficulty = label.split(/\s+/)[0]?.toLowerCase() || "default";
     runTrackerRef.current = createRunTracker(difficulty);
     saveActiveRun(activeRunFromTracker(runTrackerRef.current, level.targetFile));
     dismissRoomSubtitle();
-    const intro: TerminalLine[] = adaptation
-      ? [{ id: 1, kind: "dm", text: `Dungeon Master: ${adaptation}` }]
-      : [];
-    const offset = intro.length;
+    if (adaptation) showDungeonMasterTip(adaptation);
+    const intro: TerminalLine[] = [];
+    const modeLine: TerminalLine = {
+      id: intro.length + 1,
+      kind: "system",
+      text: playMode === "guided"
+        ? "Mode: Guided Terminal. Hints, spell effects, and mentor reactions are active."
+        : "Mode: Real Terminal. Minimal hints. Trust the shell.",
+    };
+    const offset = intro.length + 1;
     setState((s) => ({
       ...s,
       ...patch,
@@ -674,16 +883,41 @@ export function useGameState(options: UseGameStateOptions = {}) {
       screenEffect: null,
       popup: null,
       commandHistory: [],
+      completionReport: null,
+      playMode,
+      hintStage: 0,
       history: [
         ...intro,
+        modeLine,
         { id: offset + 1, kind: "system", text: `Dungeon loaded: ${label}` },
         { id: offset + 2, kind: "system", text: `Goal: ${level.goal}` },
         { id: offset + 3, kind: "system", text: `Required: ${level.required.join(", ")}` },
         { id: offset + 4, kind: "system", text: `Win: mv ${level.targetFile} ~/inventory` },
-        { id: offset + 5, kind: "system", text: level.hint ? `Hint: ${level.hint}` : "Type `ls` to look around." },
+        ...(playMode === "guided"
+          ? [{ id: offset + 5, kind: "system" as const, text: level.hint ? `Hint: ${level.hint}` : "Type `ls` to look around." }]
+          : []),
       ],
     }));
-  }, [dismissRoomSubtitle]);
+    if (playMode === "guided") {
+      const fallbackIntro =
+        options.demoMode
+          ? "Judge Demo mode is active: this dungeon will show find practice, Mau, scroll reading, command coaching, and the final report."
+          : adaptation || "This dungeon adapts to your command history. Start with ls.";
+      void askLevelIntro(
+        label,
+        {
+          goal: level.goal,
+          requiredCommands: level.required,
+          winCondition: `mv ${level.targetFile} ~/inventory`,
+          weakCommands: options.weakCommands ?? [],
+          eventKind: options.demoMode ? "judge-demo" : "adaptive-level",
+        },
+        fallbackIntro,
+      ).then((message) => {
+        appendLines([{ kind: "dm", text: `Dungeon Master: ${message}` }]);
+      });
+    }
+  }, [appendLines, dismissRoomSubtitle, showDungeonMasterTip]);
 
   useEffect(() => {
     // no-op
@@ -772,6 +1006,8 @@ export function useGameState(options: UseGameStateOptions = {}) {
     loadLevel, 
     teachingTip, 
     dismissTeaching, 
+    dungeonMasterTip,
+    dismissDungeonMasterTip,
     roomSubtitle,
     submitMauQuiz,
     closeMauQuiz,

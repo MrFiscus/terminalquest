@@ -32,6 +32,7 @@ import {
   weakSpotLines,
   type ProfileCommand,
 } from "@/game/progressStats";
+import { askProfileSummary } from "@/game/aiDungeonMasterService";
 import profileBg from "@/assets/profile-bg.png";
 
 const C = {
@@ -46,6 +47,8 @@ const C = {
   chartInk: "#1f1308",
   chartInkDim: "rgba(31, 19, 8, 0.35)",
 };
+
+const PROFILE_AI_SUMMARY_KEY = "terminalquest_ai_profile_summary";
 
 type ProfileTab = "account" | "stats" | "mastery" | "achievements" | "progress";
 
@@ -270,6 +273,7 @@ export function ProfileModal({ onClose }: ProfileModalProps) {
   const [editingUsername, setEditingUsername] = useState("");
   const [usernameSaving, setUsernameSaving] = useState(false);
   const [usernameSaved, setUsernameSaved] = useState(false);
+  const [aiProfileSummary, setAiProfileSummary] = useState<string>("");
 
   const saveUsername = async () => {
     const trimmed = editingUsername.trim();
@@ -286,6 +290,28 @@ export function ProfileModal({ onClose }: ProfileModalProps) {
   const summary = useMemo(() => summarizeProgress(runs, name, activeRun), [runs, name, activeRun]);
   const lastRun = runs.at(-1);
   const latestRunStats = activeRun ?? lastRun;
+  const weakCommands = useMemo(() => {
+    return PROFILE_COMMANDS
+      .map((cmd) => ({
+        cmd,
+        uses: summary.commandTotals[cmd] ?? 0,
+        mistakes: summary.commandMistakes[cmd] ?? 0,
+      }))
+      .sort((a, b) => (b.mistakes - a.mistakes) || (a.uses - b.uses))
+      .slice(0, 3)
+      .map((entry) => entry.cmd);
+  }, [summary.commandMistakes, summary.commandTotals]);
+  const profileSignature = useMemo(
+    () => JSON.stringify({
+      name,
+      levels: summary.totalLevels,
+      commands: summary.totalCommands,
+      favorite: summary.favoriteCommand,
+      weak: weakCommands,
+      mistakes: Object.values(summary.commandMistakes).reduce((total, count) => total + count, 0),
+    }),
+    [name, summary.commandMistakes, summary.favoriteCommand, summary.totalCommands, summary.totalLevels, weakCommands],
+  );
 
   const latestCommandData = PROFILE_COMMANDS.map((cmd) => ({
     command: cmd,
@@ -384,6 +410,50 @@ export function ProfileModal({ onClose }: ProfileModalProps) {
       window.removeEventListener("storage", onStorage);
     };
   }, []);
+
+  useEffect(() => {
+    const fallback =
+      `Shell Archetype: ${summary.favoriteCommand === "find" ? "Careful Cartographer" : "Rising Operator"}. ` +
+      `Practice ${weakCommands[0] ?? "find"} next to sharpen your route.`;
+    setAiProfileSummary(fallback);
+    try {
+      const cache = localStorage.getItem(PROFILE_AI_SUMMARY_KEY);
+      const parsed = cache ? JSON.parse(cache) as { signature?: string; text?: string } : null;
+      if (parsed?.signature === profileSignature && parsed.text) {
+        setAiProfileSummary(parsed.text);
+        return;
+      }
+    } catch {
+      // Ignore cache parse failures.
+    }
+
+    let cancelled = false;
+    void askProfileSummary(
+      "profile",
+      {
+        profileFacts: {
+          playerName: name,
+          totalLevels: summary.totalLevels,
+          totalCommands: summary.totalCommands,
+          favoriteCommand: summary.favoriteCommand,
+          weakCommands,
+          recentMistakes: Object.values(summary.commandMistakes).reduce((total, count) => total + count, 0),
+        },
+      },
+      fallback,
+    ).then((text) => {
+      if (cancelled) return;
+      setAiProfileSummary(text);
+      try {
+        localStorage.setItem(PROFILE_AI_SUMMARY_KEY, JSON.stringify({ signature: profileSignature, text }));
+      } catch {
+        // Local storage can be unavailable in private contexts.
+      }
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [name, profileSignature, summary.commandMistakes, summary.favoriteCommand, summary.totalCommands, summary.totalLevels, weakCommands]);
 
   const renderMasteryCard = (cmd: ProfileCommand, index: number) => {
     const uses = summary.commandTotals[cmd] ?? 0;
@@ -519,6 +589,14 @@ export function ProfileModal({ onClose }: ProfileModalProps) {
           </div>
 
           {/* Details */}
+          {aiProfileSummary && (
+            <div style={{ width: "100%", maxWidth: 520, border: `1px solid ${C.sep}`, background: C.card, padding: "10px 16px", boxShadow: `inset 0 0 18px rgba(139,105,20,0.08)` }}>
+              <p style={{ margin: 0, fontFamily: "Georgia, serif", fontSize: 13, color: C.ink, lineHeight: 1.45, textAlign: "center" }}>
+                {aiProfileSummary}
+              </p>
+            </div>
+          )}
+
           <div style={{ width: "100%", maxWidth: 480, border: `1px solid ${C.sep}`, background: C.card, padding: "6px 18px", boxShadow: `inset 0 0 18px rgba(139,105,20,0.08)` }}>
             {email    && row("Email",    email)}
             {provider && row("Signed in via", provider === "google" ? "Google" : "Email & Password")}

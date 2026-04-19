@@ -11,12 +11,14 @@ interface DifficultyMenuProps {
 }
 
 const tierFor = (v: number): { label: string; difficulty: Difficulty } => {
+  if (v === 0) return { label: "Judge Demo", difficulty: "easy" };
   if (v < 34) return { label: "Novice", difficulty: "easy" };
   if (v < 67) return { label: "Adept", difficulty: "medium" };
   return { label: "Archmage", difficulty: "hard" };
 };
 
 const rankFor = (v: number): string => {
+  if (v === 0) return "Judge Demo";
   if (v < 17) return "Novice";
   if (v < 33) return "Apprentice";
   if (v < 50) return "Adept";
@@ -92,6 +94,7 @@ export const DifficultyMenu = ({ onConfirm, busy }: DifficultyMenuProps) => {
         }
         .difficulty-stone-btn:active { transform:translateY(2px); }
       `}</style>
+
       <div style={{ position: "fixed", inset: 0, pointerEvents: "none", zIndex: 0, background: "radial-gradient(ellipse at center, transparent 38%, hsl(0 0% 0% / 0.85) 100%)" }} aria-hidden />
       <div
         style={{
@@ -139,7 +142,7 @@ export const DifficultyMenu = ({ onConfirm, busy }: DifficultyMenuProps) => {
 
         <div className="relative space-y-8 px-2 py-2 md:px-8">
           <div className="space-y-2">
-            <div 
+            <div
               className="difficulty-eng relative tabular-nums"
               style={{
                 color: "hsl(38 80% 60%)",
@@ -159,25 +162,36 @@ export const DifficultyMenu = ({ onConfirm, busy }: DifficultyMenuProps) => {
           </div>
 
           <div className="mx-2 md:mx-12">
-            <div 
+            <div
               ref={sliderRef}
               onPointerDown={onPointerDown}
               className="relative h-5 cursor-pointer overflow-visible"
             >
-              <div 
+              <div
                 className="absolute left-0 top-1/2 h-1 w-full -translate-y-1/2 bg-white/10"
                 aria-hidden
               />
-              <div 
+              <div
                 className="absolute left-0 top-1/2 h-1 -translate-y-1/2 bg-gradient-to-r from-[#c9a84c] to-[#f59e0b] transition-all duration-75"
                 style={{ width: `${precise}%` }}
               />
-              <div 
+              <div
                 className="absolute top-1/2 z-10 h-5 w-5 -translate-y-1/2 rounded-full border-2 border-[#c9a84c] bg-[#f59e0b] transition-all duration-75"
                 style={{ left: `calc(${precise}% - 10px)`, boxShadow: "0 0 10px rgba(249,159,11,0.6)" }}
               />
             </div>
           </div>
+
+          <div className="flex justify-between px-2 text-[#8c8273] font-bold uppercase tracking-widest text-[9px] md:mx-12 md:px-0 md:text-[10px]" style={{ textShadow: "0 1px 0 #000" }}>
+            <span>0<br/><span className="mt-1 block italic text-[#5a5349]">Demo</span></span>
+            <span>100<br/><span className="mt-1 block italic text-[#5a5349]">Archmage</span></span>
+          </div>
+
+          <p className="text-[#a89f91] italic text-xs md:text-sm px-4 leading-relaxed" style={{ textShadow: "0 1px 0 #000" }}>
+            {precise === 0
+              ? "\"Judge Demo awakens the showcase path: hints, AI coaching, Mau, generated rooms, and the final report.\""
+              : "\"Thy choice here defines the density of shadows and the weight of the trials ahead.\""}
+          </p>
         </div>
 
         <button
@@ -187,7 +201,7 @@ export const DifficultyMenu = ({ onConfirm, busy }: DifficultyMenuProps) => {
           style={{ padding: "16px 40px", fontSize: "clamp(11px,1.5vw,15px)" }}
         >
           <span className="difficulty-eng-glow">
-            {busy ? "SUMMONING..." : "▶\u00a0\u00a0ENTER THE DUNGEON"}
+            {busy ? "SUMMONING..." : precise === 0 ? ">\u00a0\u00a0ENTER JUDGE DEMO" : ">\u00a0\u00a0ENTER THE DUNGEON"}
           </span>
         </button>
       </div>

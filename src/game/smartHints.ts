@@ -1,4 +1,4 @@
-import { START_PATH } from "./dungeon";
+import { START_PATH, pathfind } from "./dungeon";
 import type { GameState, Room } from "./types";
 
 export type HintMode = "light" | "direct";
@@ -83,4 +83,22 @@ export function generateSmartHint(state: GameState, mode: HintMode = "light"): s
   }
 
   return `No clear path remains here. Use \`cd ..\` to return, then search another room.`;
+}
+
+export function smartHintCells(state: GameState): { x: number; y: number }[] {
+  const room = state.rooms[state.cwd];
+  if (!room) return [];
+  const targetRoom = roomWithFile(state.rooms, state.targetFile);
+  if (!targetRoom) return [];
+
+  if (targetRoom.path === state.cwd) {
+    const target = room.files.find((file) => file.name === state.targetFile);
+    if (!target) return [];
+    return pathfind(room, state.player, target) ?? [{ x: target.x, y: target.y }];
+  }
+
+  const step = nextStepToward(state.cwd, targetRoom.path);
+  const door = room.doors.find((entry) => entry.target === step);
+  if (!door) return [];
+  return pathfind(room, state.player, door) ?? [{ x: door.x, y: door.y }];
 }
