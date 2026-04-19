@@ -272,96 +272,13 @@ function Page({
   );
 }
 
-// ── FlipPage ───────────────────────────────────────────────────────────────
-function FlipPage({
-  direction, frontSpells, frontStartIndex,
-}: {
-  direction: "next" | "prev";
-  frontSpells: CommandEntry[];
-  frontStartIndex: number;
-}) {
-  const isNext = direction === "next";
-
-  const wrapStyle: React.CSSProperties = {
-    position: "absolute", top: 0, bottom: 0,
-    [isNext ? "right" : "left"]: 0,
-    width: "50%",
-    transformOrigin: isNext ? "left center" : "right center",
-    transformStyle: "preserve-3d",
-    animation: `${isNext ? "bookFlipNext" : "bookFlipPrev"} ${FLIP_MS}ms cubic-bezier(0.4,0,0.2,1) forwards`,
-    zIndex: 20, pointerEvents: "none",
-    filter: "drop-shadow(0 10px 30px rgba(0,0,0,0.65))",
-  };
-
-  const faceBase: React.CSSProperties = {
-    position: "absolute", inset: 0,
-    backfaceVisibility: "hidden", overflow: "hidden",
-  };
-
-  const frontFold = isNext
-    ? "linear-gradient(to left,  transparent 50%, rgba(0,0,0,0.10) 80%, rgba(0,0,0,0.30) 100%)"
-    : "linear-gradient(to right, transparent 50%, rgba(0,0,0,0.10) 80%, rgba(0,0,0,0.30) 100%)";
-
-  const backFold = isNext
-    ? "linear-gradient(to right, rgba(0,0,0,0.30) 0%, rgba(0,0,0,0.10) 30%, transparent 60%)"
-    : "linear-gradient(to left,  rgba(0,0,0,0.30) 0%, rgba(0,0,0,0.10) 30%, transparent 60%)";
-
-  return (
-    <div style={wrapStyle}>
-      <div style={{
-        ...faceBase,
-        background: `${frontFold}, #efe0bc`,
-        display: "flex", flexDirection: "column",
-      }}>
-        {frontSpells[0] && <SpellEntry entry={frontSpells[0]} index={frontStartIndex} />}
-        {frontSpells[1] && (
-          <>
-            <div style={{
-              height: 2, flexShrink: 0, margin: "0 14px",
-              background: `linear-gradient(to right, transparent, ${C.sepMid} 20%, ${C.gold} 50%, ${C.sepMid} 80%, transparent)`,
-              opacity: 0.55,
-            }} />
-            <SpellEntry entry={frontSpells[1]} index={frontStartIndex + 1} />
-          </>
-        )}
-      </div>
-
-      <div style={{
-        ...faceBase,
-        transform: "rotateY(180deg)",
-        background: `${backFold}, linear-gradient(175deg, #d8c090 0%, #c8a878 100%)`,
-      }} />
-    </div>
-  );
-}
-
-// ── LandingShadow ──────────────────────────────────────────────────────────
-function LandingShadow({ direction }: { direction: "next" | "prev" }) {
-  const isNext = direction === "next";
-  return (
-    <div style={{
-      position: "absolute", top: 0, bottom: 0,
-      [isNext ? "left" : "right"]: 0,
-      width: "50%",
-      background: isNext
-        ? "linear-gradient(to right, rgba(0,0,0,0.28) 0%, rgba(0,0,0,0.10) 45%, transparent 80%)"
-        : "linear-gradient(to left,  rgba(0,0,0,0.28) 0%, rgba(0,0,0,0.10) 45%, transparent 80%)",
-      animation: `pageShadowFadeIn ${FLIP_MS}ms ease-in-out forwards`,
-      pointerEvents: "none", zIndex: 15,
-    }} />
-  );
-}
-
 // ── Main Component ─────────────────────────────────────────────────────────
 interface BookOfSecretsProps { onClose: () => void; }
 
 export function BookOfSecrets({ onClose }: BookOfSecretsProps) {
   const [currentSpread, setCurrentSpread] = useState(0);
-  const [flipping, setFlipping]           = useState<"next" | "prev" | null>(null);
+  const [fading, setFading]               = useState(false);
   const [diffFilter, setDiffFilter]       = useState<DifficultyLevel | "all">("all");
-
-  const flipFrontRef    = useRef<CommandEntry[]>([]);
-  const flipFrontIdxRef = useRef(0);
 
   const spells = useMemo(
     () => diffFilter === "all" ? commandLibrary : commandLibrary.filter((c) => c.difficulty === diffFilter),
@@ -377,27 +294,19 @@ export function BookOfSecrets({ onClose }: BookOfSecretsProps) {
   const canNext      = safeSpread < totalSpreads - 1;
 
   function navigate(dir: "next" | "prev") {
-    if (flipping) return;
+    if (fading) return;
     const next = dir === "next"
       ? Math.min(totalSpreads - 1, safeSpread + 1)
       : Math.max(0, safeSpread - 1);
     if (next === safeSpread) return;
 
-    if (dir === "next") {
-      flipFrontRef.current    = rightSpells;
-      flipFrontIdxRef.current = pageStart + 2;
-    } else {
-      flipFrontRef.current    = leftSpells;
-      flipFrontIdxRef.current = pageStart;
-    }
-
-    setFlipping(dir);
-    setTimeout(() => setCurrentSpread(next), FLIP_MS * 0.48);
-    setTimeout(() => setFlipping(null), FLIP_MS + 40);
+    setFading(true);
+    setTimeout(() => setCurrentSpread(next), FADE_MS);
+    setTimeout(() => setFading(false), FADE_MS + 20);
   }
 
   const navBtn = (dir: "prev" | "next") => {
-    const enabled = dir === "prev" ? (canPrev && !flipping) : (canNext && !flipping);
+    const enabled = dir === "prev" ? (canPrev && !fading) : (canNext && !fading);
     return {
       fontFamily: "'Cinzel', Georgia, serif", fontSize: 11,
       letterSpacing: "0.08em", textTransform: "uppercase" as const,
