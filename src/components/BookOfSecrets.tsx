@@ -4,7 +4,7 @@ import bookFrame from "@/assets/book-frame.png";
 
 // ── Constants ──────────────────────────────────────────────────────────────
 const PER_SPREAD = 4;
-const FLIP_MS    = 650;
+const FADE_MS    = 280;
 
 // ── Palette (oxblood/brown leather relic tome — matches the frame image) ──
 const C = {
