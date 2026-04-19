@@ -28,10 +28,6 @@ export function InventoryBar({ items, slots = 5, activeIndex = 0, onOpenBook }: 
         boxShadow: "inset 0 2px 0 hsl(var(--stone-light) / 0.35), inset 0 -2px 8px hsl(0 0% 0% / 0.6)",
       }}
     >
-      <div className="mb-2 text-center">
-        <span className="font-pixel carved-gold text-[12px]">~/inventory</span>
-      </div>
-
       {onOpenBook && (
         <button
           type="button"
@@ -52,7 +48,11 @@ export function InventoryBar({ items, slots = 5, activeIndex = 0, onOpenBook }: 
         </button>
       )}
 
-      <div className="flex items-center justify-center">
+      <div className={cn("w-fit", onOpenBook ? "ml-28" : "mx-auto")}>
+        <div className="mb-2 text-center">
+          <span className="font-pixel carved-gold text-[12px]">~/inventory</span>
+        </div>
+
         <div className="grid grid-cols-[auto] items-center">
           <div className="flex justify-center gap-3">
             {displaySlots.map((slot, idx) => {

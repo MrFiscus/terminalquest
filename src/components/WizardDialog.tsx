@@ -71,7 +71,7 @@ export function WizardDialog({ context, externalMessage }: WizardDialogProps) {
   }, [isChatting, isOpen, message]);
 
   return (
-    <div className="fixed bottom-[72px] right-0 z-[130] pointer-events-none flex items-end justify-end gap-0 p-2">
+    <div className="fixed bottom-0 right-0 z-[130] pointer-events-none flex items-end justify-end gap-0 p-0">
 
       {/* Parchment Dialog Box */}
       <AnimatePresence>
@@ -80,12 +80,12 @@ export function WizardDialog({ context, externalMessage }: WizardDialogProps) {
             initial={{ opacity: 0, scale: 0.85, x: 10 }}
             animate={{ opacity: 1, scale: 1, x: 0 }}
             exit={{ opacity: 0, scale: 0.85, x: 10 }}
-            className="relative mb-2 -mr-4 flex justify-end pointer-events-auto"
+            className="relative mb-2 mr-0 flex justify-end pointer-events-auto"
           >
             <div
               className={cn(
-                "relative w-72 cursor-pointer p-4 transition-all hover:shadow-[2px_4px_12px_rgba(0,0,0,0.6)]",
-                isChatting && "cursor-default w-80"
+                "relative w-[28rem] cursor-pointer p-4 transition-all hover:shadow-[2px_4px_12px_rgba(0,0,0,0.6)]",
+                isChatting && "cursor-default w-[34rem]"
               )}
               style={{
                 backgroundColor: "#f5e6d3",
@@ -180,7 +180,7 @@ export function WizardDialog({ context, externalMessage }: WizardDialogProps) {
 
       {/* The Wizard (Permanent Anchor) */}
       <div
-        className="relative z-10 h-40 w-40 flex-shrink-0 translate-x-2 cursor-pointer pointer-events-auto group"
+        className="relative z-10 h-40 w-40 flex-shrink-0 cursor-pointer pointer-events-auto group"
         onClick={() => setIsOpen(true)}
       >
         <img
