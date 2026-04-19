@@ -22,6 +22,7 @@ import { runCommandEffect } from "@/game/commandEffects";
 import { roomFlavor } from "@/game/roomFlavor";
 import { levelCompletionLine } from "@/game/levelCompletion";
 import { appendRun, baseCommand, countCommands, type RunRecord } from "@/game/progressStats";
+import { generateMauQuiz } from "@/game/mauQuizService";
 import {
   createPerformanceSummary,
   personalityReaction,
@@ -107,6 +108,10 @@ function facingFor(dx: number, dy: number): PlayerFacing | null {
   if (dx === 0 && dy === 0) return null;
   if (Math.abs(dx) >= Math.abs(dy)) return dx > 0 ? "right" : "left";
   return dy > 0 ? "down" : "up";
+}
+
+function isNear(a: { x: number; y: number }, b: { x: number; y: number }) {
+  return Math.abs(a.x - b.x) + Math.abs(a.y - b.y) <= 1;
 }
 
 export function useGameState(options: UseGameStateOptions = {}) {
@@ -365,14 +370,16 @@ export function useGameState(options: UseGameStateOptions = {}) {
 
       if (!raw.trim()) {
         const room = getRoom(s.rooms, s.cwd);
-        // Interaction from anywhere in the room
-        const npc = (room?.npcs || []).find(n => n.id === "mau");
+        const npc = (room?.npcs || []).find(n => n.id === "mau" && isNear(s.player, n));
         if (npc) {
-          if (npc.dialogue && npc.dialogue.length) {
-            appendLines(npc.dialogue.map(text => ({ kind: "npc", text: `${npc.name}: ${text}` })));
-          } else {
-            appendLines([{ kind: "npc", text: `${npc.name} watches you silently.` }]);
-          }
+          const depth = s.cwd.split("/").filter(Boolean).length;
+          const dungeonDifficulty = Math.min(100, Math.max(0, depth * 20));
+          const quiz = await generateMauQuiz(dungeonDifficulty);
+          startMauQuiz(quiz);
+          appendLines([
+            { kind: "npc", text: "Mau's eyes glow with ancient knowledge." },
+            { kind: "npc", text: "Mau: \"Show me your command of the shell, little fox.\"" },
+          ]);
         }
         return;
       }
