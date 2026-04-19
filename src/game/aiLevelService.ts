@@ -104,6 +104,25 @@ function hashSeed(seed: string) {
   return hash >>> 0;
 }
 
+function pickSeeded<T>(values: T[], seed: string, salt: string): T {
+  return values[hashSeed(`${seed}:${salt}`) % values.length];
+}
+
+const fallbackTargetPools: Partial<Record<LinuxCommand | "default", string[]>> = {
+  cd: ["path-relic.txt", "trail-sigil.txt", "route-rune.txt", "wayfinder.txt"],
+  mv: ["cargo.txt", "moonstone.txt", "sealed-parcel.txt", "ember-core.txt"],
+  ls: ["hidden-note.txt", "buried-ledger.txt", "shadow-index.txt", "covered-scroll.txt"],
+  mkdir: ["blueprint.txt", "builder-rune.txt", "arch-plan.txt", "keystone-map.txt"],
+  find: ["relic.txt", "sunken-token.txt", "lost-crown.txt", "oracle-shard.txt"],
+  cat: ["cipher-scroll.txt", "lore-fragment.txt", "sealed-note.txt", "riddle-tablet.txt"],
+  default: ["relic.txt", "victory.jpg", "moon-coin.txt", "sanctum-seal.txt", "final-scroll.txt"],
+};
+
+function fallbackTargetFor(command: LinuxCommand | undefined, seed: string) {
+  const pool = fallbackTargetPools[command ?? "default"] ?? fallbackTargetPools.default!;
+  return pickSeeded(pool, seed, command ?? "default-target");
+}
+
 export function roomCountForFamiliarity(familiarity: number | undefined, difficulty: Difficulty) {
   const value = Number.isFinite(familiarity)
     ? clamp(Math.round(familiarity as number), 0, 100)
@@ -342,10 +361,11 @@ export function fallbackLevel(input: GenerateLevelInput): Omit<GeneratedLevel, "
   const weak = input.weakCommands.filter((cmd): cmd is LinuxCommand => validCommands.has(cmd as LinuxCommand));
   const required = unique(["ls", "cd", "file", "find", "mv", ...weak] as LinuxCommand[]);
   const mainWeak = weak[0];
+  const targetFile = fallbackTargetFor(mainWeak, seed);
 
   if (mainWeak === "cd") {
     const level = {
-      goal: "find and move path-relic.txt",
+      goal: `find and move ${targetFile}`,
       required,
       start: ids[0],
       hint: "Choose doors carefully.",
@@ -359,7 +379,7 @@ export function fallbackLevel(input: GenerateLevelInput): Omit<GeneratedLevel, "
         }
         return {
           id,
-          items: index === count - 1 ? ["path-relic.txt"] : [],
+          items: index === count - 1 ? [targetFile] : [],
           exits: unique([ids[0], ids[Math.min(count - 1, index + 1)]].filter((exit) => exit !== id)),
         };
       }),
@@ -369,13 +389,13 @@ export function fallbackLevel(input: GenerateLevelInput): Omit<GeneratedLevel, "
 
   if (mainWeak === "mv") {
     const level = {
-      goal: "find and move cargo.txt",
+      goal: `find and move ${targetFile}`,
       required,
       start: ids[0],
       hint: "Use mv with ~/inventory.",
       rooms: ids.map((id, index) => ({
         id,
-        items: index === count - 1 ? ["cargo.txt"] : [`${id}.txt`],
+        items: index === count - 1 ? [targetFile] : [`${id}.txt`],
         exits: unique([
           ids[(index + 1) % count],
           index > 0 ? ids[index - 1] : ids[count - 1],
@@ -387,13 +407,13 @@ export function fallbackLevel(input: GenerateLevelInput): Omit<GeneratedLevel, "
 
   if (mainWeak === "ls") {
     const level = {
-      goal: "find and move hidden-note.txt",
+      goal: `find and move ${targetFile}`,
       required,
       start: ids[0],
       hint: "List each room first.",
       rooms: ids.map((id, index) => ({
         id,
-        items: index === count - 1 ? ["hidden-note.txt"] : [`${id}.scroll`, `${id}.txt`].slice(0, 2),
+        items: index === count - 1 ? [targetFile] : [`${id}.scroll`, `${id}.txt`].slice(0, 2),
         exits: unique([
           ids[(index + 1) % count],
           index + 2 < count ? ids[index + 2] : ids[0],
@@ -405,13 +425,13 @@ export function fallbackLevel(input: GenerateLevelInput): Omit<GeneratedLevel, "
 
   if (mainWeak === "mkdir") {
     const level = {
-      goal: "find and move blueprint.txt",
+      goal: `find and move ${targetFile}`,
       required,
       start: ids[0],
       hint: "Create a folder if stuck.",
       rooms: ids.map((id, index) => ({
         id,
-        items: index === count - 1 ? ["blueprint.txt"] : [],
+        items: index === count - 1 ? [targetFile] : [],
         exits: unique([
           ids[(index + 1) % count],
           index === 0 && count > 2 ? ids[2] : ids[index > 0 ? index - 1 : count - 1],
@@ -422,13 +442,13 @@ export function fallbackLevel(input: GenerateLevelInput): Omit<GeneratedLevel, "
   }
 
   const level = {
-    goal: "find and move relic.txt",
+    goal: `find and move ${targetFile}`,
     required,
     start: ids[0],
     hint: "Use find, then mv to inventory.",
     rooms: ids.map((id, index) => ({
       id,
-      items: index === count - 1 ? ["relic.txt"] : index % 2 === 0 ? [`${id}.scroll`] : [],
+      items: index === count - 1 ? [targetFile] : index % 2 === 0 ? [`${id}.scroll`] : [],
       exits: unique([
         ids[(index + 1) % count],
         index > 0 ? ids[index - 1] : ids[count - 1],

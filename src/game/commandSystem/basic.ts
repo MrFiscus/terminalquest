@@ -24,7 +24,10 @@ export const basicCommands: CommandDefinition[] = [
     name: "echo",
     description: "Print text back to the terminal.",
     usage: "echo <text>",
-    run: (args) => ({ lines: [out(args.join(" "))] }),
+    run: (args, { state }) => ({
+      lines: [out(args.join(" "))],
+      vfx: { kind: "pwd", cells: [{ x: state.player.x, y: state.player.y }], durationMs: 900 },
+    }),
   },
   {
     name: "hint",
@@ -42,7 +45,9 @@ export const basicCommands: CommandDefinition[] = [
       return {
         lines: [dm(`${prefix}: ${generateSmartHint(state, direct ? "direct" : "light")}`)],
         patch: { hintStage: nextStage },
-        vfx: cells.length ? { kind: "ghost", cells, durationMs: 2600 } : undefined,
+        vfx: cells.length
+          ? { kind: "ghost", cells, durationMs: 3600 }
+          : { kind: "ghost", cells: [{ x: state.player.x, y: state.player.y }], durationMs: 1300 },
       };
     },
   },
@@ -50,9 +55,10 @@ export const basicCommands: CommandDefinition[] = [
     name: "whoami",
     description: "Show your adventurer profile and command mastery.",
     usage: "whoami",
-    run: () => ({
+    run: (_args, { state }) => ({
       lines: [dm("Dungeon Master: Opening your adventurer profile.")],
       openProfile: true,
+      vfx: { kind: "combo", cells: [{ x: state.player.x, y: state.player.y }], durationMs: 900 },
     }),
   },
   {

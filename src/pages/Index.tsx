@@ -11,20 +11,70 @@ import { ScrollModal } from "@/components/ScrollModal";
 import { WizardDialog } from "@/components/WizardDialog";
 import { DEMO_CONTEXT, useGameState } from "@/hooks/useGameState";
 import { getRoom } from "@/game/dungeon";
-import { type Difficulty } from "@/game/aiLevelService";
+import { generateLevel, type Difficulty } from "@/game/aiLevelService";
 import { generateDifficultyMechanicLevel } from "@/game/difficultyMechanics";
-import { adaptationMessage, getWeakCommands } from "@/game/adaptiveDungeon";
+import { adaptationMessage, getWeakCommands, type CommandStats } from "@/game/adaptiveDungeon";
 import { startGameAmbience, stopGameAmbience } from "@/game/audio";
 import { cn } from "@/lib/utils";
 import { useCallback, useEffect, useState } from "react";
 import { UserRound } from "lucide-react";
 import { AnimatePresence } from "framer-motion";
+import type { LinuxCommand, VictoryReport } from "@/game/types";
+
+const progressionCommands: LinuxCommand[] = [
+  "pwd",
+  "cat",
+  "file",
+  "find",
+  "grep",
+  "touch",
+  "cp",
+  "mkdir",
+  "chmod",
+  "rm",
+  "man",
+];
+
+const isLinuxCommand = (value: string): value is LinuxCommand =>
+  progressionCommands.includes(value as LinuxCommand) ||
+  ["ls", "cd", "mv", "help", "hint", "whoami", "echo", "clear"].includes(value);
+
+function teachingCommandCount(report?: VictoryReport | null) {
+  const mistakes = report?.mistakesMade ?? 0;
+  if (mistakes === 0) return 3;
+  if (mistakes <= 2) return 2;
+  return 1;
+}
+
+const nextTeachingCommands = (stats: CommandStats, count: number) => {
+  const unused = progressionCommands.filter((command) => (stats[command]?.uses ?? 0) === 0);
+  const leastUsed = progressionCommands
+    .filter((command) => !unused.includes(command))
+    .slice()
+    .sort((a, b) =>
+      (stats[a]?.uses ?? 0) - (stats[b]?.uses ?? 0) ||
+      progressionCommands.indexOf(a) - progressionCommands.indexOf(b),
+    );
+  return [...unused, ...leastUsed].slice(0, count);
+};
+
+function nextLevelWeakCommands(stats: CommandStats, report?: VictoryReport | null) {
+  const reportWeakness = report?.weakestCommand && isLinuxCommand(report.weakestCommand)
+    ? [report.weakestCommand]
+    : [];
+  const newLessons = nextTeachingCommands(stats, teachingCommandCount(report));
+  return Array.from(new Set([
+    ...reportWeakness,
+    ...getWeakCommands(stats, 4),
+    ...newLessons,
+  ].filter(Boolean))).slice(0, 8) as LinuxCommand[];
+}
 
 const Index = () => {
   const [profileOpen, setProfileOpen] = useState(false);
   const openProfile = useCallback(() => setProfileOpen(true), []);
   const { 
-    state, submit, reset, dismissPopup, loadLevel, 
+    state, submit, dismissPopup, loadLevel, 
     teachingTip, dungeonMasterTip, roomSubtitle,
     submitMauQuiz, closeMauQuiz, openScroll, closeScroll
   } = useGameState({
@@ -35,6 +85,7 @@ const Index = () => {
   const [hasEntered, setHasEntered] = useState(false);
   const [linuxFamiliarity, setLinuxFamiliarity] = useState<number | undefined>(undefined);
   const [bookOpen, setBookOpen] = useState(false);
+  const [advancingLevel, setAdvancingLevel] = useState(false);
 
   useEffect(() => {
     if (!hasEntered) return;
@@ -51,7 +102,22 @@ const Index = () => {
         ? ["mkdir", "cd", "ls", "mv"]
         : getWeakCommands(state.commandStats, 4);
       const playMode = showcaseMode ? "guided" : (familiarity ?? 0) >= 67 ? "real" : "guided";
-      const level = generateDifficultyMechanicLevel(difficulty, familiarity, weakCommands);
+      const generationSeed = [
+        difficulty,
+        familiarity ?? "unknown",
+        Date.now().toString(36),
+        Math.random().toString(36).slice(2, 10),
+        state.commandHistory.length,
+      ].join("-");
+      const level = showcaseMode
+        ? generateDifficultyMechanicLevel(difficulty, familiarity, weakCommands)
+        : await generateLevel({
+            difficulty,
+            familiarity,
+            weakCommands,
+            recentMistakes: state.recentMistakes,
+            generationSeed,
+          });
       loadLevel(
         level,
         `${difficulty} (${level.rooms.length} rooms)`,
@@ -65,6 +131,50 @@ const Index = () => {
       return true;
     } finally {
       setGenerating(null);
+    }
+  };
+
+  const loadNextAdaptiveDungeon = async () => {
+    if (advancingLevel || generating || state.animating) return;
+    setAdvancingLevel(true);
+    try {
+      const difficulty = activeDifficulty ?? (
+        (linuxFamiliarity ?? 50) < 34 ? "easy" : (linuxFamiliarity ?? 50) < 67 ? "medium" : "hard"
+      );
+      const weakCommands = nextLevelWeakCommands(state.commandStats, state.completionReport);
+      const teachingCommands = nextTeachingCommands(
+        state.commandStats,
+        teachingCommandCount(state.completionReport),
+      );
+      const generationSeed = [
+        "progression",
+        difficulty,
+        linuxFamiliarity ?? "unknown",
+        state.completionReport?.weakestCommand ?? "unknown",
+        Date.now().toString(36),
+        Math.random().toString(36).slice(2, 10),
+      ].join("-");
+      const level = await generateLevel({
+        difficulty,
+        familiarity: linuxFamiliarity,
+        weakCommands,
+        recentMistakes: [
+          ...state.recentMistakes,
+          state.completionReport?.nextLesson ?? "",
+        ].filter(Boolean).slice(0, 5),
+        generationSeed,
+      });
+      const focus = weakCommands[0];
+      const adaptation =
+        `Next dungeon tuned for ${focus}, with ${teachingCommands.length} new ${teachingCommands.length === 1 ? "lesson" : "lessons"} woven in: ${teachingCommands.join(", ")}.`;
+      loadLevel(level, `${difficulty} (${level.rooms.length} rooms)`, adaptation, "guided", {
+        showcaseMode: false,
+        weakCommands,
+      });
+      setActiveDifficulty(difficulty);
+      setHasEntered(true);
+    } finally {
+      setAdvancingLevel(false);
     }
   };
 
@@ -150,10 +260,12 @@ const Index = () => {
 
       {state.won && (
         <VictoryOverlay
-          onReset={reset}
+          onReset={loadNextAdaptiveDungeon}
           targetFile={state.targetFile}
           completionMessage={state.completionMessage}
           report={state.completionReport}
+          busy={advancingLevel}
+          actionLabel="TRAIN NEXT SKILL"
         />
       )}
       {bookOpen && <BookOfSecrets onClose={() => setBookOpen(false)} />}

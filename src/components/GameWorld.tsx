@@ -38,6 +38,81 @@ function vfxKindFor(vfx: VfxPulse[], x: number, y: number) {
   return null;
 }
 
+function VfxCell({ kind, index }: { kind: VfxPulse["kind"]; index: number }) {
+  const delay = `${(index % 9) * 32}ms`;
+  const style = { "--vfx-delay": delay } as CSSProperties;
+
+  if (kind === "ls") {
+    return (
+      <div className="vfx-cell vfx-ls-glow" style={style}>
+        <span className="vfx-corner vfx-corner-tl" />
+        <span className="vfx-corner vfx-corner-tr" />
+        <span className="vfx-corner vfx-corner-bl" />
+        <span className="vfx-corner vfx-corner-br" />
+        <span className="vfx-scanline" />
+      </div>
+    );
+  }
+  if (kind === "find") {
+    return (
+      <div className="vfx-cell vfx-find" style={style}>
+        <span className="vfx-path-dot" />
+        <span className="vfx-path-ring" />
+      </div>
+    );
+  }
+  if (kind === "rm") {
+    return (
+      <div className="vfx-cell vfx-smoke" style={style}>
+        <span className="vfx-smoke-puff vfx-smoke-a" />
+        <span className="vfx-smoke-puff vfx-smoke-b" />
+        <span className="vfx-smoke-puff vfx-smoke-c" />
+        <span className="vfx-rune-mark">*</span>
+      </div>
+    );
+  }
+  if (kind === "manifest") {
+    return (
+      <div className="vfx-cell vfx-manifest" style={style}>
+        <span className="vfx-stone-ring" />
+        <span className="vfx-rune-mark">+</span>
+      </div>
+    );
+  }
+  if (kind === "inspect") {
+    return (
+      <div className="vfx-cell vfx-inspect" style={style}>
+        <span className="vfx-lens" />
+        <span className="vfx-rune-mark">?</span>
+      </div>
+    );
+  }
+  if (kind === "pwd") {
+    return (
+      <div className="vfx-cell vfx-pulse" style={style}>
+        <span className="vfx-compass" />
+      </div>
+    );
+  }
+  if (kind === "ghost") {
+    return (
+      <div className="vfx-cell vfx-ghost" style={style}>
+        <span className="vfx-ghost-step" />
+        <span className="vfx-ghost-arrow">^</span>
+      </div>
+    );
+  }
+  if (kind === "combo") {
+    return (
+      <div className="vfx-cell vfx-combo" style={style}>
+        <span className="vfx-combo-ring" />
+        <span className="vfx-rune-mark">!</span>
+      </div>
+    );
+  }
+  return null;
+}
+
 function visualHash(value: string): number {
   let h = 2166136261 >>> 0;
   for (let i = 0; i < value.length; i++) {
@@ -1061,6 +1136,7 @@ export function GameWorld({ state, onDismissPopup, headerRight }: GameWorldProps
               const y = Math.floor(i / room.width);
               const k = vfxKindFor(state.vfx, x, y);
               if (!k) return <div key={i} />;
+              return <VfxCell key={i} kind={k} index={i} />;
               if (k === "ls") return <div key={i} className="vfx-ls-glow" />;
               if (k === "find") return (
                 <div key={i} className="vfx-trail flex items-center justify-center text-[16px]">

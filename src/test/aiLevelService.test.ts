@@ -38,11 +38,30 @@ describe("aiLevelService", () => {
   it("converts fallback levels into reachable room data", () => {
     const level = fallbackLevel({ difficulty: "easy", weakCommands: ["find"], recentMistakes: [] });
     const rooms = levelToRooms(level);
+    const target = level.goal.match(/move ([^\s]+)/)?.[1];
 
     expect(rooms[START_PATH]).toBeTruthy();
     expect(Object.keys(rooms)).toHaveLength(4);
-    expect(Object.values(rooms).some((room) => room.files.some((file) => file.name === "relic.txt"))).toBe(true);
+    expect(target).toBeTruthy();
+    expect(Object.values(rooms).some((room) => room.files.some((file) => file.name === target))).toBe(true);
     expect(Object.values(rooms).some((room) => room.files.some((file) => file.name === "skeleton.key" && file.type === "key"))).toBe(true);
     expect(Object.values(rooms).some((room) => room.doors.some((door) => door.locked && door.requiredKey === "skeleton.key"))).toBe(true);
+  });
+
+  it("uses the generation seed to vary fallback objectives", () => {
+    const first = fallbackLevel({
+      difficulty: "medium",
+      weakCommands: ["mv"],
+      recentMistakes: [],
+      generationSeed: "seed-one",
+    });
+    const second = fallbackLevel({
+      difficulty: "medium",
+      weakCommands: ["mv"],
+      recentMistakes: [],
+      generationSeed: "seed-two",
+    });
+
+    expect(first.goal).not.toBe(second.goal);
   });
 });

@@ -63,7 +63,7 @@ describe("command registry", () => {
     ]));
 
     const result = await runCommand("whoami", state());
-    expect(result.lines[0].text).toBe("Opening your adventurer profile...");
+    expect(result.lines[0].text).toBe("Dungeon Master: Opening your adventurer profile.");
     expect(result.openProfile).toBe(true);
   });
 
@@ -131,7 +131,7 @@ describe("command registry", () => {
     expect(blocked.walkTo).toEqual({ x: 7, y: 2 });
   });
 
-  it("only treats relic.txt as the victory mv target", async () => {
+  it("only treats the configured target file as the victory mv target", async () => {
     const hallwayState = {
       ...state(),
       cwd: "/home/user/hallway",
@@ -147,5 +147,21 @@ describe("command registry", () => {
     };
     const relicMove = await runCommand("mv relic.txt ~/inventory", vaultState);
     expect(relicMove.effect).toEqual({ type: "win", fileName: "relic.txt" });
+
+    const targetRoom = {
+      ...DEFAULT_ROOMS[START_PATH],
+      files: [
+        ...DEFAULT_ROOMS[START_PATH].files,
+        { name: "moonstone.txt", glyph: "□", x: 3, y: 3 },
+      ],
+    };
+    const generatedTargetState = {
+      ...state(),
+      rooms: { ...DEFAULT_ROOMS, [START_PATH]: targetRoom },
+      targetFile: "moonstone.txt",
+      winCondition: "mv moonstone.txt ~/inventory",
+    };
+    const generatedTargetMove = await runCommand("mv moonstone.txt ~/inventory", generatedTargetState);
+    expect(generatedTargetMove.effect).toEqual({ type: "win", fileName: "moonstone.txt" });
   });
 });

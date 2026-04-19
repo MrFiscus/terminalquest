@@ -515,7 +515,6 @@ export function useGameState(options: UseGameStateOptions = {}) {
           const room = getRoom(s.rooms, s.cwd);
           if (!room) return s;
           console.log(`[applyEffect win] triggeredBy="${effect.fileName}" targetFile="${s.targetFile}"`);
-          if (effect.fileName !== TARGET_FILE || s.targetFile !== TARGET_FILE) return s;
           if (effect.fileName !== s.targetFile) return s;
           const file = room.files.find((f) => f.name === effect.fileName);
           if (!file) return s;

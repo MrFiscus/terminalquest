@@ -635,6 +635,173 @@
   .door-create-pulse {
     animation: door-create-pulse 0.72s ease-out;
   }
+  .vfx-cell {
+    position: relative;
+    width: 100%;
+    height: 100%;
+    overflow: visible;
+    animation-delay: var(--vfx-delay, 0ms);
+    will-change: transform, opacity, filter;
+  }
+  .vfx-cell::before,
+  .vfx-cell::after {
+    content: "";
+    position: absolute;
+    inset: 12%;
+    pointer-events: none;
+  }
+  .vfx-corner {
+    position: absolute;
+    width: 28%;
+    height: 28%;
+    opacity: 0;
+    border-color: hsl(45 100% 62%);
+    filter: drop-shadow(0 0 8px hsl(38 100% 55% / 0.9));
+    animation: vfx-corner-lock 1.35s ease-out forwards;
+    animation-delay: var(--vfx-delay, 0ms);
+  }
+  .vfx-corner-tl { left: 2px; top: 2px; border-left: 2px solid; border-top: 2px solid; }
+  .vfx-corner-tr { right: 2px; top: 2px; border-right: 2px solid; border-top: 2px solid; }
+  .vfx-corner-bl { left: 2px; bottom: 2px; border-left: 2px solid; border-bottom: 2px solid; }
+  .vfx-corner-br { right: 2px; bottom: 2px; border-right: 2px solid; border-bottom: 2px solid; }
+  .vfx-scanline {
+    position: absolute;
+    left: 8%;
+    right: 8%;
+    top: 50%;
+    height: 2px;
+    background: linear-gradient(90deg, transparent, hsl(45 100% 65% / 0.95), transparent);
+    box-shadow: 0 0 10px hsl(38 100% 55% / 0.7);
+    opacity: 0;
+    animation: vfx-scanline-sweep 1.2s ease-out forwards;
+    animation-delay: var(--vfx-delay, 0ms);
+  }
+  .vfx-path-dot,
+  .vfx-path-ring,
+  .vfx-stone-ring,
+  .vfx-lens,
+  .vfx-compass,
+  .vfx-ghost-step,
+  .vfx-combo-ring {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    transform: translate(-50%, -50%);
+    pointer-events: none;
+  }
+  .vfx-path-dot {
+    width: 18%;
+    height: 18%;
+    border-radius: 9999px;
+    background: hsl(185 95% 68%);
+    box-shadow: 0 0 10px hsl(185 95% 62% / 0.95), 0 0 18px hsl(45 100% 60% / 0.35);
+    animation: vfx-path-dot 1.6s ease-out forwards;
+    animation-delay: var(--vfx-delay, 0ms);
+  }
+  .vfx-path-ring {
+    width: 72%;
+    height: 72%;
+    border: 2px solid hsl(185 95% 68% / 0.8);
+    border-radius: 9999px;
+    box-shadow: 0 0 12px hsl(185 95% 62% / 0.55);
+    animation: vfx-path-ring 1.8s ease-out forwards;
+    animation-delay: var(--vfx-delay, 0ms);
+  }
+  .vfx-smoke-puff {
+    position: absolute;
+    left: 50%;
+    top: 52%;
+    width: 32%;
+    height: 32%;
+    border-radius: 9999px;
+    background:
+      radial-gradient(circle, hsl(275 45% 70% / 0.55), hsl(0 0% 10% / 0.2) 58%, transparent 72%);
+    filter: blur(1px);
+    animation: vfx-smoke-puff 1.25s ease-out forwards;
+    animation-delay: var(--vfx-delay, 0ms);
+  }
+  .vfx-smoke-a { --smoke-x: -42%; --smoke-y: -58%; }
+  .vfx-smoke-b { --smoke-x: 16%; --smoke-y: -70%; animation-delay: calc(var(--vfx-delay, 0ms) + 80ms); }
+  .vfx-smoke-c { --smoke-x: -8%; --smoke-y: -26%; animation-delay: calc(var(--vfx-delay, 0ms) + 150ms); }
+  .vfx-rune-mark {
+    position: absolute;
+    left: 50%;
+    top: 48%;
+    transform: translate(-50%, -50%);
+    font-family: 'Press Start 2P', monospace;
+    font-size: 11px;
+    color: hsl(45 100% 70%);
+    text-shadow: 0 0 8px hsl(38 100% 55% / 0.85), 0 1px 0 hsl(0 0% 0% / 0.9);
+    animation: vfx-rune-mark 1.4s ease-out forwards;
+    animation-delay: var(--vfx-delay, 0ms);
+  }
+  .vfx-stone-ring {
+    width: 80%;
+    height: 80%;
+    border-radius: 3px;
+    border: 2px solid hsl(45 100% 60% / 0.85);
+    background:
+      radial-gradient(circle, hsl(45 100% 55% / 0.28), transparent 56%),
+      repeating-linear-gradient(45deg, hsl(45 90% 60% / 0.18) 0 2px, transparent 2px 5px);
+    box-shadow: inset 0 0 18px hsl(38 100% 50% / 0.24), 0 0 16px hsl(38 100% 50% / 0.5);
+    animation: vfx-stone-ring 1.45s ease-out forwards;
+    animation-delay: var(--vfx-delay, 0ms);
+  }
+  .vfx-lens {
+    width: 62%;
+    height: 62%;
+    border-radius: 9999px;
+    border: 2px solid hsl(45 100% 68% / 0.9);
+    background: radial-gradient(circle at 35% 30%, hsl(45 100% 85% / 0.45), transparent 34%);
+    box-shadow: 0 0 14px hsl(45 100% 60% / 0.55), inset 0 0 12px hsl(45 100% 75% / 0.25);
+    animation: vfx-lens-search 1.7s ease-in-out forwards;
+    animation-delay: var(--vfx-delay, 0ms);
+  }
+  .vfx-compass {
+    width: 86%;
+    height: 86%;
+    border: 2px solid hsl(140 60% 58% / 0.78);
+    border-radius: 9999px;
+    background:
+      linear-gradient(0deg, transparent 46%, hsl(140 60% 58% / 0.5) 48% 52%, transparent 54%),
+      linear-gradient(90deg, transparent 46%, hsl(140 60% 58% / 0.5) 48% 52%, transparent 54%),
+      radial-gradient(circle, hsl(140 60% 52% / 0.22), transparent 58%);
+    box-shadow: 0 0 15px hsl(140 60% 50% / 0.45);
+    animation: vfx-compass-spin 1.2s ease-out forwards;
+    animation-delay: var(--vfx-delay, 0ms);
+  }
+  .vfx-ghost-step {
+    width: 42%;
+    height: 62%;
+    border-radius: 9999px 9999px 45% 45%;
+    background: radial-gradient(ellipse at 50% 28%, hsl(45 100% 72% / 0.82), hsl(45 100% 52% / 0.28) 58%, transparent 72%);
+    box-shadow: 0 0 14px hsl(45 100% 58% / 0.6);
+    animation: vfx-ghost-step 2.4s ease-out forwards;
+    animation-delay: var(--vfx-delay, 0ms);
+  }
+  .vfx-ghost-arrow {
+    position: absolute;
+    left: 50%;
+    top: 18%;
+    transform: translateX(-50%);
+    font-family: 'Press Start 2P', monospace;
+    font-size: 8px;
+    color: hsl(45 100% 70%);
+    text-shadow: 0 0 8px hsl(45 100% 55% / 0.75);
+    animation: vfx-ghost-arrow 2.1s ease-out forwards;
+    animation-delay: var(--vfx-delay, 0ms);
+  }
+  .vfx-combo-ring {
+    width: 95%;
+    height: 95%;
+    border: 2px solid hsl(48 100% 64% / 0.9);
+    border-radius: 9999px;
+    background:
+      conic-gradient(from 0deg, transparent, hsl(48 100% 65% / 0.45), transparent, hsl(170 70% 62% / 0.34), transparent);
+    box-shadow: 0 0 18px hsl(48 100% 58% / 0.75), inset 0 0 20px hsl(48 100% 58% / 0.3);
+    animation: vfx-combo-ring 1.55s ease-out forwards;
+    animation-delay: var(--vfx-delay, 0ms);
+  }
   .scanlines::before {
     content: "";
     position: absolute;
@@ -1280,4 +1447,87 @@
   0%,
   100% { opacity: 0.55; }
   50% { opacity: 0.82; }
+}
+
+@keyframes vfx-corner-lock {
+  0% { opacity: 0; transform: scale(1.55); }
+  18% { opacity: 1; transform: scale(1); }
+  48% { opacity: 0.95; transform: scale(0.96); }
+  100% { opacity: 0; transform: scale(0.9); }
+}
+@keyframes vfx-scanline-sweep {
+  0% { opacity: 0; transform: translateY(-170%) scaleX(0.2); }
+  20% { opacity: 1; transform: translateY(-60%) scaleX(1); }
+  62% { opacity: 0.9; transform: translateY(60%) scaleX(1); }
+  100% { opacity: 0; transform: translateY(170%) scaleX(0.25); }
+}
+@keyframes vfx-path-dot {
+  0% { opacity: 0; transform: translate(-50%, -50%) scale(0.2); }
+  16% { opacity: 1; transform: translate(-50%, -50%) scale(1.3); }
+  70% { opacity: 0.85; transform: translate(-50%, -50%) scale(0.9); }
+  100% { opacity: 0; transform: translate(-50%, -50%) scale(0.25); }
+}
+@keyframes vfx-path-ring {
+  0% { opacity: 0; transform: translate(-50%, -50%) scale(0.2); }
+  18% { opacity: 0.95; transform: translate(-50%, -50%) scale(0.72); }
+  100% { opacity: 0; transform: translate(-50%, -50%) scale(1.35); }
+}
+@keyframes vfx-smoke-puff {
+  0% { opacity: 0; transform: translate(-50%, -40%) scale(0.3); filter: blur(0); }
+  25% { opacity: 0.9; transform: translate(calc(-50% + var(--smoke-x)), calc(-50% + var(--smoke-y) * 0.2)) scale(0.95); filter: blur(1px); }
+  100% { opacity: 0; transform: translate(calc(-50% + var(--smoke-x)), calc(-50% + var(--smoke-y))) scale(2.2); filter: blur(5px); }
+}
+@keyframes vfx-rune-mark {
+  0% { opacity: 0; transform: translate(-50%, -50%) scale(0.35) rotate(-18deg); }
+  32% { opacity: 1; transform: translate(-50%, -50%) scale(1.2) rotate(5deg); }
+  100% { opacity: 0; transform: translate(-50%, -72%) scale(0.7) rotate(16deg); }
+}
+@keyframes vfx-stone-ring {
+  0% { opacity: 0; transform: translate(-50%, -50%) scale(0.25) rotate(-18deg); filter: brightness(1.4); }
+  38% { opacity: 1; transform: translate(-50%, -50%) scale(1.05) rotate(2deg); filter: brightness(1.2); }
+  100% { opacity: 0; transform: translate(-50%, -50%) scale(1.18) rotate(0deg); filter: brightness(1); }
+}
+@keyframes vfx-lens-search {
+  0% { opacity: 0; transform: translate(-75%, -45%) scale(0.65); }
+  20% { opacity: 1; transform: translate(-60%, -52%) scale(1); }
+  55% { opacity: 1; transform: translate(-42%, -48%) scale(1.05); }
+  82% { opacity: 0.85; transform: translate(-50%, -50%) scale(0.94); }
+  100% { opacity: 0; transform: translate(-50%, -50%) scale(0.65); }
+}
+@keyframes vfx-compass-spin {
+  0% { opacity: 0; transform: translate(-50%, -50%) scale(0.55) rotate(-90deg); }
+  24% { opacity: 1; transform: translate(-50%, -50%) scale(1.02) rotate(20deg); }
+  70% { opacity: 0.85; transform: translate(-50%, -50%) scale(0.96) rotate(270deg); }
+  100% { opacity: 0; transform: translate(-50%, -50%) scale(1.2) rotate(360deg); }
+}
+@keyframes vfx-ghost-step {
+  0% { opacity: 0; transform: translate(-50%, -35%) scale(0.45); }
+  18% { opacity: 0.95; transform: translate(-50%, -50%) scale(1); }
+  72% { opacity: 0.7; transform: translate(-50%, -52%) scale(0.92); }
+  100% { opacity: 0; transform: translate(-50%, -74%) scale(0.55); }
+}
+@keyframes vfx-ghost-arrow {
+  0% { opacity: 0; transform: translateX(-50%) translateY(6px); }
+  25% { opacity: 1; transform: translateX(-50%) translateY(0); }
+  100% { opacity: 0; transform: translateX(-50%) translateY(-12px); }
+}
+@keyframes vfx-combo-ring {
+  0% { opacity: 0; transform: translate(-50%, -50%) scale(0.25) rotate(0deg); }
+  30% { opacity: 1; transform: translate(-50%, -50%) scale(1.05) rotate(120deg); }
+  68% { opacity: 0.85; transform: translate(-50%, -50%) scale(0.92) rotate(260deg); }
+  100% { opacity: 0; transform: translate(-50%, -50%) scale(1.3) rotate(360deg); }
+}
+
+.victory-scroll-content::-webkit-scrollbar {
+  width: 8px;
+}
+
+.victory-scroll-content::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.victory-scroll-content::-webkit-scrollbar-thumb {
+  background: rgba(139, 105, 20, 0.55);
+  border: 2px solid rgba(235, 205, 130, 0.55);
+  border-radius: 8px;
 }
