@@ -39,10 +39,13 @@ import {
   appendRun,
   baseCommand,
   clearActiveRun,
+  clearLevelSession,
   countCommands,
   saveActiveRun,
+  saveLevelSession,
   summarizeProgress,
   type ActiveRunRecord,
+  type LevelSessionSnapshot,
   type RunRecord,
 } from "@/game/progressStats";
 import {
@@ -237,6 +240,96 @@ export function useGameState(options: UseGameStateOptions = {}) {
     for (const def of ACHIEVEMENTS) {
       if (def.progress(summary).unlocked) markAchievementNotified(def.id);
     }
+  }, []);
+
+  // ---------------------------------------------------------------------
+  // Level-session auto-save: every time the state changes, write a
+  // debounced snapshot to localStorage so a refresh can offer
+  // "continue last level". Transient UI fields (animations, popups,
+  // screen effects, vfx) are scrubbed so we don't restore into an
+  // open dialog. Cleared on win.
+  // ---------------------------------------------------------------------
+  const suppressAutoSaveRef = useRef(false);
+  useEffect(() => {
+    if (suppressAutoSaveRef.current) return;
+    if (state.won) {
+      clearLevelSession();
+      return;
+    }
+    // Skip saving the absolutely-blank initial state (no rooms populated
+    // beyond the default demo home) — there's nothing to resume yet.
+    if (!state.rooms || Object.keys(state.rooms).length === 0) return;
+
+    const handle = setTimeout(() => {
+      const room = getRoom(state.rooms, state.cwd);
+      const tracker = runTrackerRef.current;
+      const snapshot: LevelSessionSnapshot = {
+        savedAt: Date.now(),
+        activeDifficulty: tracker.difficulty,
+        linuxFamiliarity: typeof state.difficultyValue === "number" ? state.difficultyValue : null,
+        label: room?.name || state.cwd,
+        state: {
+          ...state,
+          // scrub transient UI state
+          screenEffect: null,
+          vfx: [],
+          popup: null,
+          transitioning: false,
+          animating: false,
+          activeMauQuiz: undefined,
+          activeScroll: undefined,
+        },
+        tracker: {
+          difficulty: tracker.difficulty,
+          startedAt: tracker.startedAt,
+          commands: [...tracker.commands],
+          mistakes: [...tracker.mistakes],
+          visitedRooms: Array.from(tracker.visitedRooms),
+          keysFound: tracker.keysFound,
+          lockedDoorsUnlocked: tracker.lockedDoorsUnlocked,
+          completed: tracker.completed,
+        },
+      };
+      saveLevelSession(snapshot);
+    }, 700);
+    return () => clearTimeout(handle);
+  }, [state]);
+
+  /**
+   * Rehydrate a saved level session (state + run tracker) in one shot.
+   * Called from Index.tsx when the player picks "Continue Last".
+   * Toggles a guard around the setState so the auto-save effect doesn't
+   * immediately re-write what we just loaded.
+   */
+  const resumeSession = useCallback((snapshot: LevelSessionSnapshot) => {
+    suppressAutoSaveRef.current = true;
+    const loaded = snapshot.state as GameState;
+    setState({
+      ...loaded,
+      // Defensive: zero out transient UI fields in case they were
+      // accidentally persisted.
+      screenEffect: null,
+      vfx: [],
+      popup: null,
+      transitioning: false,
+      animating: false,
+      activeMauQuiz: undefined,
+      activeScroll: undefined,
+    });
+    runTrackerRef.current = {
+      difficulty: snapshot.tracker.difficulty,
+      startedAt: snapshot.tracker.startedAt,
+      commands: [...snapshot.tracker.commands],
+      mistakes: [...snapshot.tracker.mistakes],
+      visitedRooms: new Set(snapshot.tracker.visitedRooms),
+      keysFound: snapshot.tracker.keysFound,
+      lockedDoorsUnlocked: snapshot.tracker.lockedDoorsUnlocked,
+      completed: snapshot.tracker.completed,
+    };
+    // Re-enable auto-save on the next tick so restoration is atomic.
+    setTimeout(() => {
+      suppressAutoSaveRef.current = false;
+    }, 0);
   }, []);
 
   const nextId = () => ++idRef.current;
@@ -1172,5 +1265,6 @@ export function useGameState(options: UseGameStateOptions = {}) {
     closeScroll,
     achievementQueue,
     dismissAchievement,
+    resumeSession,
   };
 }

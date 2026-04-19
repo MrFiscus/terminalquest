@@ -1225,7 +1225,7 @@ export function generateDungeon(
     }
   }
 
-  const finalRooms = spawnMauTheCat(rooms, rootPath);
+  const finalRooms = spawnMauTheCat(rooms, rootPath, nonce);
 
   for (const p of Object.keys(finalRooms)) {
     if (!seen.has(p)) {
@@ -1239,7 +1239,7 @@ export function generateDungeon(
 /**
  * BFS across the entire dungeon graph to find the walkable tile furthest from the start.
  */
-function spawnMauTheCat(rooms: Record<string, Room>, rootPath: string): Record<string, Room> {
+function spawnMauTheCat(rooms: Record<string, Room>, rootPath: string, nonce = 0): Record<string, Room> {
   const startRoom = rooms[rootPath];
   if (!startRoom) return rooms;
 
@@ -1303,8 +1303,9 @@ function spawnMauTheCat(rooms: Record<string, Room>, rootPath: string): Record<s
   if (targetRoom) {
     const walkableTiles = targetRoom.tiles.filter((t) => isRoomWalkableForNpc(targetRoom, t.x, t.y));
     
-    // Pick one at random using the room path as a seed base
-    const rng = mulberry32(hashString("mau-pos-" + targetPath));
+    // Seed mixes the level nonce in so the same room layout doesn't put
+    // Mau on the identical tile across different generated levels.
+    const rng = mulberry32(hashString("mau-pos-" + targetPath) ^ (nonce >>> 0));
     const randomTile = walkableTiles.length > 0 
       ? walkableTiles[Math.floor(rng() * walkableTiles.length)]
       : { x: targetRoom.spawn.x, y: targetRoom.spawn.y };

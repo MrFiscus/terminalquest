@@ -80,6 +80,9 @@ const validCommands = new Set<LinuxCommand>([
   "grep",
 ]);
 
+// Pool used by the fallback generator when the AI call fails. Expanded
+// from 10 → 24 entries so fallback levels collide far less often; ids
+// are still one word + lowercase so they read as folder names.
 const fallbackIds = [
   "foyer",
   "vault",
@@ -91,6 +94,20 @@ const fallbackIds = [
   "sanctum",
   "gallery",
   "observatory",
+  "scriptorium",
+  "reliquary",
+  "aqueduct",
+  "chancel",
+  "oubliette",
+  "rookery",
+  "atrium",
+  "ossuary",
+  "keep",
+  "chapter-house",
+  "dovecote",
+  "barracks",
+  "apothecary",
+  "hollow",
 ];
 
 const clamp = (value: number, min: number, max: number) => Math.min(max, Math.max(min, value));
@@ -108,14 +125,52 @@ function pickSeeded<T>(values: T[], seed: string, salt: string): T {
   return values[hashSeed(`${seed}:${salt}`) % values.length];
 }
 
+// Fallback target-file pools expanded ~3x so even the offline/fallback
+// path avoids trivial repetition. Each pool stays command-themed so the
+// naming still reinforces the lesson the level is built around.
 const fallbackTargetPools: Partial<Record<LinuxCommand | "default", string[]>> = {
-  cd: ["path-relic.txt", "trail-sigil.txt", "route-rune.txt", "wayfinder.txt"],
-  mv: ["cargo.txt", "moonstone.txt", "sealed-parcel.txt", "ember-core.txt"],
-  ls: ["hidden-note.txt", "buried-ledger.txt", "shadow-index.txt", "covered-scroll.txt"],
-  mkdir: ["blueprint.txt", "builder-rune.txt", "arch-plan.txt", "keystone-map.txt"],
-  find: ["relic.txt", "sunken-token.txt", "lost-crown.txt", "oracle-shard.txt"],
-  cat: ["cipher-scroll.txt", "lore-fragment.txt", "sealed-note.txt", "riddle-tablet.txt"],
-  default: ["relic.txt", "victory.jpg", "moon-coin.txt", "sanctum-seal.txt", "final-scroll.txt"],
+  cd: [
+    "path-relic.txt", "trail-sigil.txt", "route-rune.txt", "wayfinder.txt",
+    "compass-fragment.txt", "step-ledger.txt", "milestone.txt", "gatekey-note.txt",
+    "cairn-map.txt", "crossroads.txt", "pilgrim-badge.txt", "rift-token.txt",
+  ],
+  mv: [
+    "cargo.txt", "moonstone.txt", "sealed-parcel.txt", "ember-core.txt",
+    "courier-seal.txt", "caravan-key.txt", "ferry-token.txt", "freight.txt",
+    "talisman.txt", "shifter-rune.txt", "porter-note.txt", "bound-scroll.txt",
+  ],
+  ls: [
+    "hidden-note.txt", "buried-ledger.txt", "shadow-index.txt", "covered-scroll.txt",
+    "dust-inventory.txt", "missing-catalog.txt", "whisper-register.txt", "veiled-tally.txt",
+    "forgotten-list.txt", "lantern-log.txt", "seeker-manifest.txt",
+  ],
+  mkdir: [
+    "blueprint.txt", "builder-rune.txt", "arch-plan.txt", "keystone-map.txt",
+    "architect-mark.txt", "foundation-stone.txt", "mason-charter.txt", "buttress-plan.txt",
+    "frame-writ.txt", "quarry-map.txt",
+  ],
+  find: [
+    "relic.txt", "sunken-token.txt", "lost-crown.txt", "oracle-shard.txt",
+    "wayward-coin.txt", "hidden-ember.txt", "buried-seal.txt", "shifting-key.txt",
+    "unseen-mark.txt", "cloaked-relic.txt", "twin-shard.txt",
+  ],
+  cat: [
+    "cipher-scroll.txt", "lore-fragment.txt", "sealed-note.txt", "riddle-tablet.txt",
+    "dream-journal.txt", "oracle-stanza.txt", "bard-verses.txt", "inscribed-shard.txt",
+    "half-burnt-page.txt", "vellum-rune.txt",
+  ],
+  rm: [
+    "cursed-brand.txt", "rot-seal.txt", "plague-writ.txt", "broken-chain.txt",
+    "hollow-effigy.txt", "snare-mark.txt",
+  ],
+  grep: [
+    "echo-index.txt", "matching-sigil.txt", "needle-scroll.txt", "tally-fragment.txt",
+  ],
+  default: [
+    "relic.txt", "victory.jpg", "moon-coin.txt", "sanctum-seal.txt", "final-scroll.txt",
+    "twin-shard.txt", "wayfinder.txt", "oathstone.txt", "night-charter.txt",
+    "ember-crown.txt",
+  ],
 };
 
 function fallbackTargetFor(command: LinuxCommand | undefined, seed: string) {

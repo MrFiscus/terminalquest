@@ -16,6 +16,16 @@ import { generateDifficultyMechanicLevel } from "@/game/difficultyMechanics";
 import { adaptationMessage, getWeakCommands, type CommandStats } from "@/game/adaptiveDungeon";
 import { startGameAmbience, stopGameAmbience } from "@/game/audio";
 import { useCallback, useEffect, useState } from "react";
+import {
+  clearLevelSession,
+  readFamiliarity,
+  readLevelSession,
+  readOnboarded,
+  saveFamiliarity,
+  setOnboarded,
+  type LevelSessionSnapshot,
+} from "@/game/progressStats";
+import { ResumeDialog } from "@/components/ResumeDialog";
 import { UserRound } from "lucide-react";
 import { AnimatePresence } from "framer-motion";
 import type { LinuxCommand, VictoryReport } from "@/game/types";
@@ -113,13 +123,35 @@ const Index = () => {
     teachingTip, dungeonMasterTip, roomSubtitle,
     submitMauQuiz, closeMauQuiz, openScroll, closeScroll,
     achievementQueue, dismissAchievement,
+    resumeSession,
   } = useGameState({
     onOpenProfile: openProfile,
   });
   const [generating, setGenerating] = useState<Difficulty | null>(null);
   const [activeDifficulty, setActiveDifficulty] = useState<Difficulty | null>(null);
   const [hasEntered, setHasEntered] = useState(false);
-  const [linuxFamiliarity, setLinuxFamiliarity] = useState<number | undefined>(undefined);
+  // Initialize the familiarity state from localStorage synchronously on
+  // first render so we don't flash the slider for returning users.
+  const [linuxFamiliarity, setLinuxFamiliarity] = useState<number | undefined>(() => {
+    const stored = readFamiliarity();
+    return stored == null ? undefined : stored;
+  });
+  // Resume-prompt state — computed synchronously on first render so the
+  // dialog appears immediately on refresh, before any slider / auto-enter
+  // flow has a chance to flash. `resumeDecision` tracks what the player
+  // chose so we only show the prompt once per mount.
+  const [pendingSession, setPendingSession] = useState<LevelSessionSnapshot | null>(() => readLevelSession());
+  const [resumeDecision, setResumeDecision] = useState<"pending" | "continue" | "new" | "none">(
+    () => (readLevelSession() ? "pending" : "none"),
+  );
+  // When true, the user has onboarded before and has a saved familiarity —
+  // skip the slider and jump straight into an adaptive level on mount.
+  // Only activates AFTER the resume dialog is resolved (or skipped).
+  const [autoEntering, setAutoEntering] = useState(() => {
+    const hasSession = !!readLevelSession();
+    if (hasSession) return false; // wait for resume dialog
+    return readOnboarded() && readFamiliarity() != null;
+  });
   const [bookOpen, setBookOpen] = useState(false);
   const [advancingLevel, setAdvancingLevel] = useState(false);
 
@@ -214,14 +246,107 @@ const Index = () => {
     }
   };
 
+  // Returning-user auto-enter: if the player already confirmed the slider
+  // in a previous session, skip the slider and jump into an adaptive level
+  // using their saved familiarity. Demo (familiarity=0) is preserved — it
+  // routes through the same loadAIDungeon call which picks the demo path
+  // based on familiarity === 0.
+  useEffect(() => {
+    if (!autoEntering || hasEntered) return;
+    const familiarity = readFamiliarity();
+    if (familiarity == null) {
+      setAutoEntering(false);
+      return;
+    }
+    const difficulty: Difficulty =
+      familiarity < 34 ? "easy" : familiarity < 67 ? "medium" : "hard";
+    setLinuxFamiliarity(familiarity);
+    (async () => {
+      try {
+        const loaded = await loadAIDungeon(difficulty, familiarity);
+        if (loaded) setHasEntered(true);
+      } catch {
+        // Fall back to showing the slider if generation fails.
+      } finally {
+        setAutoEntering(false);
+      }
+    })();
+    // loadAIDungeon is stable per render; triggering only when the gate
+    // flips is intentional.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [autoEntering]);
+
+  // ── Resume-or-new prompt ──────────────────────────────────────────────
+  // Takes priority over auto-enter and the slider. Once the player picks,
+  // we flip resumeDecision and the rest of the gating logic below runs
+  // as before.
+  const handleContinueSession = () => {
+    if (!pendingSession) return;
+    // Restore the GameState + runTracker from storage. Also restore the
+    // in-memory familiarity / difficulty so adaptive next-level logic
+    // still has the right context.
+    resumeSession(pendingSession);
+    if (pendingSession.linuxFamiliarity != null) {
+      setLinuxFamiliarity(pendingSession.linuxFamiliarity);
+    }
+    if (pendingSession.activeDifficulty) {
+      setActiveDifficulty(pendingSession.activeDifficulty as Difficulty);
+    }
+    setPendingSession(null);
+    setResumeDecision("continue");
+    setHasEntered(true);
+  };
+  const handleStartNewWorld = () => {
+    // Throw away the saved snapshot so next auto-save writes a fresh one.
+    clearLevelSession();
+    setPendingSession(null);
+    setResumeDecision("new");
+    // Re-arm auto-enter for onboarded users; first-timers fall through to
+    // the slider like normal.
+    setAutoEntering(readOnboarded() && readFamiliarity() != null);
+  };
+
   if (!hasEntered) {
+    if (resumeDecision === "pending" && pendingSession) {
+      return (
+        <ResumeDialog
+          session={pendingSession}
+          onContinue={handleContinueSession}
+          onNew={handleStartNewWorld}
+        />
+      );
+    }
+    if (autoEntering) {
+      // Brief loader while the adaptive level is being generated for a
+      // returning player. Kept intentionally minimal so it doesn't fight
+      // with the DifficultyMenu styling when we do fall back to it.
+      return (
+        <div
+          className="fixed inset-0 flex items-center justify-center bg-background"
+          style={{ fontFamily: "'Cinzel', Georgia, serif" }}
+        >
+          <div className="flex flex-col items-center gap-3 text-parchment">
+            <span className="text-sm tracking-[0.25em] uppercase opacity-75">
+              Preparing your next dungeon
+            </span>
+            <span className="text-xs opacity-60">…drawing the map</span>
+          </div>
+        </div>
+      );
+    }
     return (
       <DifficultyMenu
         busy={Boolean(generating)}
         onConfirm={async (difficulty, familiarity, precise) => {
           setLinuxFamiliarity(familiarity);
           const loaded = await loadAIDungeon(difficulty, familiarity);
-          if (loaded) setHasEntered(true);
+          if (loaded) {
+            // Persist the slider value + mark the user onboarded so future
+            // visits skip the slider and continue the adaptive loop.
+            saveFamiliarity(familiarity);
+            setOnboarded(true);
+            setHasEntered(true);
+          }
         }}
       />
     );

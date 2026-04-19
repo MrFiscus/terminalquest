@@ -3,6 +3,9 @@ import type { LinuxCommand } from "./types";
 export const RUNS_STORAGE_KEY = "terminalquest_runs";
 export const PLAYER_STORAGE_KEY = "terminalquest_player";
 export const ACTIVE_RUN_STORAGE_KEY = "terminalquest_active_run";
+export const FAMILIARITY_STORAGE_KEY = "terminalquest_familiarity";
+export const ONBOARDED_STORAGE_KEY = "terminalquest_onboarded";
+export const LEVEL_SESSION_STORAGE_KEY = "terminalquest_level_session";
 const PROFILE_SCOPE_STORAGE_KEY = "terminalquest_profile_scope";
 
 export const PROFILE_COMMANDS = ["ls", "cd", "mv", "cat", "find", "mkdir", "rm", "pwd", "file"] as const;
@@ -179,6 +182,103 @@ export function savePlayerName(name: string) {
   const cleaned = name.trim().slice(0, 28) || "Adventurer";
   storage()?.setItem(scopedKey(PLAYER_STORAGE_KEY), cleaned);
   return cleaned;
+}
+
+/**
+ * Persisted Linux-familiarity slider value (0–100). Returns null if the
+ * current user has never confirmed the slider. Scoped per-user via the
+ * same mechanism the other storage helpers use, so multiple accounts on
+ * one machine don't overwrite each other's progression.
+ */
+export function readFamiliarity(): number | null {
+  const raw = storage()?.getItem(scopedKey(FAMILIARITY_STORAGE_KEY));
+  if (raw == null) return null;
+  const n = Number(raw);
+  return Number.isFinite(n) ? n : null;
+}
+
+export function saveFamiliarity(value: number) {
+  storage()?.setItem(scopedKey(FAMILIARITY_STORAGE_KEY), String(Math.round(value)));
+}
+
+export function clearFamiliarity() {
+  storage()?.removeItem(scopedKey(FAMILIARITY_STORAGE_KEY));
+}
+
+/**
+ * First-time onboarding flag. True once the user has confirmed the
+ * difficulty slider at least once. Drives whether the slider is shown
+ * on `/play` entry (first-time users) or skipped in favor of the
+ * adaptive loop (returning users).
+ */
+export function readOnboarded(): boolean {
+  return storage()?.getItem(scopedKey(ONBOARDED_STORAGE_KEY)) === "1";
+}
+
+export function setOnboarded(flag: boolean) {
+  const s = storage();
+  if (!s) return;
+  if (flag) s.setItem(scopedKey(ONBOARDED_STORAGE_KEY), "1");
+  else s.removeItem(scopedKey(ONBOARDED_STORAGE_KEY));
+}
+
+// ---------------------------------------------------------------------
+// Level session — full "resume last level" snapshot
+// ---------------------------------------------------------------------
+// Kept as `unknown` in the signature so we don't couple this module to
+// the GameState shape (which would cycle through types.ts → game imports
+// back here). The hook that owns state casts it at the boundary.
+
+export interface LevelSessionSnapshot {
+  /** Wall-clock when this snapshot was written. Used only for the UI. */
+  savedAt: number;
+  /** Difficulty label the player selected for this run (easy/medium/hard). */
+  activeDifficulty: string | null;
+  /** Linux-familiarity slider value (0-100) the run started with. */
+  linuxFamiliarity: number | null;
+  /** A short human-readable summary of where the player is (room name / cwd). */
+  label: string;
+  /** Scrubbed GameState snapshot (transient UI like popups/animations stripped). */
+  state: unknown;
+  /** RunTracker snapshot — Set converted to string[] for JSON. */
+  tracker: {
+    difficulty: string;
+    startedAt: number;
+    commands: string[];
+    mistakes: string[];
+    visitedRooms: string[];
+    keysFound: number;
+    lockedDoorsUnlocked: number;
+    completed: boolean;
+  };
+}
+
+export function readLevelSession(): LevelSessionSnapshot | null {
+  const raw = storage()?.getItem(scopedKey(LEVEL_SESSION_STORAGE_KEY));
+  if (!raw) return null;
+  try {
+    const parsed = JSON.parse(raw) as Partial<LevelSessionSnapshot>;
+    if (!parsed || typeof parsed !== "object") return null;
+    if (typeof parsed.savedAt !== "number") return null;
+    return parsed as LevelSessionSnapshot;
+  } catch {
+    return null;
+  }
+}
+
+export function saveLevelSession(session: LevelSessionSnapshot) {
+  const s = storage();
+  if (!s) return;
+  try {
+    s.setItem(scopedKey(LEVEL_SESSION_STORAGE_KEY), JSON.stringify(session));
+  } catch {
+    // If localStorage is full or the state exceeds quota, fail silently —
+    // the run still continues in memory.
+  }
+}
+
+export function clearLevelSession() {
+  storage()?.removeItem(scopedKey(LEVEL_SESSION_STORAGE_KEY));
 }
 
 export function baseCommand(raw: string) {
