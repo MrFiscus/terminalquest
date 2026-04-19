@@ -1,4 +1,4 @@
-import { useState, useMemo, useRef } from "react";
+import { useState, useMemo } from "react";
 import { commandLibrary, type CommandEntry, type DifficultyLevel } from "@/game/commandLibrary";
 import bookFrame from "@/assets/book-frame.png";
 
@@ -481,7 +481,7 @@ export function BookOfSecrets({ onClose }: BookOfSecretsProps) {
             zIndex: 10,
             display: "flex", alignItems: "center", justifyContent: "center", gap: 18,
           }}>
-            <button disabled={!canPrev || !!flipping} onClick={() => navigate("prev")} style={navBtn("prev")}>
+            <button disabled={!canPrev || fading} onClick={() => navigate("prev")} style={navBtn("prev")}>
               ◄ Prev Page
             </button>
             <div style={{ display: "flex", alignItems: "center", gap: 12,
@@ -496,7 +496,7 @@ export function BookOfSecrets({ onClose }: BookOfSecretsProps) {
                 {safeSpread + 1} / {totalSpreads}
               </span>
             </div>
-            <button disabled={!canNext || !!flipping} onClick={() => navigate("next")} style={navBtn("next")}>
+            <button disabled={!canNext || fading} onClick={() => navigate("next")} style={navBtn("next")}>
               Next Page ►
             </button>
           </div>
