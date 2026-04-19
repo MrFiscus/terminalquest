@@ -332,9 +332,9 @@ export function BookOfSecrets({ onClose }: BookOfSecretsProps) {
 
   // The frame image's parchment area — tightened so text stays well inside
   // the decorative gold border drawn on each page of the artwork.
-  const PAGE_INSET_X      = "15%";
-  const PAGE_INSET_TOP    = "11%";
-  const PAGE_INSET_BOTTOM = "16%";
+  const PAGE_INSET_X      = "19%";
+  const PAGE_INSET_TOP    = "13%";
+  const PAGE_INSET_BOTTOM = "18%";
 
   return (
     <>
