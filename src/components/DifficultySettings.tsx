@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { motion } from "framer-motion";
 import type { Difficulty } from "@/game/aiLevelService";
-import { readFamiliarity, saveFamiliarity } from "@/game/progressStats";
+import { readFamiliarity, readRuns, saveFamiliarity } from "@/game/progressStats";
 
 interface DifficultySettingsProps {
   onConfirm?: (difficulty: Difficulty, familiarity: number) => void;
@@ -73,9 +73,17 @@ function Medallion({ color, glow }: { color: string; glow: string }) {
 }
 
 export const DifficultySettings = ({ onConfirm }: DifficultySettingsProps) => {
-  const [precise, setPrecise] = useState<number>(() => readFamiliarity() ?? 50);
+  // `saved` is the source of truth — what's actually persisted and what
+  // drives level generation. `precise` is the value the slider is
+  // currently showing (which may differ during a recalibrate session).
+  // The slider is read-only by default; "Recalibrate" enters edit mode,
+  // which lets the player drag and shows Save / Cancel buttons.
+  const [savedValue, setSavedValue] = useState<number>(() => readFamiliarity() ?? 50);
+  const [precise, setPrecise] = useState<number>(savedValue);
+  const [editing, setEditing] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
-  const [saved, setSaved] = useState(false);
+  const [savedToast, setSavedToast] = useState(false);
+  const [completedRunCount] = useState<number>(() => readRuns().length);
   const sliderAreaRef = useRef<HTMLDivElement>(null);
 
   const tier = tierFor(precise);
@@ -89,6 +97,7 @@ export const DifficultySettings = ({ onConfirm }: DifficultySettingsProps) => {
   }, []);
 
   const onPointerDown = (e: React.PointerEvent) => {
+    if (!editing) return;
     setIsDragging(true);
     handleMove(e.clientX);
   };
@@ -98,7 +107,7 @@ export const DifficultySettings = ({ onConfirm }: DifficultySettingsProps) => {
       if (isDragging) handleMove(e.clientX);
     };
     const onPointerUp = () => setIsDragging(false);
-    
+
     if (isDragging) {
       window.addEventListener("pointermove", onPointerMove);
       window.addEventListener("pointerup", onPointerUp);
@@ -109,11 +118,21 @@ export const DifficultySettings = ({ onConfirm }: DifficultySettingsProps) => {
     };
   }, [isDragging, handleMove]);
 
+  const handleStartEdit = () => {
+    setPrecise(savedValue);
+    setEditing(true);
+  };
+  const handleCancel = () => {
+    setPrecise(savedValue);
+    setEditing(false);
+  };
   const handleSave = () => {
     saveFamiliarity(precise);
+    setSavedValue(precise);
     onConfirm?.(tier.difficulty, precise);
-    setSaved(true);
-    setTimeout(() => setSaved(false), 2000);
+    setEditing(false);
+    setSavedToast(true);
+    setTimeout(() => setSavedToast(false), 2000);
   };
 
   return (
@@ -161,16 +180,27 @@ export const DifficultySettings = ({ onConfirm }: DifficultySettingsProps) => {
         </div>
       </div>
 
-      {/* Slider */}
-      <div ref={sliderAreaRef} onPointerDown={onPointerDown} className="cursor-pointer" style={{
-        position: "relative",
-        height: 28,
-        padding: 5,
-        background: "linear-gradient(180deg, rgba(255, 248, 220, 0.86), rgba(236, 216, 170, 0.8))",
-        border: "1px solid rgba(106,72,24,0.45)",
-        boxShadow: "inset 0 0 12px rgba(139,105,20,0.12)",
-        borderRadius: 4,
-      }}>
+      {/* Slider — interactive only while recalibrating, otherwise read-only */}
+      <div
+        ref={sliderAreaRef}
+        onPointerDown={onPointerDown}
+        className={editing ? "cursor-pointer" : "cursor-default"}
+        style={{
+          position: "relative",
+          height: 28,
+          padding: 5,
+          background: "linear-gradient(180deg, rgba(255, 248, 220, 0.86), rgba(236, 216, 170, 0.8))",
+          border: editing
+            ? "1px solid rgba(180,120,40,0.85)"
+            : "1px solid rgba(106,72,24,0.45)",
+          boxShadow: editing
+            ? "inset 0 0 12px rgba(139,105,20,0.18), 0 0 12px rgba(255,180,80,0.35)"
+            : "inset 0 0 12px rgba(139,105,20,0.12)",
+          borderRadius: 4,
+          opacity: editing ? 1 : 0.92,
+          transition: "border-color 0.2s, box-shadow 0.2s, opacity 0.2s",
+        }}
+      >
         <div style={{ position: "absolute", inset: 5, borderRadius: 2, background: "linear-gradient(180deg, rgba(245, 229, 192, 0.95), rgba(224, 200, 152, 0.92))", border: "1px solid rgba(106,72,24,0.4)", boxShadow: "inset 0 1px 4px rgba(139,105,20,0.2)" }} />
 
         <motion.div animate={{ width: `${precise}%` }} style={{ position: "absolute", top: 5, bottom: 5, left: 5, overflow: "hidden", borderRadius: 2 }} transition={{ type: "spring", stiffness: 400, damping: 35 }}>
@@ -209,35 +239,110 @@ export const DifficultySettings = ({ onConfirm }: DifficultySettingsProps) => {
           : "A harsher trial for players who want the dungeon to bite back."}
       </div>
 
-      {/* Save Button */}
-      <button
-        onClick={handleSave}
-        style={{
-          fontFamily: "'Cinzel', serif",
+      {/* Auto-progression context — only when in read-only mode */}
+      {!editing && (
+        <div style={{
+          background: "linear-gradient(180deg, rgba(255, 248, 220, 0.55), rgba(236, 216, 170, 0.5))",
+          border: "1px solid rgba(106,72,24,0.35)",
+          borderRadius: 4,
+          padding: "10px 12px",
           fontSize: 11,
-          letterSpacing: "0.2em",
-          padding: "10px 20px",
-          background: "linear-gradient(180deg, hsl(228 10% 16%), hsl(228 12% 10%))",
-          border: "2px solid hsl(0 0% 3%)",
-          borderRadius: "4px",
-          color: "#f0d68a",
-          cursor: "pointer",
-          boxShadow: [
-            "0 0 8px hsl(33 100% 50% / 0.45)",
-            "0 0 20px hsl(33 100% 45% / 0.22)",
-            "0 0 36px hsl(33 100% 40% / 0.12)",
-            "inset 1px 1px 0 hsl(0 0% 100% / 0.08)",
-            "inset -1px -1px 0 hsl(0 0% 0% / 0.85)",
-            "inset 0 0 22px hsl(0 0% 0% / 0.55)",
-            "0 6px 18px hsl(0 0% 0% / 0.65)",
-          ].join(", "),
-          transition: "all 0.2s ease",
-        }}
-        onMouseDown={(e) => { (e.currentTarget as HTMLButtonElement).style.transform = "translateY(1px)"; }}
-        onMouseUp={(e) => { (e.currentTarget as HTMLButtonElement).style.transform = ""; }}
-      >
-        {saved ? "✓ SAVED" : "SAVE DIFFICULTY"}
-      </button>
+          fontFamily: "'VT323', monospace",
+          color: "#3b1f0a",
+          lineHeight: 1.4,
+          textAlign: "center",
+        }}>
+          {completedRunCount > 0 ? (
+            <>
+              Calibrated by your <strong>{completedRunCount}</strong>{" "}
+              completed quest{completedRunCount === 1 ? "" : "s"}. Each finished
+              dungeon nudges this upward.
+            </>
+          ) : (
+            <>The dungeon will calibrate this as you complete quests.</>
+          )}
+        </div>
+      )}
+
+      {/* Action row — Recalibrate (locked) OR Save / Cancel (editing) */}
+      {!editing ? (
+        <button
+          onClick={handleStartEdit}
+          style={{
+            fontFamily: "'Cinzel', serif",
+            fontSize: 11,
+            letterSpacing: "0.2em",
+            padding: "10px 20px",
+            background: "linear-gradient(180deg, hsl(228 10% 18%), hsl(228 12% 11%))",
+            border: "1px solid hsl(35 38% 22% / 0.85)",
+            borderRadius: "4px",
+            color: "hsl(38 80% 62%)",
+            cursor: "pointer",
+            boxShadow: "0 0 8px hsl(33 100% 45% / 0.28), inset 0 0 14px hsl(0 0% 0% / 0.5)",
+            transition: "all 0.2s ease",
+          }}
+          onMouseEnter={(e) => {
+            (e.currentTarget as HTMLButtonElement).style.boxShadow =
+              "0 0 14px hsl(33 100% 50% / 0.55), 0 0 28px hsl(33 100% 45% / 0.25), inset 0 0 14px hsl(0 0% 0% / 0.5)";
+            (e.currentTarget as HTMLButtonElement).style.color = "hsl(38 90% 70%)";
+          }}
+          onMouseLeave={(e) => {
+            (e.currentTarget as HTMLButtonElement).style.boxShadow =
+              "0 0 8px hsl(33 100% 45% / 0.28), inset 0 0 14px hsl(0 0% 0% / 0.5)";
+            (e.currentTarget as HTMLButtonElement).style.color = "hsl(38 80% 62%)";
+          }}
+          aria-label="Recalibrate difficulty manually"
+        >
+          {savedToast ? "✓ SAVED" : "✦ RECALIBRATE MANUALLY"}
+        </button>
+      ) : (
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+          <button
+            onClick={handleCancel}
+            style={{
+              fontFamily: "'Cinzel', serif",
+              fontSize: 11,
+              letterSpacing: "0.2em",
+              padding: "10px 16px",
+              background: "linear-gradient(180deg, hsl(228 10% 14%), hsl(228 12% 9%))",
+              border: "1px solid hsl(0 0% 8%)",
+              borderRadius: "4px",
+              color: "hsl(0 0% 60%)",
+              cursor: "pointer",
+              boxShadow: "inset 0 0 12px hsl(0 0% 0% / 0.5)",
+            }}
+          >
+            CANCEL
+          </button>
+          <button
+            onClick={handleSave}
+            style={{
+              fontFamily: "'Cinzel', serif",
+              fontSize: 11,
+              letterSpacing: "0.2em",
+              padding: "10px 16px",
+              background: "linear-gradient(180deg, hsl(228 10% 16%), hsl(228 12% 10%))",
+              border: "2px solid hsl(0 0% 3%)",
+              borderRadius: "4px",
+              color: "#f0d68a",
+              cursor: "pointer",
+              boxShadow: [
+                "0 0 8px hsl(33 100% 50% / 0.45)",
+                "0 0 20px hsl(33 100% 45% / 0.22)",
+                "0 0 36px hsl(33 100% 40% / 0.12)",
+                "inset 1px 1px 0 hsl(0 0% 100% / 0.08)",
+                "inset -1px -1px 0 hsl(0 0% 0% / 0.85)",
+                "inset 0 0 22px hsl(0 0% 0% / 0.55)",
+              ].join(", "),
+              transition: "all 0.2s ease",
+            }}
+            onMouseDown={(e) => { (e.currentTarget as HTMLButtonElement).style.transform = "translateY(1px)"; }}
+            onMouseUp={(e) => { (e.currentTarget as HTMLButtonElement).style.transform = ""; }}
+          >
+            SAVE OVERRIDE
+          </button>
+        </div>
+      )}
 
       <style>{`
         @keyframes liquid-surface {

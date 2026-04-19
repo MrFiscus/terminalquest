@@ -27,6 +27,8 @@ import {
 } from "@/game/progressStats";
 import { ResumeDialog } from "@/components/ResumeDialog";
 import { UserRound } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
+import type { User } from "@supabase/supabase-js";
 import { AnimatePresence } from "framer-motion";
 import { useNavigate } from "react-router-dom";
 import type { LinuxCommand, VictoryReport } from "@/game/types";
@@ -168,6 +170,24 @@ const Index = () => {
   });
   const [bookOpen, setBookOpen] = useState(false);
   const [advancingLevel, setAdvancingLevel] = useState(false);
+
+  // Track the signed-in user so the header button can show their actual
+  // avatar (Google profile pic, custom avatar, or auto-generated initials)
+  // instead of a generic placeholder icon.
+  const [headerUser, setHeaderUser] = useState<User | null>(null);
+  useEffect(() => {
+    let alive = true;
+    supabase.auth.getUser().then(({ data }) => {
+      if (alive) setHeaderUser(data.user ?? null);
+    });
+    const { data: sub } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (alive) setHeaderUser(session?.user ?? null);
+    });
+    return () => {
+      alive = false;
+      sub.subscription.unsubscribe();
+    };
+  }, []);
   const replayPayloadRef = useRef<ReplayLoadPayload | null>(null);
 
   useEffect(() => {
@@ -423,16 +443,66 @@ const Index = () => {
       : undefined;
   const mapSubtitle = roomHeaderNote(currentRoom, roomSubtitle, state.goal);
 
+  // Header avatar — prefer the OAuth provider's profile image, then
+  // initials from the user's name/email, then the generic UserRound.
+  // Wrapped in a single button so the click target is the whole circle.
+  const headerAvatarUrl =
+    (headerUser?.user_metadata?.avatar_url as string | undefined) ?? null;
+  const headerInitialsSource = (
+    (headerUser?.user_metadata?.username as string | undefined) ??
+    (headerUser?.user_metadata?.full_name as string | undefined) ??
+    (headerUser?.user_metadata?.name as string | undefined) ??
+    headerUser?.email ??
+    ""
+  ).trim();
+  const headerInitials = headerInitialsSource
+    ? headerInitialsSource
+        .split(/[\s@._-]+/)
+        .filter(Boolean)
+        .slice(0, 2)
+        .map((part) => part[0]?.toUpperCase() ?? "")
+        .join("") || headerInitialsSource[0]?.toUpperCase()
+    : null;
+
   const headerActions = (
     <div className="flex items-center gap-2">
       <button
         type="button"
         onClick={() => setProfileOpen(true)}
         aria-label="Open profile"
-        title="Open profile"
-        className="z-[60] flex h-10 w-10 items-center justify-center rounded-full border border-amber-500 bg-gray-900 text-amber-300 shadow-[0_0_0_hsl(38_92%_50%/0)] transition hover:scale-105 hover:shadow-[0_0_18px_hsl(38_92%_50%/0.75)]"
+        title={headerUser ? "Open profile" : "Sign in"}
+        className="z-[60] flex h-10 w-10 items-center justify-center overflow-hidden rounded-full border-2 border-amber-500 bg-gray-900 text-amber-300 shadow-[0_0_0_hsl(38_92%_50%/0)] transition hover:scale-105 hover:shadow-[0_0_18px_hsl(38_92%_50%/0.75)]"
+        style={{ padding: 0 }}
       >
-        <UserRound className="h-5 w-5" aria-hidden />
+        {headerAvatarUrl ? (
+          <img
+            src={headerAvatarUrl}
+            alt={headerInitialsSource || "Profile avatar"}
+            referrerPolicy="no-referrer"
+            className="h-full w-full object-cover"
+            onError={(e) => {
+              // If the avatar URL fails (CORS, expired Google ref, etc.)
+              // hide the broken image so the initials fallback shows.
+              (e.currentTarget as HTMLImageElement).style.display = "none";
+            }}
+          />
+        ) : headerInitials ? (
+          <span
+            aria-hidden
+            style={{
+              fontFamily: "'Cinzel', Georgia, serif",
+              fontSize: 13,
+              fontWeight: 700,
+              letterSpacing: "0.02em",
+              color: "hsl(38 80% 70%)",
+              textShadow: "0 0 6px hsl(38 90% 55% / 0.6)",
+            }}
+          >
+            {headerInitials}
+          </span>
+        ) : (
+          <UserRound className="h-5 w-5" aria-hidden />
+        )}
       </button>
     </div>
   );

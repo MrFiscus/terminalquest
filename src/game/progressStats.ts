@@ -206,6 +206,49 @@ export function clearFamiliarity() {
 }
 
 /**
+ * How much the saved familiarity should increase after this run.
+ *
+ * Pure: caller passes the current value so this can be unit-tested.
+ *
+ * - +2 baseline for any completed run (you finished it)
+ * - +1 if the run had zero mistyped commands (clean execution)
+ * - +1 if at least 6 distinct commands were used (breadth)
+ * - +1 if at least one locked door was unlocked (game-mechanic mastery)
+ * - +1 if the run was lean — fewer than 20 total commands (efficient)
+ *
+ * Diminishing returns near the top so a long-running player doesn't
+ * jam the slider against 100 immediately:
+ *   ≥ 80 → cap gain at 1
+ *   ≥ 95 → 0
+ */
+export function familiarityGainFromRun(run: RunRecord, current: number): number {
+  let gain = 2;
+  if ((run.mistakes?.length ?? 0) === 0) gain += 1;
+  const uniqueCmds = Object.values(run.commandCounts ?? {}).filter((n) => n > 0).length;
+  if (uniqueCmds >= 6) gain += 1;
+  if ((run.lockedDoorsUnlocked ?? 0) > 0) gain += 1;
+  if ((run.totalCommands ?? 0) > 0 && (run.totalCommands ?? 0) < 20) gain += 1;
+  if (current >= 95) return 0;
+  if (current >= 80) return Math.min(gain, 1);
+  return gain;
+}
+
+/**
+ * Reads the current saved familiarity, computes the new one based on the
+ * run, persists it, and returns the new value. Idempotent for runs that
+ * earn 0 (no write).
+ */
+export function applyFamiliarityProgression(run: RunRecord): number {
+  const current = readFamiliarity() ?? 50;
+  const gain = familiarityGainFromRun(run, current);
+  if (gain <= 0) return current;
+  const next = Math.min(100, current + gain);
+  if (next === current) return current;
+  saveFamiliarity(next);
+  return next;
+}
+
+/**
  * First-time onboarding flag. True once the user has confirmed the
  * difficulty slider at least once. Drives whether the slider is shown
  * on `/play` entry (first-time users) or skipped in favor of the

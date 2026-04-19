@@ -18,7 +18,24 @@ import {
   XAxis,
   YAxis,
 } from "recharts";
-import { Lock, X } from "lucide-react";
+import {
+  CalendarCheck,
+  CalendarDays,
+  DoorOpen,
+  Flame,
+  KeyRound,
+  Lock,
+  LogOut,
+  Mail,
+  Pencil,
+  ShieldCheck,
+  Sparkles,
+  Star,
+  Terminal,
+  Trophy,
+  X,
+  type LucideIcon,
+} from "lucide-react";
 import {
   PROFILE_COMMANDS,
   efficiencyInsight,
@@ -229,6 +246,96 @@ function StatCard({ index, label, value }: { index: number; label: string; value
   );
 }
 
+/**
+ * Richer stat tile used in the Stats tab. Shows an icon medallion next
+ * to the label + value, with an optional small caption underneath. Reads
+ * like a heraldic crest rather than a flat data row.
+ */
+function StatTile({
+  icon: Icon,
+  label,
+  value,
+  caption,
+}: {
+  icon: LucideIcon;
+  label: string;
+  value: string | number;
+  caption?: string;
+}) {
+  return (
+    <article
+      style={{
+        position: "relative",
+        display: "flex",
+        alignItems: "center",
+        gap: 14,
+        padding: "16px 18px",
+        border: `1px solid ${C.sep}`,
+        background: "linear-gradient(180deg, rgba(255, 248, 220, 0.72), rgba(244, 228, 188, 0.62))",
+        boxShadow: "inset 0 0 18px rgba(139,105,20,0.10), 0 1px 0 rgba(255,255,255,0.35)",
+        borderRadius: 4,
+      }}
+    >
+      <div
+        aria-hidden
+        style={{
+          flex: "0 0 44px",
+          width: 44,
+          height: 44,
+          borderRadius: "50%",
+          background: "radial-gradient(circle at 35% 30%, hsl(228 14% 16%), hsl(228 14% 6%))",
+          border: `1.5px solid ${C.gold}`,
+          color: C.goldBright,
+          display: "grid",
+          placeItems: "center",
+          boxShadow: "0 0 10px rgba(200,145,58,0.35), inset 0 1px 0 rgba(255,255,255,0.08)",
+        }}
+      >
+        <Icon size={20} />
+      </div>
+      <div style={{ minWidth: 0, flex: 1 }}>
+        <div
+          style={{
+            fontFamily: "'Cinzel', Georgia, serif",
+            fontSize: 9,
+            letterSpacing: "0.18em",
+            textTransform: "uppercase",
+            color: C.goldDark,
+            marginBottom: 2,
+          }}
+        >
+          {label}
+        </div>
+        <div
+          style={{
+            fontFamily: "'Pirata One', 'Cinzel', Georgia, serif",
+            fontSize: 26,
+            fontWeight: 700,
+            color: C.ink,
+            lineHeight: 1.05,
+            wordBreak: "break-word",
+          }}
+        >
+          {value}
+        </div>
+        {caption && (
+          <div
+            style={{
+              fontFamily: "Georgia, serif",
+              fontSize: 11,
+              fontStyle: "italic",
+              color: C.dim,
+              marginTop: 4,
+            }}
+          >
+            {caption}
+          </div>
+        )}
+      </div>
+    </article>
+  );
+}
+
 function PageColumn({ children }: { children: React.ReactNode }) {
   return (
     <div style={{
@@ -267,6 +374,86 @@ function ChartShell({ title, children }: { title: string; children: React.ReactN
   );
 }
 
+/**
+ * Themed chart frame for the Progress tab. Wraps a recharts component
+ * with a stone-tablet style, a Cinzel uppercase title, and an optional
+ * italic subtitle. Renders an empty-state if `empty` is true (e.g. no
+ * runs played yet) so the page never shows a blank chart with an axis
+ * for nothing.
+ */
+function ChartFrame({
+  title,
+  subtitle,
+  empty,
+  emptyText,
+  children,
+}: {
+  title: string;
+  subtitle?: string;
+  empty?: boolean;
+  emptyText?: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <article
+      style={{
+        position: "relative",
+        border: `1px solid ${C.sep}`,
+        background: "linear-gradient(180deg, rgba(255, 248, 220, 0.72), rgba(244, 228, 188, 0.55))",
+        padding: "14px 16px 12px",
+        borderRadius: 4,
+        boxShadow: "inset 0 0 22px rgba(139,105,20,0.10), 0 1px 0 rgba(255,255,255,0.35)",
+        minHeight: 240,
+      }}
+    >
+      <h3
+        style={{
+          margin: "0 0 2px",
+          color: C.chartInk,
+          fontFamily: "'Cinzel', Georgia, serif",
+          fontSize: 11,
+          textTransform: "uppercase",
+          letterSpacing: "0.18em",
+        }}
+      >
+        {title}
+      </h3>
+      {subtitle && (
+        <p
+          style={{
+            margin: "0 0 10px",
+            fontFamily: "Georgia, serif",
+            fontSize: 11,
+            fontStyle: "italic",
+            color: C.dim,
+          }}
+        >
+          {subtitle}
+        </p>
+      )}
+      {empty ? (
+        <div
+          style={{
+            height: 190,
+            display: "grid",
+            placeItems: "center",
+            color: C.dim,
+            fontFamily: "Georgia, serif",
+            fontSize: 13,
+            fontStyle: "italic",
+            textAlign: "center",
+            padding: "0 24px",
+          }}
+        >
+          {emptyText ?? "Complete a quest to fill this chart."}
+        </div>
+      ) : (
+        children
+      )}
+    </article>
+  );
+}
+
 export function ProfileModal({ onClose }: ProfileModalProps) {
   const [profileData, setProfileData] = useState(() => ({ runs: readRuns(), activeRun: readActiveRun() }));
   const { runs, activeRun } = profileData;
@@ -276,6 +463,10 @@ export function ProfileModal({ onClose }: ProfileModalProps) {
   const [editingUsername, setEditingUsername] = useState("");
   const [usernameSaving, setUsernameSaving] = useState(false);
   const [usernameSaved, setUsernameSaved] = useState(false);
+  // The username is shown as a static heading by default. The pencil
+  // toggle in the account view flips this to true to reveal the input
+  // field — prevents accidental edits and gives the page a cleaner read.
+  const [usernameEditMode, setUsernameEditMode] = useState(false);
   const [aiProfileSummary, setAiProfileSummary] = useState<string>("");
 
   const saveUsername = async () => {
@@ -287,6 +478,7 @@ export function ProfileModal({ onClose }: ProfileModalProps) {
     if (user) await supabase.auth.updateUser({ data: { username: trimmed } });
     setUsernameSaving(false);
     setUsernameSaved(true);
+    setUsernameEditMode(false);
     setTimeout(() => setUsernameSaved(false), 2000);
   };
   const [revealed, setRevealed] = useState<Set<ProfileCommand>>(() => new Set());
@@ -361,6 +553,21 @@ export function ProfileModal({ onClose }: ProfileModalProps) {
     { label: "Current Streak", value: summary.currentWinStreak },
     { label: "Best Streak", value: summary.bestWinStreak },
     { label: "Completed Today", value: summary.levelsToday },
+  ];
+
+  // Icon + caption metadata for the Stats tab tiles. Order mirrors
+  // {leftStats, rightStats} so we can zip them together at render time.
+  const statTilesLeft: Array<{ icon: LucideIcon; caption?: string }> = [
+    { icon: Trophy,    caption: "Quests cleared all-time" },
+    { icon: Terminal,  caption: "Across every run logged" },
+    { icon: KeyRound,  caption: "Iron and bone — every kind" },
+    { icon: DoorOpen,  caption: "Sealed thresholds breached" },
+  ];
+  const statTilesRight: Array<{ icon: LucideIcon; caption?: string }> = [
+    { icon: Sparkles,     caption: "Most reached-for spell" },
+    { icon: Flame,        caption: "Wins back to back" },
+    { icon: Star,         caption: "Longest unbroken hunt" },
+    { icon: CalendarCheck, caption: "Quests finished today" },
   ];
   // Shared catalog — same list used by the unlock toast so the two views
   // never drift.
@@ -515,120 +722,370 @@ export function ProfileModal({ onClose }: ProfileModalProps) {
 
   const renderTabContent = () => {
     if (activeTab === "account") {
-      const displayName = user?.user_metadata?.username ?? user?.user_metadata?.full_name ?? user?.user_metadata?.name ?? null;
+      const displayName =
+        (user?.user_metadata?.username as string | undefined) ??
+        (user?.user_metadata?.full_name as string | undefined) ??
+        (user?.user_metadata?.name as string | undefined) ??
+        null;
       const email = user?.email ?? null;
-      const avatarUrl = user?.user_metadata?.avatar_url ?? null;
-      const provider = user?.app_metadata?.provider ?? "email";
-      const createdAt = user?.created_at ? new Date(user.created_at).toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" }) : null;
-      const initials = (editingUsername || displayName || email || "?").slice(0, 2).toUpperCase();
+      const avatarUrl = (user?.user_metadata?.avatar_url as string | undefined) ?? null;
+      const provider = (user?.app_metadata?.provider as string | undefined) ?? "email";
+      const createdAt = user?.created_at
+        ? new Date(user.created_at).toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" })
+        : null;
+      const initialsSource = (displayName || editingUsername || email || "").trim();
+      const initials = initialsSource
+        ? initialsSource
+            .split(/[\s@._-]+/)
+            .filter(Boolean)
+            .slice(0, 2)
+            .map((p) => p[0]?.toUpperCase() ?? "")
+            .join("") || initialsSource[0]?.toUpperCase()
+        : "?";
+      const headlineName = displayName || editingUsername || (email ? email.split("@")[0] : "Adventurer");
 
-      const row =(label: string, value: string) => (
-        <div style={{ display: "flex", alignItems: "baseline", gap: 12, padding: "8px 0", borderBottom: `1px solid ${C.sep}` }}>
-          <span style={{ fontFamily: "'Cinzel', Georgia, serif", fontSize: 10, letterSpacing: "0.12em", textTransform: "uppercase", color: C.goldDark, minWidth: 120 }}>{label}</span>
-          <span style={{ fontFamily: "Georgia, serif", fontSize: 14, color: C.ink }}>{value}</span>
+      const detailRow = (Icon: typeof Mail, label: string, value: string) => (
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: 12,
+            padding: "10px 14px",
+            borderRadius: 4,
+            border: `1px solid ${C.sep}`,
+            background: "rgba(255, 248, 220, 0.45)",
+          }}
+        >
+          <span
+            style={{
+              flex: "0 0 28px",
+              width: 28,
+              height: 28,
+              borderRadius: "50%",
+              background: C.dark,
+              display: "grid",
+              placeItems: "center",
+              color: C.goldBright,
+              boxShadow: `inset 0 0 6px rgba(0,0,0,0.6), 0 0 6px rgba(200,145,58,0.25)`,
+            }}
+          >
+            <Icon size={14} />
+          </span>
+          <div style={{ minWidth: 0, flex: 1 }}>
+            <div
+              style={{
+                fontFamily: "'Cinzel', Georgia, serif",
+                fontSize: 9,
+                letterSpacing: "0.18em",
+                textTransform: "uppercase",
+                color: C.goldDark,
+                marginBottom: 2,
+              }}
+            >
+              {label}
+            </div>
+            <div
+              style={{
+                fontFamily: "Georgia, serif",
+                fontSize: 13,
+                color: C.ink,
+                wordBreak: "break-word",
+              }}
+            >
+              {value}
+            </div>
+          </div>
         </div>
       );
 
       return (
-        <div style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", gap: 24, padding: "12px 24px" }}>
-          {/* Avatar */}
-          <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 10 }}>
-            {avatarUrl ? (
-              <img
-                src={avatarUrl}
-                alt={displayName ?? "avatar"}
-                style={{ width: 80, height: 80, borderRadius: "50%", border: `2px solid ${C.gold}`, objectFit: "cover", boxShadow: `0 0 16px rgba(200,145,58,0.4)` }}
+        <div
+          style={{
+            flex: 1,
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "center",
+            gap: 22,
+            padding: "8px 24px 18px",
+          }}
+        >
+          {/* Hero header — avatar + name + email under it */}
+          <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 12, width: "100%", maxWidth: 480 }}>
+            {/* Avatar with double halo */}
+            <div style={{ position: "relative" }}>
+              <div
+                aria-hidden
+                style={{
+                  position: "absolute",
+                  inset: -10,
+                  borderRadius: "50%",
+                  background:
+                    "radial-gradient(circle, rgba(240, 200, 100, 0.22) 0%, rgba(240, 200, 100, 0.08) 50%, transparent 75%)",
+                  filter: "blur(2px)",
+                }}
               />
+              {avatarUrl ? (
+                <img
+                  src={avatarUrl}
+                  alt={displayName ?? "avatar"}
+                  referrerPolicy="no-referrer"
+                  style={{
+                    position: "relative",
+                    width: 96,
+                    height: 96,
+                    borderRadius: "50%",
+                    border: `2px solid ${C.gold}`,
+                    objectFit: "cover",
+                    boxShadow: `0 0 18px rgba(200,145,58,0.45), inset 0 0 0 2px rgba(0,0,0,0.4)`,
+                  }}
+                  onError={(e) => {
+                    (e.currentTarget as HTMLImageElement).style.display = "none";
+                  }}
+                />
+              ) : (
+                <div
+                  style={{
+                    position: "relative",
+                    width: 96,
+                    height: 96,
+                    borderRadius: "50%",
+                    border: `2px solid ${C.gold}`,
+                    background: `radial-gradient(circle at 35% 30%, rgba(40,22,8,0.95), ${C.dark})`,
+                    display: "grid",
+                    placeItems: "center",
+                    fontFamily: "'Cinzel', Georgia, serif",
+                    fontSize: 32,
+                    fontWeight: 700,
+                    color: C.goldBright,
+                    letterSpacing: "0.04em",
+                    boxShadow: `0 0 18px rgba(200,145,58,0.45), inset 0 0 12px rgba(0,0,0,0.6)`,
+                  }}
+                >
+                  {initials}
+                </div>
+              )}
+            </div>
+
+            {/* Name (display mode) OR input (edit mode) + edit toggle */}
+            {!usernameEditMode ? (
+              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                <span
+                  style={{
+                    fontFamily: "'Pirata One', 'Cinzel', Georgia, serif",
+                    fontSize: 26,
+                    color: C.ink,
+                    letterSpacing: "0.02em",
+                    lineHeight: 1.1,
+                  }}
+                >
+                  {headlineName}
+                </span>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setEditingUsername(headlineName);
+                    setUsernameEditMode(true);
+                  }}
+                  aria-label="Edit username"
+                  title="Edit username"
+                  style={{
+                    width: 28,
+                    height: 28,
+                    borderRadius: "50%",
+                    border: `1px solid ${C.goldDark}`,
+                    background: C.dark,
+                    color: C.goldBright,
+                    cursor: "pointer",
+                    display: "grid",
+                    placeItems: "center",
+                    boxShadow: `0 0 8px rgba(200,145,58,0.18)`,
+                    transition: "transform 0.15s ease, box-shadow 0.15s ease",
+                  }}
+                  onMouseEnter={(e) => {
+                    (e.currentTarget as HTMLButtonElement).style.boxShadow = `0 0 12px rgba(200,145,58,0.5)`;
+                    (e.currentTarget as HTMLButtonElement).style.transform = "scale(1.05)";
+                  }}
+                  onMouseLeave={(e) => {
+                    (e.currentTarget as HTMLButtonElement).style.boxShadow = `0 0 8px rgba(200,145,58,0.18)`;
+                    (e.currentTarget as HTMLButtonElement).style.transform = "scale(1)";
+                  }}
+                >
+                  <Pencil size={12} />
+                </button>
+                {usernameSaved && (
+                  <span style={{ fontFamily: "'Cinzel', Georgia, serif", fontSize: 10, color: C.goldDark, letterSpacing: "0.12em" }}>
+                    Saved ✓
+                  </span>
+                )}
+              </div>
             ) : (
-              <div style={{
-                width: 80, height: 80, borderRadius: "50%",
-                border: `2px solid ${C.gold}`,
-                background: C.dark,
-                display: "grid", placeItems: "center",
-                fontFamily: "'Cinzel', Georgia, serif",
-                fontSize: 28, fontWeight: 700,
-                color: C.goldBright,
-                boxShadow: `0 0 16px rgba(200,145,58,0.4)`,
-              }}>
-                {initials}
+              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                <input
+                  aria-label="Username"
+                  autoFocus
+                  value={editingUsername}
+                  onChange={(e) => { setEditingUsername(e.target.value); setUsernameSaved(false); }}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") saveUsername();
+                    if (e.key === "Escape") setUsernameEditMode(false);
+                  }}
+                  placeholder="Enter username"
+                  style={{
+                    border: 0,
+                    borderBottom: `2px solid ${C.goldDark}`,
+                    background: "rgba(255, 248, 220, 0.6)",
+                    outline: "none",
+                    textAlign: "center",
+                    fontFamily: "'Pirata One', 'Cinzel', Georgia, serif",
+                    fontSize: 22,
+                    color: C.ink,
+                    width: 220,
+                    padding: "2px 8px",
+                  }}
+                />
+                <button
+                  type="button"
+                  onClick={() => setUsernameEditMode(false)}
+                  style={{
+                    fontFamily: "'Cinzel', Georgia, serif",
+                    fontSize: 9,
+                    letterSpacing: "0.1em",
+                    textTransform: "uppercase",
+                    padding: "5px 10px",
+                    border: `1px solid ${C.sep}`,
+                    background: "transparent",
+                    color: C.dim,
+                    cursor: "pointer",
+                    borderRadius: 3,
+                  }}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={saveUsername}
+                  disabled={usernameSaving || !editingUsername.trim()}
+                  style={{
+                    fontFamily: "'Cinzel', Georgia, serif",
+                    fontSize: 9,
+                    letterSpacing: "0.1em",
+                    textTransform: "uppercase",
+                    padding: "5px 12px",
+                    border: `1px solid ${C.goldDark}`,
+                    background: C.dark,
+                    color: C.goldBright,
+                    cursor: usernameSaving ? "wait" : "pointer",
+                    borderRadius: 3,
+                    boxShadow: `0 0 6px rgba(200,145,58,0.25)`,
+                    opacity: !editingUsername.trim() ? 0.5 : 1,
+                  }}
+                >
+                  {usernameSaving ? "..." : "Save"}
+                </button>
               </div>
             )}
-            {/* Editable username */}
-            <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 4 }}>
-              <input
-                aria-label="Username"
-                value={editingUsername}
-                onChange={e => { setEditingUsername(e.target.value); setUsernameSaved(false); }}
-                onKeyDown={e => { if (e.key === "Enter") saveUsername(); }}
-                placeholder="Enter username"
+
+            {/* Email subtitle directly under name */}
+            {email && (
+              <span
                 style={{
-                  border: 0,
-                  borderBottom: `2px solid ${C.goldDark}`,
-                  background: "transparent",
-                  outline: "none",
-                  textAlign: "center",
-                  fontFamily: "'Pirata One', 'Cinzel', Georgia, serif",
-                  fontSize: 20,
-                  color: C.ink,
-                  width: 200,
-                }}
-              />
-              <button
-                type="button"
-                onClick={saveUsername}
-                disabled={usernameSaving}
-                style={{
-                  fontFamily: "'Cinzel', Georgia, serif",
-                  fontSize: 9,
-                  letterSpacing: "0.1em",
-                  textTransform: "uppercase",
-                  padding: "3px 10px",
-                  border: `1px solid ${C.goldDark}`,
-                  background: usernameSaved ? C.gold : C.dark,
-                  color: usernameSaved ? C.ink : C.goldBright,
-                  cursor: "pointer",
-                  borderRadius: 3,
-                  transition: "all 0.2s",
+                  fontFamily: "'JetBrains Mono', monospace",
+                  fontSize: 11,
+                  color: C.dim,
+                  letterSpacing: "0.04em",
                 }}
               >
-                {usernameSaving ? "..." : usernameSaved ? "Saved ✓" : "Save"}
-              </button>
-            </div>
+                {email}
+              </span>
+            )}
           </div>
 
-          {/* Details */}
+          {/* AI summary card (if available) */}
           {aiProfileSummary && (
-            <div style={{ width: "100%", maxWidth: 520, border: `1px solid ${C.sep}`, background: C.card, padding: "10px 16px", boxShadow: `inset 0 0 18px rgba(139,105,20,0.08)` }}>
-              <p style={{ margin: 0, fontFamily: "Georgia, serif", fontSize: 13, color: C.ink, lineHeight: 1.45, textAlign: "center" }}>
+            <div
+              style={{
+                width: "100%",
+                maxWidth: 520,
+                border: `1px solid ${C.sep}`,
+                background: C.card,
+                padding: "12px 18px",
+                borderRadius: 4,
+                boxShadow: `inset 0 0 18px rgba(139,105,20,0.08)`,
+                position: "relative",
+              }}
+            >
+              <span
+                style={{
+                  position: "absolute",
+                  top: -8,
+                  left: 16,
+                  background: "rgb(247, 234, 199)",
+                  padding: "0 8px",
+                  fontFamily: "'Cinzel', Georgia, serif",
+                  fontSize: 9,
+                  letterSpacing: "0.18em",
+                  color: C.goldDark,
+                  textTransform: "uppercase",
+                }}
+              >
+                Loremaster's Notes
+              </span>
+              <p style={{ margin: 0, fontFamily: "Georgia, serif", fontSize: 13, color: C.ink, lineHeight: 1.5, textAlign: "center" }}>
                 {aiProfileSummary}
               </p>
             </div>
           )}
 
-          <div style={{ width: "100%", maxWidth: 480, border: `1px solid ${C.sep}`, background: C.card, padding: "6px 18px", boxShadow: `inset 0 0 18px rgba(139,105,20,0.08)` }}>
-            {email    && row("Email",    email)}
-            {provider && row("Signed in via", provider === "google" ? "Google" : "Email & Password")}
-            {createdAt && row("Member since", createdAt)}
+          {/* Detail badges grid */}
+          <div
+            style={{
+              width: "100%",
+              maxWidth: 520,
+              display: "grid",
+              gridTemplateColumns: "1fr",
+              gap: 8,
+            }}
+          >
+            {email && detailRow(Mail, "Email", email)}
+            {provider && detailRow(ShieldCheck, "Signed in via", provider === "google" ? "Google" : "Email & Password")}
+            {createdAt && detailRow(CalendarDays, "Member since", createdAt)}
           </div>
 
-          {/* Sign out */}
+          {/* Sign out — themed with danger affordance */}
           {user && (
             <button
               type="button"
               onClick={async () => { await supabase.auth.signOut(); onClose(); }}
               style={{
+                marginTop: 6,
+                display: "inline-flex",
+                alignItems: "center",
+                gap: 8,
                 fontFamily: "'Cinzel', Georgia, serif",
                 fontSize: 11,
-                letterSpacing: "0.12em",
+                letterSpacing: "0.18em",
                 textTransform: "uppercase",
-                padding: "6px 22px",
-                border: `1px solid ${C.goldDark}`,
-                background: C.dark,
-                color: C.goldBright,
+                padding: "8px 22px",
+                border: `1px solid hsl(0 60% 35% / 0.6)`,
+                background: "linear-gradient(180deg, hsl(0 30% 12%), hsl(0 30% 8%))",
+                color: "hsl(20 75% 75%)",
                 cursor: "pointer",
-                borderRadius: 3,
+                borderRadius: 4,
+                boxShadow: "inset 0 0 14px hsl(0 0% 0% / 0.5), 0 0 8px hsl(0 70% 40% / 0.25)",
+                transition: "box-shadow 0.2s ease, color 0.2s ease",
+              }}
+              onMouseEnter={(e) => {
+                (e.currentTarget as HTMLButtonElement).style.boxShadow =
+                  "inset 0 0 14px hsl(0 0% 0% / 0.5), 0 0 14px hsl(0 80% 50% / 0.5)";
+                (e.currentTarget as HTMLButtonElement).style.color = "hsl(20 90% 85%)";
+              }}
+              onMouseLeave={(e) => {
+                (e.currentTarget as HTMLButtonElement).style.boxShadow =
+                  "inset 0 0 14px hsl(0 0% 0% / 0.5), 0 0 8px hsl(0 70% 40% / 0.25)";
+                (e.currentTarget as HTMLButtonElement).style.color = "hsl(20 75% 75%)";
               }}
             >
+              <LogOut size={13} />
               Sign Out
             </button>
           )}
@@ -646,10 +1103,26 @@ export function ProfileModal({ onClose }: ProfileModalProps) {
       return (
         <>
           <PageColumn>
-            {leftStats.map((stat, index) => <StatCard key={stat.label} index={index + 1} label={stat.label} value={stat.value} />)}
+            {leftStats.map((stat, i) => (
+              <StatTile
+                key={stat.label}
+                icon={statTilesLeft[i].icon}
+                label={stat.label}
+                value={stat.value}
+                caption={statTilesLeft[i].caption}
+              />
+            ))}
           </PageColumn>
           <PageColumn>
-            {rightStats.map((stat, index) => <StatCard key={stat.label} index={index + 5} label={stat.label} value={stat.value} />)}
+            {rightStats.map((stat, i) => (
+              <StatTile
+                key={stat.label}
+                icon={statTilesRight[i].icon}
+                label={stat.label}
+                value={stat.value}
+                caption={statTilesRight[i].caption}
+              />
+            ))}
           </PageColumn>
         </>
       );
@@ -699,63 +1172,167 @@ export function ProfileModal({ onClose }: ProfileModalProps) {
       );
     }
 
+    // Empty-state detection — every chart needs at least one run/command
+    // to be meaningful. We compute these once so each ChartFrame can
+    // render a nice italic "complete a quest…" line instead of an
+    // axis-only blank rectangle.
+    const noLatestCommands = !latestCommandData.some((d) => d.count > 0);
+    const noTimeData = timeData.length === 0;
+    const noEfficiencyData = efficiencyData.length === 0;
+    const noMasteryData = !masteryData.some((d) => d.mastery > 0);
+
+    // Top-of-page insight banner — short adaptive line summarizing trend.
+    const insightLine = (() => {
+      if (summary.totalLevels === 0) {
+        return "Run your first quest to start charting your trajectory.";
+      }
+      if (summary.totalLevels === 1) {
+        return "One quest under your belt — the dungeon is taking notes.";
+      }
+      const last = runs.at(-1);
+      const prev = runs.at(-2);
+      if (last && prev) {
+        if (last.totalCommands < prev.totalCommands) {
+          return `Sharper than last time — ${prev.totalCommands - last.totalCommands} fewer keystrokes used.`;
+        }
+        if (last.durationMs < prev.durationMs) {
+          return `Faster than your previous quest by ${Math.round((prev.durationMs - last.durationMs) / 1000)}s.`;
+        }
+      }
+      return "Steady progress. Keep mixing new commands into your runs.";
+    })();
+
     return (
-      <>
+      <div style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column", gap: 14 }}>
+        {/* Insight banner spanning the full progress page */}
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: 12,
+            padding: "10px 16px",
+            margin: "0 12px",
+            border: `1px solid ${C.sep}`,
+            background: "linear-gradient(180deg, rgba(255,248,220,0.6), rgba(244,228,188,0.45))",
+            boxShadow: "inset 0 0 18px rgba(139,105,20,0.08)",
+            borderRadius: 4,
+          }}
+        >
+          <Sparkles size={16} style={{ color: C.gold, flex: "0 0 16px" }} aria-hidden />
+          <span
+            style={{
+              fontFamily: "Georgia, serif",
+              fontSize: 13,
+              fontStyle: "italic",
+              color: C.ink,
+              lineHeight: 1.4,
+            }}
+          >
+            {insightLine}
+          </span>
+        </div>
+
+        <div style={{ display: "flex", gap: 42, alignItems: "flex-start", minWidth: 0 }}>
         <PageColumn>
-          <ChartShell title="Commands Used This Run">
+          <ChartFrame
+            title="Commands Used This Run"
+            subtitle="How your latest dungeon was solved, command by command."
+            empty={noLatestCommands}
+            emptyText="No commands logged yet. Type a few and reopen this page."
+          >
             <ResponsiveContainer width="100%" height={190}>
               <BarChart data={latestCommandData}>
-                <CartesianGrid stroke={C.chartInkDim} />
+                <CartesianGrid stroke={C.chartInkDim} strokeDasharray="3 3" />
                 <XAxis dataKey="command" stroke={C.chartInk} tick={{ fill: C.chartInk, fontSize: 10 }} />
                 <YAxis allowDecimals={false} stroke={C.chartInk} tick={{ fill: C.chartInk, fontSize: 10 }} />
-                <Tooltip contentStyle={{ background: "rgba(255,248,220,0.92)", border: `1px solid ${C.dark}`, color: C.ink }} />
-                <Bar dataKey="count">
+                <Tooltip
+                  cursor={{ fill: "rgba(139,105,20,0.10)" }}
+                  contentStyle={{ background: "rgba(255,248,220,0.96)", border: `1px solid ${C.goldDark}`, color: C.ink, borderRadius: 3 }}
+                />
+                <Bar dataKey="count" radius={[3, 3, 0, 0]}>
                   {latestCommandData.map((entry) => (
-                    <Cell key={entry.command} fill={entry.count === mostUsed && entry.count > 0 ? C.chartInk : entry.count === leastNonZero ? "#4b3520" : "#6f5432"} />
+                    <Cell
+                      key={entry.command}
+                      fill={
+                        entry.count === mostUsed && entry.count > 0
+                          ? C.gold
+                          : entry.count === leastNonZero
+                          ? "#7d5a30"
+                          : "#a07b3e"
+                      }
+                    />
                   ))}
                 </Bar>
               </BarChart>
             </ResponsiveContainer>
-          </ChartShell>
-          <ChartShell title="Efficiency Over Time">
+          </ChartFrame>
+
+          <ChartFrame
+            title="Efficiency Over Time"
+            subtitle="Commands per quest — lower is sharper."
+            empty={noEfficiencyData}
+            emptyText="At least one completed quest is needed to chart efficiency."
+          >
             <ResponsiveContainer width="100%" height={190}>
               <LineChart data={efficiencyData}>
-                <CartesianGrid stroke={C.chartInkDim} />
+                <CartesianGrid stroke={C.chartInkDim} strokeDasharray="3 3" />
                 <XAxis dataKey="run" stroke={C.chartInk} tick={{ fill: C.chartInk, fontSize: 10 }} />
                 <YAxis allowDecimals={false} stroke={C.chartInk} tick={{ fill: C.chartInk, fontSize: 10 }} />
-                <Tooltip contentStyle={{ background: "rgba(255,248,220,0.92)", border: `1px solid ${C.dark}`, color: C.ink }} />
-                <Line type="monotone" dataKey="commands" stroke={C.chartInk} strokeWidth={2} />
-                <Line type="monotone" dataKey="trend" stroke="#4b3520" strokeDasharray="4 4" dot={false} />
+                <Tooltip
+                  contentStyle={{ background: "rgba(255,248,220,0.96)", border: `1px solid ${C.goldDark}`, color: C.ink, borderRadius: 3 }}
+                />
+                <Line type="monotone" dataKey="commands" stroke={C.chartInk} strokeWidth={2} dot={{ r: 3, fill: C.gold }} />
+                <Line type="monotone" dataKey="trend" stroke={C.goldDark} strokeDasharray="4 4" dot={false} strokeWidth={1.5} />
               </LineChart>
             </ResponsiveContainer>
-          </ChartShell>
+          </ChartFrame>
         </PageColumn>
+
         <PageColumn>
-          <ChartShell title="Time Per Run">
+          <ChartFrame
+            title="Time Per Run"
+            subtitle="Seconds to victory. Gold marks your fastest finish."
+            empty={noTimeData}
+            emptyText="Finish a quest to record your first time."
+          >
             <ResponsiveContainer width="100%" height={190}>
               <BarChart data={timeData}>
-                <CartesianGrid stroke={C.chartInkDim} />
+                <CartesianGrid stroke={C.chartInkDim} strokeDasharray="3 3" />
                 <XAxis dataKey="run" stroke={C.chartInk} tick={{ fill: C.chartInk, fontSize: 10 }} />
                 <YAxis allowDecimals={false} stroke={C.chartInk} tick={{ fill: C.chartInk, fontSize: 10 }} />
-                <Tooltip contentStyle={{ background: "rgba(255,248,220,0.92)", border: `1px solid ${C.dark}`, color: C.ink }} />
-                <Bar dataKey="seconds">
-                  {timeData.map((entry) => <Cell key={entry.run} fill={entry.best ? C.chartInk : "#6f5432"} />)}
+                <Tooltip
+                  cursor={{ fill: "rgba(139,105,20,0.10)" }}
+                  contentStyle={{ background: "rgba(255,248,220,0.96)", border: `1px solid ${C.goldDark}`, color: C.ink, borderRadius: 3 }}
+                />
+                <Bar dataKey="seconds" radius={[3, 3, 0, 0]}>
+                  {timeData.map((entry) => (
+                    <Cell key={entry.run} fill={entry.best ? C.gold : "#a07b3e"} />
+                  ))}
                 </Bar>
               </BarChart>
             </ResponsiveContainer>
-          </ChartShell>
-          <ChartShell title="Command Mastery Shape">
+          </ChartFrame>
+
+          <ChartFrame
+            title="Command Mastery Shape"
+            subtitle="Coverage across your toolkit — round means well-balanced."
+            empty={noMasteryData}
+            emptyText="Use any command to start sketching this shape."
+          >
             <ResponsiveContainer width="100%" height={190}>
               <RadarChart data={masteryData}>
                 <PolarGrid stroke={C.chartInkDim} />
                 <PolarAngleAxis dataKey="command" stroke={C.chartInk} tick={{ fill: C.chartInk, fontSize: 10 }} />
-                <Radar dataKey="mastery" stroke={C.chartInk} fill={C.chartInk} fillOpacity={0.35} />
-                <Tooltip contentStyle={{ background: "rgba(255,248,220,0.92)", border: `1px solid ${C.dark}`, color: C.ink }} />
+                <Radar dataKey="mastery" stroke={C.gold} strokeWidth={2} fill={C.gold} fillOpacity={0.32} />
+                <Tooltip
+                  contentStyle={{ background: "rgba(255,248,220,0.96)", border: `1px solid ${C.goldDark}`, color: C.ink, borderRadius: 3 }}
+                />
               </RadarChart>
             </ResponsiveContainer>
-          </ChartShell>
+          </ChartFrame>
         </PageColumn>
-      </>
+        </div>
+      </div>
     );
   };
 

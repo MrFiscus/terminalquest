@@ -37,6 +37,7 @@ import { levelCompletionLine } from "@/game/levelCompletion";
 import { playCommandSound, playFootstep, playGameSound, unlockGameAudio } from "@/game/audio";
 import {
   appendRun,
+  applyFamiliarityProgression,
   baseCommand,
   clearActiveRun,
   clearLevelSession,
@@ -366,6 +367,10 @@ export function useGameState(options: UseGameStateOptions = {}) {
     });
     appendRun(run);
     clearActiveRun();
+    // Auto-bump the saved familiarity to reflect actual demonstrated
+    // skill. Returning user's next adaptive level will use this larger
+    // value, scaling up room count and prompt complexity.
+    applyFamiliarityProgression(run);
     return aiFeedback ? { ...report, feedback: aiFeedback } : report;
   }, []);
 
