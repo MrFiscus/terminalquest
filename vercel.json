@@ -6,7 +6,7 @@
   "outputDirectory": "dist",
   "rewrites": [
     {
-      "source": "/(.*)",
+      "source": "/((?!assets/.*|favicon.ico|robots.txt).*)",
       "destination": "/index.html"
     }
   ]

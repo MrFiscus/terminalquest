@@ -149,7 +149,20 @@ export const DifficultyMenu = ({ onConfirm, busy }: DifficultyMenuProps) => {
           transition={{ duration: 0.45, ease: "easeOut" }}
           className="flex w-full max-w-5xl flex-col gap-5"
         >
-          <div style={{ ...boxStyle, width: "min(100%, 560px)", padding: "18px 22px 16px", backgroundColor: "hsl(226 12% 8% / 0.5)" }}>
+          <div
+            style={{
+              ...boxStyle,
+              width: "100%",
+              padding: "18px",
+              backgroundColor: "hsl(226 12% 8% / 0.44)",
+              backgroundImage: [
+                "radial-gradient(120% 90% at 86% 8%, hsl(34 92% 50% / 0.12), transparent 54%)",
+                "radial-gradient(120% 130% at 18% 100%, hsl(214 42% 30% / 0.12), transparent 62%)",
+                "linear-gradient(180deg, hsl(226 12% 15% / 0.48), hsl(224 16% 7% / 0.6))",
+                "repeating-linear-gradient(45deg, hsl(0 0% 100% / 0.02) 0 2px, transparent 2px 7px)",
+              ].join(", "),
+            }}
+          >
             <p style={{ fontFamily: "'Cinzel', serif", fontSize: "10px", letterSpacing: "0.38em", textTransform: "uppercase", color: "hsl(0 0% 28%)", fontWeight: 700, marginBottom: "8px", textShadow: "-1px -1px 0 hsl(0 0% 0%/0.85), 1px 1px 0 hsl(0 0% 100%/0.18)" }}>
               Terminal Quest
             </p>
