@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState, type KeyboardEvent } from "react";
+import { useNavigate } from "react-router-dom";
 import { cn } from "@/lib/utils";
 import type { GameState, TerminalLine } from "@/game/types";
 import { commandDefinitions } from "@/game/commandSystem/registry";
@@ -105,6 +106,7 @@ function isDeepOrRestricted(cwd: string): boolean {
 }
 
 export function Terminal({ state, onSubmit }: TerminalProps) {
+  const navigate = useNavigate();
   const [input, setInput] = useState("");
   const [cursorPos, setCursorPos] = useState(0);
   const [histIndex, setHistIndex] = useState<number | null>(null);
@@ -220,9 +222,15 @@ export function Terminal({ state, onSubmit }: TerminalProps) {
 
       {/* Title bar — iron plate with rune text */}
       <div className="dungeon-terminal-header">
-        <span className="dungeon-terminal-header-text">
-          ⚔ <span style={{ letterSpacing: '0.12em' }}>TERMINAL QUEST</span> ⚔
-        </span>
+        <button
+          onClick={() => navigate("/")}
+          className="cursor-pointer hover:opacity-80 transition-opacity"
+          title="Return to Landing Page"
+        >
+          <span className="dungeon-terminal-header-text">
+            ⚔ <span style={{ letterSpacing: '0.12em' }}>TERMINAL QUEST</span> ⚔
+          </span>
+        </button>
         <span className="dungeon-terminal-header-sub">rune·shell</span>
       </div>
 

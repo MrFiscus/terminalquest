@@ -1,6 +1,7 @@
 import { describe, expect, it, vi, beforeEach } from "vitest";
 import { render, screen, fireEvent, act } from "@testing-library/react";
 import { Terminal } from "@/components/Terminal";
+import { MemoryRouter as Router } from "react-router-dom";
 import { DifficultyMenu } from "@/components/DifficultyMenu";
 import { DEFAULT_ROOMS, START_PATH } from "@/game/dungeon";
 import { createCommandStats } from "@/game/adaptiveDungeon";
@@ -26,10 +27,13 @@ const mockState = {
 };
 
 describe("UI Components (Phase 3)", () => {
-    
   describe("Terminal", () => {
     it("renders history and path", () => {
-      render(<Terminal state={mockState as any} onSubmit={vi.fn()} />);
+      render(
+        <Router>
+          <Terminal state={mockState as any} onSubmit={vi.fn()} />
+        </Router>
+      );
       expect(screen.getByText(/Welcome/)).toBeInTheDocument();
       // Prompt is split into multiple spans for dungeon theme
       expect(screen.getByText("adventurer")).toBeInTheDocument();
@@ -38,7 +42,11 @@ describe("UI Components (Phase 3)", () => {
 
     it("submits command on Enter", () => {
       const onSubmit = vi.fn();
-      render(<Terminal state={mockState as any} onSubmit={onSubmit} />);
+      render(
+        <Router>
+          <Terminal state={mockState as any} onSubmit={onSubmit} />
+        </Router>
+      );
       const input = screen.getByRole("textbox");
       
       fireEvent.change(input, { target: { value: "ls" } });

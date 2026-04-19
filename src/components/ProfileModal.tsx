@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import type { User } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
+import { DifficultySettings } from "@/components/DifficultySettings";
 import {
   Bar,
   BarChart,
@@ -51,7 +52,7 @@ const C = {
 
 const PROFILE_AI_SUMMARY_KEY = "terminalquest_ai_profile_summary";
 
-type ProfileTab = "account" | "stats" | "mastery" | "achievements" | "progress";
+type ProfileTab = "account" | "stats" | "mastery" | "achievements" | "progress" | "difficulty";
 
 interface ProfileModalProps {
   onClose: () => void;
@@ -70,6 +71,7 @@ const TAB_LABELS: Record<ProfileTab, string> = {
   mastery: "Mastery",
   achievements: "Achievements",
   progress: "Progress",
+  difficulty: "Difficulty",
 };
 
 const COMMAND_COPY: Record<ProfileCommand, { title: string; description: string; example: string; tip: string }> = {
@@ -684,6 +686,16 @@ export function ProfileModal({ onClose }: ProfileModalProps) {
           <PageColumn>{leftAchievements.map((achievement, index) => renderAchievement(achievement, index + 1))}</PageColumn>
           <PageColumn>{rightAchievements.map((achievement, index) => renderAchievement(achievement, index + leftAchievements.length + 1))}</PageColumn>
         </>
+      );
+    }
+
+    if (activeTab === "difficulty") {
+      return (
+        <PageColumn>
+          <div style={{ width: "100%", maxWidth: 500, margin: "0 auto" }}>
+            <DifficultySettings />
+          </div>
+        </PageColumn>
       );
     }
 
