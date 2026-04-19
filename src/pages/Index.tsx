@@ -30,7 +30,6 @@ import { UserRound } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import type { User } from "@supabase/supabase-js";
 import { AnimatePresence } from "framer-motion";
-import { useNavigate } from "react-router-dom";
 import type { LinuxCommand, VictoryReport } from "@/game/types";
 import type { GeneratedLevel } from "@/game/aiLevelService";
 
@@ -131,7 +130,6 @@ function roomHeaderNote(room: ReturnType<typeof getRoom>, transientNote: string 
 }
 
 const Index = () => {
-  const navigate = useNavigate();
   const [profileOpen, setProfileOpen] = useState(false);
   const openProfile = useCallback(() => setProfileOpen(true), []);
   const {
@@ -139,6 +137,7 @@ const Index = () => {
     teachingTip, dungeonMasterTip, roomSubtitle,
     submitMauQuiz, closeMauQuiz, openScroll, closeScroll,
     achievementQueue, dismissAchievement,
+    dismissVictory,
     resumeSession,
   } = useGameState({
     onOpenProfile: openProfile,
@@ -358,19 +357,12 @@ const Index = () => {
     setAutoEntering(readOnboarded() && readFamiliarity() != null);
   };
 
-  const handleCloseVictoryToResume = () => {
-    const session = readLevelSession();
-    if (!session) {
-      navigate("/", { replace: true });
-      return;
-    }
-    setPendingSession(session);
-    setResumeDecision("pending");
-    setHasEntered(false);
+  const handleCloseVictoryOverlay = () => {
+    dismissVictory();
   };
 
   const handleCloseResumeToLanding = () => {
-    navigate("/", { replace: true });
+    window.location.assign("/");
   };
 
   const handleReplayCurrentLevel = () => {
@@ -532,7 +524,7 @@ const Index = () => {
         <VictoryOverlay
           onReset={loadNextAdaptiveDungeon}
           onReplay={handleReplayCurrentLevel}
-          onClose={handleCloseVictoryToResume}
+          onClose={handleCloseVictoryOverlay}
           targetFile={state.targetFile}
           canReplay={Boolean(replayPayloadRef.current)}
           completionMessage={state.completionMessage}

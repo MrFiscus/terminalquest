@@ -1106,6 +1106,18 @@ export function useGameState(options: UseGameStateOptions = {}) {
     setState((cur) => ({ ...cur, popup: null }));
   }, []);
 
+  const dismissVictory = useCallback(() => {
+    setState((cur) => {
+      if (!cur.won) return cur;
+      return {
+        ...cur,
+        won: false,
+        completionMessage: null,
+        completionReport: null,
+      };
+    });
+  }, []);
+
   const reset = useCallback(() => {
     idRef.current = 100;
     runTrackerRef.current = createRunTracker();
@@ -1276,6 +1288,7 @@ export function useGameState(options: UseGameStateOptions = {}) {
     submit,
     reset,
     dismissPopup,
+    dismissVictory,
     loadLevel,
     teachingTip,
     dismissTeaching,
