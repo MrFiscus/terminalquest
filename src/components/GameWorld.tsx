@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
 import { getRoom } from "@/game/dungeon";
 import { PlayerSprite } from "@/components/PlayerSprite";
-import { ScrollPopup } from "@/components/ScrollPopup";
+
 import archwayDoor from "@/assets/archway-door.png";
 import scrollItem from "@/assets/scroll-item.png";
 import type { DecorKind, GameState, VfxPulse } from "@/game/types";
