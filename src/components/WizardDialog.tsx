@@ -48,17 +48,17 @@ export function WizardDialog({ context, externalMessage }: WizardDialogProps) {
     setIsChatting(false);
   }, [externalMessage]);
 
-  // Auto-close welcome dialog after 7 seconds if not chatting
+  // Auto-close welcome dialog after 5 seconds if not chatting
   useEffect(() => {
     if (!isOpen || isChatting) return;
     const timer = setTimeout(() => {
       setIsOpen(false);
-    }, 7000);
+    }, 5000);
     return () => clearTimeout(timer);
   }, [isChatting, isOpen, message]);
 
   return (
-    <div className="fixed bottom-[118px] right-0 z-40 pointer-events-none flex h-44 w-full max-w-4xl items-end justify-end gap-0 p-2">
+    <div className="fixed bottom-[84px] right-0 z-40 pointer-events-none flex h-44 w-full max-w-4xl items-end justify-end gap-0 p-2">
       
       {/* Parchment Dialog Box */}
       <AnimatePresence>

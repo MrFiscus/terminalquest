@@ -38,12 +38,12 @@ export function InventoryBar({ items, slots = 5, activeIndex = 0, onOpenBook }: 
           onClick={onOpenBook}
           title="Open the Book of Secrets"
           aria-label="Open the Book of Secrets"
-          className="group absolute left-4 bottom-3 flex h-14 w-14 items-center justify-center rounded-sm border border-[hsl(var(--torch-glow)/0.45)] bg-[hsl(230_20%_7%/0.72)] shadow-[inset_0_1px_0_hsl(42_70%_70%/0.12),0_2px_8px_hsl(0_0%_0%/0.55)] transition hover:scale-105 hover:border-[hsl(var(--torch-glow)/0.85)] hover:shadow-[0_0_14px_hsl(var(--torch-glow)/0.45)]"
+          className="group absolute left-3 top-1/2 flex h-20 w-20 -translate-y-1/2 items-center justify-center transition hover:scale-105"
         >
           <img
             src={hintBookImage}
             alt=""
-            className="h-12 w-12 object-contain drop-shadow-[0_2px_2px_hsl(0_0%_0%/0.8)]"
+            className="h-20 w-20 object-contain drop-shadow-[0_4px_4px_hsl(0_0%_0%/0.85)]"
             draggable={false}
           />
           <span className="pointer-events-none absolute -top-7 left-0 whitespace-nowrap rounded bg-stone-slab-edge px-1.5 py-0.5 font-pixel text-[7px] text-primary opacity-0 transition-opacity group-hover:opacity-100">
