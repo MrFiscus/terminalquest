@@ -16,6 +16,7 @@ const tierFor = (v: number): { label: string; difficulty: Difficulty } => {
 export const DifficultyMenu = ({ onConfirm, busy }: DifficultyMenuProps) => {
   const [dungeonDifficulty, setDungeonDifficulty] = useState<number>(50);
   const [fading, setFading] = useState(false);
+  const [dragging, setDragging] = useState(false);
   const trackRef = useRef<HTMLDivElement>(null);
   const draggingRef = useRef(false);
   const tier = tierFor(dungeonDifficulty);
@@ -35,7 +36,10 @@ export const DifficultyMenu = ({ onConfirm, busy }: DifficultyMenuProps) => {
       e.preventDefault();
       setFromClientX(e.clientX);
     };
-    const onUp = () => { draggingRef.current = false; };
+    const onUp = () => {
+      draggingRef.current = false;
+      setDragging(false);
+    };
     window.addEventListener("pointermove", onMove);
     window.addEventListener("pointerup", onUp);
     return () => {
@@ -46,6 +50,7 @@ export const DifficultyMenu = ({ onConfirm, busy }: DifficultyMenuProps) => {
 
   const onTrackPointerDown = (e: React.PointerEvent) => {
     draggingRef.current = true;
+    setDragging(true);
     setFromClientX(e.clientX);
   };
 
