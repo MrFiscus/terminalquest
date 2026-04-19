@@ -77,7 +77,7 @@ Set hosted secrets:
 
 ```bash
 npx supabase secrets set ANTHROPIC_API_KEY=your-anthropic-api-key --project-ref vtizdyjqkwcrygqblpcm
-npx supabase secrets set ANTHROPIC_MODEL=claude-haiku-4-5-20251001 --project-ref vtizdyjqkwcrygqblpcm
+npx supabase secrets set ANTHROPIC_MODEL=claude-3-haiku-20240307 --project-ref vtizdyjqkwcrygqblpcm
 ```
 
 Deploy Edge Functions:
@@ -100,7 +100,7 @@ Then fill in:
 
 ```env
 ANTHROPIC_API_KEY="your-anthropic-api-key"
-ANTHROPIC_MODEL="claude-haiku-4-5-20251001"
+ANTHROPIC_MODEL="claude-3-haiku-20240307"
 ```
 
 ## Testing AI
