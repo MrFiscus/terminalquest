@@ -82,6 +82,11 @@ type WallSide = "top" | "bottom" | "left" | "right";
 type RoomTheme = "crypt" | "vault" | "storage" | "shrine" | "prison" | "hall" | "flooded" | "trap";
 type Point = { x: number; y: number };
 type Corner = "nw" | "ne" | "sw" | "se";
+type InteriorWallRun = { x: number; y: number; length: number; dir: "h" | "v" };
+type CompactWallBlueprint = {
+  h: Array<[x: number, y: number, length: number]>;
+  v: Array<[x: number, y: number, length: number]>;
+};
 
 interface Layout {
   width: number;
@@ -99,6 +104,38 @@ interface Layout {
   /** Thin L-paths from spawn to each door/file. Blocking props avoid these. */
   pathCells: Set<string>;
 }
+
+// Compact, AI-authored wall recipes. These are intentionally tiny: each run is
+// [x, y, length] on an 18x12 reference room, then scaled and validated by the
+// regular generator. This keeps token use near zero during play while giving
+// the procedural layer many more starting structures.
+const WALL_BLUEPRINT_BASE = { width: 18, height: 12 };
+const AI_WALL_BLUEPRINTS: CompactWallBlueprint[] = [
+  { h: [[2, 3, 5], [11, 3, 5], [6, 6, 7], [3, 9, 4]], v: [[5, 4, 4], [13, 4, 4]] },
+  { h: [[3, 3, 6], [10, 6, 5], [4, 9, 7]], v: [[12, 3, 5], [5, 6, 3]] },
+  { h: [[2, 3, 4], [12, 3, 4], [5, 7, 8], [2, 9, 4]], v: [[8, 4, 3], [14, 5, 4]] },
+  { h: [[5, 3, 8], [2, 6, 5], [11, 9, 5]], v: [[5, 4, 5], [12, 4, 3]] },
+  { h: [[2, 4, 6], [10, 4, 6], [6, 8, 6]], v: [[4, 5, 4], [14, 5, 4]] },
+  { h: [[2, 3, 5], [8, 5, 7], [11, 8, 5]], v: [[7, 4, 5], [13, 5, 3]] },
+  { h: [[4, 3, 4], [10, 3, 4], [2, 7, 6], [10, 9, 6]], v: [[9, 4, 5]] },
+  { h: [[2, 3, 7], [10, 5, 6], [3, 9, 5]], v: [[4, 4, 4], [12, 6, 3]] },
+  { h: [[3, 4, 5], [10, 4, 5], [5, 8, 8]], v: [[8, 5, 3], [15, 5, 4]] },
+  { h: [[2, 5, 5], [11, 5, 5], [6, 3, 6], [7, 9, 5]], v: [[5, 6, 3], [13, 6, 3]] },
+  { h: [[2, 3, 4], [7, 6, 7], [12, 9, 4]], v: [[4, 4, 5], [14, 4, 5]] },
+  { h: [[3, 3, 5], [10, 3, 6], [2, 8, 5], [11, 8, 5]], v: [[9, 4, 4]] },
+  { h: [[2, 4, 7], [10, 7, 6], [4, 9, 4]], v: [[11, 3, 3], [5, 5, 4]] },
+  { h: [[5, 3, 5], [2, 6, 5], [9, 9, 7]], v: [[7, 4, 5], [14, 6, 3]] },
+  { h: [[2, 3, 6], [10, 3, 4], [5, 6, 6], [2, 9, 5]], v: [[13, 4, 5]] },
+  { h: [[4, 4, 8], [2, 8, 4], [12, 8, 4]], v: [[4, 5, 3], [13, 5, 3]] },
+  { h: [[2, 3, 5], [11, 5, 5], [5, 9, 8]], v: [[6, 4, 4], [13, 6, 3]] },
+  { h: [[3, 3, 4], [8, 6, 8], [3, 9, 4], [12, 9, 4]], v: [[15, 3, 4]] },
+  { h: [[2, 4, 5], [9, 4, 7], [6, 8, 5]], v: [[5, 5, 4], [12, 5, 4]] },
+  { h: [[5, 3, 8], [2, 7, 4], [12, 7, 4], [6, 9, 5]], v: [[9, 4, 5]] },
+  { h: [[2, 3, 4], [6, 5, 7], [11, 8, 5]], v: [[4, 4, 5], [13, 3, 3]] },
+  { h: [[3, 4, 6], [10, 4, 6], [4, 8, 5]], v: [[7, 5, 4], [14, 5, 4]] },
+  { h: [[2, 3, 6], [9, 6, 6], [3, 9, 6]], v: [[12, 3, 5], [5, 6, 3]] },
+  { h: [[4, 3, 5], [2, 6, 5], [10, 6, 6], [7, 9, 5]], v: [[15, 4, 4]] },
+];
 
 // ---------- structural layer ----------
 
@@ -299,84 +336,144 @@ function placePillars(layout: Layout) {
   }
 }
 
+function compactBlueprintRunsForRoom(
+  blueprint: CompactWallBlueprint,
+  width: number,
+  height: number,
+  rng: () => number,
+): InteriorWallRun[] {
+  const runs: InteriorWallRun[] = [];
+  const scaleX = (x: number) =>
+    Math.round(2 + ((x - 2) / (WALL_BLUEPRINT_BASE.width - 4)) * Math.max(1, width - 4));
+  const scaleY = (y: number) =>
+    Math.round(3 + ((y - 3) / (WALL_BLUEPRINT_BASE.height - 6)) * Math.max(1, height - 6));
+  const clampLength = (length: number, max: number) => Math.max(3, Math.min(max, Math.round(length)));
+  const jitter = () => Math.floor(rng() * 3) - 1;
+
+  for (const [bx, by, blen] of blueprint.h) {
+    const length = clampLength(blen * ((width - 4) / (WALL_BLUEPRINT_BASE.width - 4)), width - 4);
+    const x = Math.max(2, Math.min(width - 2 - length, scaleX(bx) + jitter()));
+    const y = Math.max(3, Math.min(height - 3, scaleY(by) + jitter()));
+    if (x + length < width - 1) runs.push({ x, y, length, dir: "h" });
+  }
+
+  for (const [bx, by, blen] of blueprint.v) {
+    const length = clampLength(blen * ((height - 5) / (WALL_BLUEPRINT_BASE.height - 5)), height - 4);
+    const x = Math.max(2, Math.min(width - 2, scaleX(bx) + jitter()));
+    const y = Math.max(4, Math.min(height - 1 - length, scaleY(by) + jitter()));
+    if (y + length < height - 1) runs.push({ x, y, length, dir: "v" });
+  }
+
+  return shuffle(runs, rng);
+}
+
 /**
  * Interior wall templates per theme. Each template returns an array of
- * horizontal runs describing short structural walls placed inside the
- * room. Runs never cross doors/pillars and always leave a clear spawn-side
- * walk lane.
+ * structural wall runs placed inside the room. Most runs come from compact
+ * AI-authored blueprints, with procedural archetypes as a deterministic
+ * fallback. Placement later rejects anything that violates room rules.
  */
 function interiorWallTemplate(
   theme: RoomTheme,
   width: number,
   height: number,
   rng: () => number,
-): Array<{ x: number; y: number; length: number }> {
+): InteriorWallRun[] {
   const cx = Math.floor(width / 2);
-  const runs: Array<{ x: number; y: number; length: number }> = [];
+  const runs: InteriorWallRun[] = [];
   if (width < 12 || height < 9) return runs;
+
+  if (rng() < 0.82) {
+    const blueprint = AI_WALL_BLUEPRINTS[Math.floor(rng() * AI_WALL_BLUEPRINTS.length)];
+    const blueprintRuns = compactBlueprintRunsForRoom(blueprint, width, height, rng);
+    if (blueprintRuns.length >= 4) return blueprintRuns;
+  }
 
   // All interior wall runs are at LEAST 3 tiles long so they read as real
   // partitions, not sketchy two-block stubs. Pushed down to y=3 so the soil
   // cap above them stays clear of the pillar row at y=1.
   const rowY = 3;
-  const shortLen = Math.max(3, Math.min(4, Math.floor(width * 0.22)));
-  const mediumLen = Math.max(4, Math.min(5, Math.floor(width * 0.3)));
-  const longLen = Math.max(5, Math.min(6, Math.floor(width * 0.36)));
+  const midY = Math.max(rowY + 2, Math.floor(height * 0.52));
+  const lowY = Math.max(rowY + 3, height - 3);
+  const midDrift = Math.max(rowY + 2, Math.min(height - 4, midY + Math.floor(rng() * 3) - 1));
+  const lowDrift = Math.max(midDrift + 2, Math.min(height - 3, lowY + Math.floor(rng() * 3) - 1));
+  const shortLen = Math.max(3, Math.min(4, Math.floor(width * 0.22) + Math.floor(rng() * 2)));
+  const mediumLen = Math.max(4, Math.min(6, Math.floor(width * 0.3) + Math.floor(rng() * 2)));
+  const longLen = Math.max(5, Math.min(7, Math.floor(width * 0.36) + Math.floor(rng() * 2)));
+  const roomShift = Math.floor(rng() * 3) - 1;
+  const clampX = (x: number, length = 1) => Math.max(2, Math.min(width - 1 - length, x));
+  const variant = Math.floor(rng() * 7);
+  const add = (x: number, y: number, length: number) => {
+    if (y <= 1 || y >= height - 1 || length < 3) return;
+    const start = Math.max(2, Math.min(width - 2 - length, x));
+    if (start + length < width - 1) runs.push({ x: start, y, length, dir: "h" });
+  };
+  const addV = (x: number, y: number, length: number) => {
+    if (x <= 1 || x >= width - 1 || length < 3) return;
+    const start = Math.max(rowY + 1, Math.min(height - 1 - length, y));
+    if (start + length < height - 1) runs.push({ x, y: start, length, dir: "v" });
+  };
+  const addPair = (y: number, length: number) => {
+    const inset = rng() < 0.5 ? 2 : 3;
+    add(inset, y, length);
+    add(width - inset - length, y, length);
+  };
 
-  switch (theme) {
-    case "storage": {
-      // Partition walls creating deep stock bays against the back.
-      runs.push({ x: 2, y: rowY, length: shortLen });
-      runs.push({ x: width - 2 - shortLen, y: rowY, length: shortLen });
-      if (height >= 11 && rng() < 0.6) runs.push({ x: cx - 1, y: rowY + 2, length: 3 });
+  switch (variant) {
+    case 0:
+      addPair(rowY, theme === "storage" || theme === "vault" ? mediumLen : shortLen);
+      add(cx - Math.floor(longLen / 2) + roomShift, midDrift, longLen);
+      addV(clampX(cx - 4 + roomShift), rowY + 1, Math.max(3, midDrift - rowY - 1));
+      if (rng() < 0.75) addV(clampX(cx + 4 + roomShift), rowY + 1, Math.max(3, midDrift - rowY - 1));
+      if (height >= 11) add(rng() < 0.5 ? 2 : width - 2 - mediumLen, lowDrift, mediumLen);
+      break;
+    case 1: {
+      const spineX = clampX(rng() < 0.5 ? cx - 5 + roomShift : cx + 5 + roomShift);
+      addPair(rowY, shortLen);
+      add(spineX - (rng() < 0.5 ? 0 : mediumLen - 1), midDrift, mediumLen);
+      addV(spineX, rowY + 1, Math.max(4, lowDrift - rowY - 1));
+      if (height >= 11) add(cx - Math.floor(longLen / 2), lowDrift, longLen);
       break;
     }
-    case "shrine":
-    case "crypt": {
-      runs.push({ x: 2, y: rowY, length: shortLen });
-      runs.push({ x: width - 2 - shortLen, y: rowY, length: shortLen });
+    case 2:
+      add(cx - Math.floor(longLen / 2) + roomShift, rowY, longLen);
+      addPair(midDrift, shortLen);
+      addV(clampX(cx - Math.floor(longLen / 2) + roomShift), rowY + 1, Math.max(3, midDrift - rowY - 1));
+      addV(clampX(cx + Math.floor(longLen / 2) + roomShift), rowY + 1, Math.max(3, midDrift - rowY - 1));
+      if (height >= 11) add(rng() < 0.5 ? 3 : width - 3 - mediumLen, lowDrift, mediumLen);
+      break;
+    case 3: {
+      const leftFirst = rng() < 0.5;
+      add(leftFirst ? 2 : width - 2 - mediumLen, rowY, mediumLen);
+      add(cx - Math.floor(longLen / 2), midDrift, longLen);
+      add(leftFirst ? width - 2 - mediumLen : 2, lowDrift, mediumLen);
+      addV(clampX(leftFirst ? cx - 4 : cx + 4), rowY + 1, Math.max(3, midDrift - rowY - 1));
+      addV(clampX(leftFirst ? cx + 4 : cx - 4), midDrift + 1, Math.max(3, lowDrift - midDrift - 1));
       break;
     }
-    case "vault": {
-      // Back alcove flanking the treasure — solid walls hugging the chest.
-      runs.push({ x: 2, y: rowY, length: shortLen });
-      runs.push({ x: width - 2 - shortLen, y: rowY, length: shortLen });
+    case 4:
+      addPair(rowY, mediumLen);
+      addPair(lowDrift, mediumLen);
+      addV(clampX(3 + Math.floor(rng() * 2)), rowY + 1, Math.max(4, lowDrift - rowY - 1));
+      addV(clampX(width - 4 - Math.floor(rng() * 2)), rowY + 1, Math.max(4, lowDrift - rowY - 1));
+      if (theme === "prison" || theme === "hall") add(cx - 2 + roomShift, midDrift, 4);
       break;
-    }
-    case "hall": {
-      // Halls get a pair of partition walls like flanking colonnades.
-      runs.push({ x: 2, y: rowY, length: shortLen });
-      runs.push({ x: width - 2 - shortLen, y: rowY, length: shortLen });
+    case 5:
+      add(cx - Math.floor(mediumLen / 2) + roomShift, rowY, mediumLen);
+      add(2, midDrift, mediumLen);
+      add(width - 2 - mediumLen, midDrift, mediumLen);
+      addV(cx + roomShift, rowY + 1, Math.max(3, lowDrift - rowY - 1));
+      if (height >= 11) add(cx - Math.floor(longLen / 2) - roomShift, lowDrift, longLen);
       break;
-    }
-    case "prison": {
-      // Cell dividers: two partition walls plus a lower backbone.
-      runs.push({ x: 2, y: rowY, length: shortLen });
-      runs.push({ x: width - 2 - shortLen, y: rowY, length: shortLen });
-      if (height >= 10) runs.push({ x: cx - 2, y: height - 3, length: 4 });
+    default:
+      addPair(rowY, shortLen);
+      add(cx - Math.floor(longLen / 2) + roomShift, midDrift, longLen);
+      addV(clampX(rng() < 0.5 ? cx - 5 : cx + 5), rowY + 1, Math.max(4, lowDrift - rowY - 1));
+      if (height >= 10) add(rng() < 0.5 ? 2 : width - 2 - mediumLen, lowDrift, mediumLen);
       break;
-    }
-    case "flooded": {
-      // Long partition wall on one side like a cistern divider.
-      const leftSide = rng() < 0.5;
-      const startX = leftSide ? 2 : width - 2 - mediumLen;
-      runs.push({ x: startX, y: rowY, length: mediumLen });
-      break;
-    }
-    case "trap": {
-      // Chokepoint dividers creating narrow pass-throughs.
-      runs.push({ x: 2, y: rowY, length: shortLen });
-      runs.push({ x: width - 2 - shortLen, y: rowY, length: shortLen });
-      break;
-    }
-    default: {
-      runs.push({ x: 2, y: rowY, length: shortLen });
-      runs.push({ x: width - 2 - shortLen, y: rowY, length: shortLen });
-      break;
-    }
   }
 
-  return runs;
+  return shuffle(runs, rng);
 }
 
 /**
@@ -396,14 +493,47 @@ function placeInteriorWalls(layout: Layout) {
     !files.some((f) => f.x === x && f.y === y);
 
   for (const run of runs) {
-    const doorIdx = run.length >= 4 ? Math.floor(run.length / 2) : -1;
+    const doorIdx = run.dir === "h" && run.length >= 4 ? Math.floor(run.length / 2) : -1;
+    const cells = Array.from({ length: run.length }, (_, i) => ({
+      x: run.x + (run.dir === "h" ? i : 0),
+      y: run.y + (run.dir === "v" ? i : 0),
+    }));
+    const doorCell = doorIdx >= 0 ? cells[doorIdx] : null;
+    const canPlaceRun = cells.every((cell) =>
+      isInterior(width, height, cell.x, cell.y) &&
+      !layout.occupied.has(key(cell.x, cell.y)) &&
+      doorClear(cell.x, cell.y) &&
+      fileClear(cell.x, cell.y)
+    );
+    if (!canPlaceRun) continue;
+    if (
+      run.dir === "v" &&
+      cells.some((cell) =>
+        layout.decor.some(
+          (d) =>
+            d.kind === "interior-door" &&
+            d.x === cell.x &&
+            Math.abs(d.y - cell.y) <= 1,
+        ),
+      )
+    ) {
+      continue;
+    }
+    if (
+      doorCell &&
+      layout.decor.some(
+        (d) =>
+          d.kind === "interior-wall" &&
+          d.x === doorCell.x &&
+          Math.abs(d.y - doorCell.y) <= 1,
+      )
+    ) {
+      continue;
+    }
+
     for (let i = 0; i < run.length; i++) {
-      const x = run.x + i;
-      const y = run.y;
-      if (!isInterior(width, height, x, y)) continue;
-      if (layout.occupied.has(key(x, y))) continue;
-      if (!doorClear(x, y)) continue;
-      if (!fileClear(x, y)) continue;
+      const x = run.x + (run.dir === "h" ? i : 0);
+      const y = run.y + (run.dir === "v" ? i : 0);
       const kind: DecorKind = i === doorIdx ? "interior-door" : "interior-wall";
       layout.decor.push({ kind, x, y });
       layout.occupied.add(key(x, y));

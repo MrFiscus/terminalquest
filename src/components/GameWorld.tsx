@@ -479,13 +479,83 @@ export function GameWorld({ state, onDismissPopup, headerRight }: GameWorldProps
     return set;
   }, [room]);
 
-  const runPosition = (x: number, y: number): "left" | "right" | "middle" => {
+  const cellAxis = (x: number, y: number): "h" | "v" => {
     const hasLeft = interiorRunSet.has(`${x - 1},${y}`);
     const hasRight = interiorRunSet.has(`${x + 1},${y}`);
-    if (!hasLeft && hasRight) return "left";
-    if (hasLeft && !hasRight) return "right";
+    const hasUp = interiorRunSet.has(`${x},${y - 1}`);
+    const hasDown = interiorRunSet.has(`${x},${y + 1}`);
+    return hasLeft || hasRight || (!hasUp && !hasDown) ? "h" : "v";
+  };
+
+  const runAxis = (x: number, y: number): "h" | "v" => cellAxis(x, y);
+
+  const runPosition = (x: number, y: number, axis = runAxis(x, y)): "left" | "right" | "middle" => {
+    const before =
+      axis === "h"
+        ? interiorRunSet.has(`${x - 1},${y}`) && cellAxis(x - 1, y) === "h"
+        : interiorRunSet.has(`${x},${y - 1}`) && cellAxis(x, y - 1) === "v";
+    const after =
+      axis === "h"
+        ? interiorRunSet.has(`${x + 1},${y}`) && cellAxis(x + 1, y) === "h"
+        : interiorRunSet.has(`${x},${y + 1}`) && cellAxis(x, y + 1) === "v";
+    if (!before && after) return "left";
+    if (before && !after) return "right";
     return "middle";
   };
+
+  const interiorCapFor = (x: number, y: number) => {
+    const axis = runAxis(x, y);
+    const pos = runPosition(x, y, axis);
+    const cap =
+      pos === "middle"
+        ? { src: topSoilCapTile(roomSeed + 53, axis === "h" ? x : y), transform: undefined as string | undefined }
+        : topSoilCornerTile(pos);
+    if (axis === "h") {
+      return {
+        axis,
+        src: cap.src,
+        style: {
+          left: "0%",
+          top: "-80%",
+          width: "100%",
+          height: "85%",
+          transform: cap.transform,
+        } satisfies CSSProperties,
+      };
+    }
+    return {
+      axis,
+      src: cap.src,
+      style: {
+        left: "-80%",
+        top: "0%",
+        width: "85%",
+        height: "100%",
+        transform: cap.transform ? `${cap.transform} rotate(-90deg)` : "rotate(-90deg)",
+      } satisfies CSSProperties,
+    };
+  };
+
+  const horizontalInteriorCapFor = (x: number, y: number) => {
+    const pos = runPosition(x, y, "h");
+    const cap =
+      pos === "middle"
+        ? { src: topSoilCapTile(roomSeed + 53, x), transform: undefined as string | undefined }
+        : topSoilCornerTile(pos);
+    return {
+      src: cap.src,
+      style: {
+        left: "0%",
+        top: "-80%",
+        width: "100%",
+        height: "85%",
+        transform: cap.transform,
+      } satisfies CSSProperties,
+    };
+  };
+
+  const hasVerticalWallAt = (x: number, y: number) =>
+    interiorRunSet.has(`${x},${y}`) && cellAxis(x, y) === "v";
 
   // topSoil overhang removed — outer ring now uses composite Top-Soil-Wall tiles.
 
@@ -602,11 +672,80 @@ export function GameWorld({ state, onDismissPopup, headerRight }: GameWorldProps
 
           {/* ------- Interior wall tiles (from generator decor: kind "interior-wall") ------- */}
           {interiorWalls.map((w) => {
-            const pos = runPosition(w.x, w.y);
-            const cap =
-              pos === "middle"
-                ? { src: topSoilCapTile(roomSeed + 53, w.x), transform: undefined as string | undefined }
-                : topSoilCornerTile(pos);
+            const cap = interiorCapFor(w.x, w.y);
+            if (cap.axis === "v") {
+              const connectUp = interiorRunSet.has(`${w.x},${w.y - 1}`);
+              const connectDown = interiorRunSet.has(`${w.x},${w.y + 1}`);
+              const joinsHorizontalUp = interiorRunSet.has(`${w.x},${w.y - 1}`) && cellAxis(w.x, w.y - 1) === "h";
+              const joinsHorizontalDown = interiorRunSet.has(`${w.x},${w.y + 1}`) && cellAxis(w.x, w.y + 1) === "h";
+              const pos = runPosition(w.x, w.y, "v");
+              const needsEndpointWall = pos !== "middle";
+              return (
+                <div
+                  key={`iw-${w.x}-${w.y}`}
+                  className="pointer-events-none absolute"
+                  style={{
+                    left: w.x * tileW,
+                    top: w.y * tileH,
+                    width: tileW,
+                    height: tileH,
+                    zIndex: 6,
+                  }}
+                >
+                  <span
+                    aria-hidden
+                    className="absolute inset-y-[2%] left-[8%] right-[8%] rounded-sm"
+                    style={{ background: "rgba(0,0,0,0.42)", filter: "blur(6px)" }}
+                  />
+                  {needsEndpointWall && (
+                    <img
+                      src={elementAsset("Normal-Wall")}
+                      alt=""
+                      draggable={false}
+                      className="absolute inset-0 h-full w-full object-cover"
+                      style={{
+                        imageRendering: "pixelated",
+                        transform: "rotate(90deg)",
+                        filter: "drop-shadow(0 4px 4px rgba(0,0,0,0.55))",
+                      }}
+                    />
+                  )}
+                  <img
+                    src={pos === "middle" ? newAsset("Top-Soil-Wall") : newAsset("Top-Soil-Corner-Wall")}
+                    alt=""
+                    draggable={false}
+                    className="absolute h-full w-full object-cover"
+                    style={{
+                      left: 0,
+                      top: 0,
+                      imageRendering: "pixelated",
+                      transform: pos === "right" ? "rotate(-90deg)" : "rotate(90deg)",
+                    }}
+                  />
+                  {(connectUp || connectDown) && (
+                    <span
+                      aria-hidden
+                      className="absolute left-[18%] right-[18%]"
+                      style={{
+                        top: connectUp ? "-18%" : undefined,
+                        bottom: connectDown ? "-18%" : undefined,
+                        height: joinsHorizontalUp || joinsHorizontalDown ? "42%" : "34%",
+                        backgroundColor: "rgba(55,48,36,0.72)",
+                        backgroundImage: `url(${newAsset("Soil-2")})`,
+                        backgroundSize: "cover",
+                        imageRendering: "pixelated",
+                        boxShadow: "inset 0 0 5px rgba(0,0,0,0.35)",
+                      }}
+                    />
+                  )}
+                </div>
+              );
+            }
+            const joinsVerticalUp = hasVerticalWallAt(w.x, w.y - 1);
+            const joinsVerticalDown = hasVerticalWallAt(w.x, w.y + 1);
+            const isMudOnlyJoint = joinsVerticalUp || joinsVerticalDown;
+            const joinsHorizontalLeft = interiorRunSet.has(`${w.x - 1},${w.y}`) && cellAxis(w.x - 1, w.y) === "h";
+            const joinsHorizontalRight = interiorRunSet.has(`${w.x + 1},${w.y}`) && cellAxis(w.x + 1, w.y) === "h";
             return (
               <div
                 key={`iw-${w.x}-${w.y}`}
@@ -619,45 +758,129 @@ export function GameWorld({ state, onDismissPopup, headerRight }: GameWorldProps
                   zIndex: 6,
                 }}
               >
-                <span
-                  aria-hidden
-                  className="absolute left-[4%] right-[4%] bottom-[-6%] h-[28%] rounded-sm"
-                  style={{ background: "rgba(0,0,0,0.55)", filter: "blur(6px)" }}
-                />
-                <img
-                  src={elementAsset("Normal-Wall")}
-                  alt=""
-                  draggable={false}
-                  className="absolute inset-0 h-full w-full object-cover"
-                  style={{ imageRendering: "pixelated" }}
-                />
+                {isMudOnlyJoint && (
+                  <img
+                    src={elementAsset("Normal-Wall")}
+                    alt=""
+                    draggable={false}
+                    className="absolute inset-0 h-full w-full object-cover"
+                    style={{
+                      imageRendering: "pixelated",
+                      filter: "drop-shadow(0 4px 4px rgba(0,0,0,0.45))",
+                    }}
+                  />
+                )}
+                {!isMudOnlyJoint && (
+                  <>
+                    <span
+                      aria-hidden
+                      className="absolute left-[4%] right-[4%] bottom-[-6%] h-[28%] rounded-sm"
+                      style={{ background: "rgba(0,0,0,0.55)", filter: "blur(6px)" }}
+                    />
+                    <img
+                      src={elementAsset("Normal-Wall")}
+                      alt=""
+                      draggable={false}
+                      className="absolute inset-0 h-full w-full object-cover"
+                      style={{
+                        imageRendering: "pixelated",
+                        transform: cap.axis === "v" ? "rotate(90deg)" : undefined,
+                      }}
+                    />
+                  </>
+                )}
                 {/* Soil cap — corner variant at run ends, wall-capped variant in the middle. */}
                 <img
-                  src={cap.src}
+                  src={isMudOnlyJoint ? newAsset("Soil-2") : cap.src}
                   alt=""
                   draggable={false}
                   className="absolute object-cover"
                   style={{
-                    left: "0%",
-                    top: "-80%",
-                    width: "100%",
-                    height: "85%",
-                    transform: cap.transform,
+                    ...(isMudOnlyJoint
+                      ? {
+                          left: "0%",
+                          top: "0%",
+                          width: "100%",
+                          height: "100%",
+                        }
+                      : cap.style),
                     imageRendering: "pixelated",
-                    filter: "drop-shadow(0 4px 4px rgba(0,0,0,0.55))",
+                    filter: isMudOnlyJoint ? "drop-shadow(0 2px 3px rgba(0,0,0,0.45))" : "drop-shadow(0 4px 4px rgba(0,0,0,0.55))",
                   }}
                 />
+                {isMudOnlyJoint && (
+                  <>
+                    <img
+                      src={newAsset("Soil-2")}
+                      alt=""
+                      draggable={false}
+                      className="absolute object-cover"
+                      style={{
+                        left: "0%",
+                        top: "-72%",
+                        width: "100%",
+                        height: "82%",
+                        imageRendering: "pixelated",
+                        filter: "drop-shadow(0 2px 3px rgba(0,0,0,0.45))",
+                      }}
+                    />
+                    {joinsHorizontalLeft && (
+                      <img
+                        src={elementAsset("Normal-Wall")}
+                        alt=""
+                        draggable={false}
+                        className="absolute object-cover"
+                        style={{
+                          left: "0%",
+                          top: "0%",
+                          width: "34%",
+                          height: "100%",
+                          imageRendering: "pixelated",
+                          filter: "drop-shadow(0 4px 4px rgba(0,0,0,0.45))",
+                        }}
+                      />
+                    )}
+                    {joinsHorizontalRight && (
+                      <img
+                        src={elementAsset("Normal-Wall")}
+                        alt=""
+                        draggable={false}
+                        className="absolute object-cover"
+                        style={{
+                          right: "0%",
+                          top: "0%",
+                          width: "34%",
+                          height: "100%",
+                          imageRendering: "pixelated",
+                          filter: "drop-shadow(0 4px 4px rgba(0,0,0,0.45))",
+                        }}
+                      />
+                    )}
+                  </>
+                )}
+                {isMudOnlyJoint && (
+                  <span
+                    aria-hidden
+                    className="absolute left-[16%] right-[16%]"
+                    style={{
+                      top: joinsVerticalUp ? "-34%" : undefined,
+                      bottom: joinsVerticalDown ? "-2%" : undefined,
+                      height: "46%",
+                      backgroundColor: "rgba(55,48,36,0.72)",
+                      backgroundImage: `url(${newAsset("Soil-2")})`,
+                      backgroundSize: "cover",
+                      imageRendering: "pixelated",
+                      boxShadow: "inset 0 0 5px rgba(0,0,0,0.35)",
+                    }}
+                  />
+                )}
               </div>
             );
           })}
 
           {/* ------- Interior doors (archways cut through interior wall runs) ------- */}
           {interiorDoors.map((d) => {
-            const pos = runPosition(d.x, d.y);
-            const cap =
-              pos === "middle"
-                ? { src: topSoilCapTile(roomSeed + 53, d.x), transform: undefined as string | undefined }
-                : topSoilCornerTile(pos);
+            const cap = horizontalInteriorCapFor(d.x, d.y);
             return (
             <div
               key={`id-${d.x}-${d.y}`}
@@ -701,11 +924,7 @@ export function GameWorld({ state, onDismissPopup, headerRight }: GameWorldProps
                 draggable={false}
                 className="absolute object-cover"
                 style={{
-                  left: "0%",
-                  top: "-80%",
-                  width: "100%",
-                  height: "85%",
-                  transform: cap.transform,
+                  ...cap.style,
                   imageRendering: "pixelated",
                   filter: "drop-shadow(0 4px 4px rgba(0,0,0,0.55))",
                 }}
