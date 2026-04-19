@@ -229,10 +229,6 @@ export const DifficultyMenu = ({ onConfirm, busy }: DifficultyMenuProps) => {
               <span className="engraved engraved-hover" style={{ fontSize: 20 }}>100 — MASTER'S CHALLENGE</span>
             </div>
 
-            {/* Tier readout */}
-            <div className="mt-3 text-center engraved engraved-hover" style={{ fontSize: 22, letterSpacing: "0.2em" }}>
-              ✦ TIER · {tier.label.toUpperCase()} ✦
-            </div>
           </div>
         </div>
 
