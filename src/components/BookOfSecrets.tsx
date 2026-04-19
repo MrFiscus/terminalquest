@@ -837,6 +837,16 @@ export function BookOfSecrets({ onClose }: BookOfSecretsProps) {
             </div>
 
           </div>{/* end leather cover */}
+
+          {/* Silver corner brackets */}
+          <SilverCorner corner="tl" />
+          <SilverCorner corner="tr" />
+          <SilverCorner corner="bl" />
+          <SilverCorner corner="br" />
+
+          {/* Wooden bookmark tabs */}
+          <WoodTab leftPct={30} />
+          <WoodTab leftPct={70} />
         </div>{/* end book wrapper */}
       </div>{/* end backdrop */}
     </>
