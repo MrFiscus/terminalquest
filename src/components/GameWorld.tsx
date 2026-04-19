@@ -497,14 +497,7 @@ export function GameWorld({ state, onDismissPopup, headerRight }: GameWorldProps
             </div>
           )}
 
-          {/* Parchment popup (cat) */}
-          {state.popup && (
-            <ScrollPopup
-              title={state.popup.title}
-              body={state.popup.body}
-              onDismiss={onDismissPopup}
-            />
-          )}
+          {/* (cat popup is now rendered as a full-screen LoreBookOverlay from Index.tsx) */}
         </div>
       </div>
     </div>
