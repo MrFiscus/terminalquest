@@ -11,7 +11,6 @@ import { generateLevel, type Difficulty } from "@/game/aiLevelService";
 import { adaptationMessage, getWeakCommands } from "@/game/adaptiveDungeon";
 import { cn } from "@/lib/utils";
 import { useState } from "react";
-import slateTexture from "@/assets/slate-texture.jpg";
 
 const Index = () => {
   const { state, submit, reset, dismissPopup, loadLevel, teachingTip, dismissTeaching, roomSubtitle } = useGameState();
@@ -72,91 +71,35 @@ const Index = () => {
         </button>
       ))}
 
-      {/* Book of Secrets — landing-style stone tablet button */}
+      {/* Book of Secrets button */}
       <button
         type="button"
         onClick={() => setBookOpen(true)}
-        className="lp-stone-btn lp-stone-btn-sweep"
-        style={{ fontSize: 9, padding: "5px 12px", letterSpacing: "0.14em" }}
+        className="stone-tablet-btn"
+        style={{ fontSize: 8, padding: "4px 10px", letterSpacing: "0.08em" }}
         title="Open the Book of Secrets"
       >
-        <span className="lp-eng-glow">📖&nbsp;&nbsp;BOOK OF SECRETS</span>
+        📖 BOOK OF SECRETS
       </button>
     </div>
   );
 
   return (
-    <main
-      className="dungeon-page-bg relative grid h-screen w-screen grid-cols-[40vw_4px_60vw] overflow-hidden"
-      style={{
-        backgroundImage: `radial-gradient(ellipse at 50% 30%, hsl(230 14% 14%) 0%, hsl(230 18% 7%) 55%, hsl(230 22% 3%) 100%), url(${slateTexture})`,
-        backgroundRepeat: "no-repeat, repeat",
-        backgroundSize: "100% 100%, 512px 512px",
-        backgroundPosition: "center, center",
-        backgroundAttachment: "fixed, fixed",
-        backgroundBlendMode: "multiply, normal",
-      }}
-    >
+    <main className="relative grid h-screen w-screen grid-cols-[40vw_4px_60vw] overflow-hidden bg-background">
       <h1 className="sr-only">Terminal Quest - Linux Dungeon RPG</h1>
 
-      {/* Ambient embers across the dungeon side */}
-      <div className="pointer-events-none absolute inset-y-0 right-0 z-[1] w-[60vw] overflow-hidden" aria-hidden>
-        {Array.from({ length: 6 }).map((_, i) => {
-          const left = 8 + (i * 17) % 84;
-          const dur = 6 + (i % 4) * 1.3;
-          const delay = (i * 0.85) % 6;
-          const drift = (i % 2 === 0 ? 1 : -1) * (6 + (i % 3) * 4);
-          return (
-            <span
-              key={i}
-              className="lp-ember"
-              style={{
-                left: `${left}%`,
-                bottom: `${12 + (i * 9) % 30}%`,
-                animationDuration: `${dur}s`,
-                animationDelay: `${delay}s`,
-                ["--ember-drift" as never]: `${drift}px`,
-              }}
-            />
-          );
-        })}
-      </div>
-
-      <section aria-label="Terminal" className="relative z-[2] h-full min-h-0 lp-hero-in">
-        <div
-          className="lp-breathe pointer-events-none absolute inset-0"
-          aria-hidden
-          style={{
-            background:
-              "radial-gradient(ellipse 70% 55% at 50% 50%, hsl(33 100% 50% / 0.06) 0%, transparent 65%)",
-          }}
-        />
+      <section aria-label="Terminal" className="h-full min-h-0">
         <Terminal state={state} onSubmit={submit} />
       </section>
 
-      <div className="pillar-divider relative z-[2] h-full" aria-hidden />
+      <div className="pillar-divider h-full" aria-hidden />
 
-      <section
-        aria-label="Dungeon"
-        className="relative z-[2] flex h-full min-h-0 flex-col lp-hero-in"
-        style={{ animationDelay: "120ms" }}
-      >
-        <div
-          className="lp-breathe pointer-events-none absolute inset-0"
-          aria-hidden
-          style={{
-            background:
-              "radial-gradient(ellipse 70% 55% at 50% 45%, hsl(33 100% 50% / 0.08) 0%, transparent 65%)",
-            animationDelay: "1.4s",
-          }}
-        />
-        <div className="relative min-h-0 flex-1">
+      <section aria-label="Dungeon" className="relative flex h-full min-h-0 flex-col">
+        <div className="min-h-0 flex-1">
           <GameWorld state={state} onDismissPopup={dismissPopup} headerRight={difficultyToggles} />
         </div>
         <RoomFlavorSubtitle text={roomSubtitle} />
-        <div className="lp-hero-in" style={{ animationDelay: "240ms" }}>
-          <InventoryBar items={state.inventory} slots={5} />
-        </div>
+        <InventoryBar items={state.inventory} slots={5} />
       </section>
 
       {state.won && (
