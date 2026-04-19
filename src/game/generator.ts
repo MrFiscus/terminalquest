@@ -17,7 +17,7 @@ import type { DecorItem, DecorKind, DoorTile, FileItem, Room, Tile } from "./typ
  *   5. Place focal features per theme (altar, paired statues, chest trio,
  *      water pool) on the "presentation" side of the room.
  *   6. Stack corner clusters (storage-heavy in 3 corners, lighter elsewhere).
- *   7. Drift environmental details (cracks, inscribed floor).
+ *   7. Drift environmental details (cracks, inscribed floor, skulls).
  *   8. Top up with a wall-band fill pass until density target is hit.
  */
 
@@ -820,10 +820,11 @@ function placeEnvironmental(layout: Layout) {
   const { theme, width, height, rng } = layout;
 
   const crackTarget =
-    theme === "trap" ? 6 :
-    theme === "crypt" ? 5 :
-    theme === "prison" || theme === "flooded" ? 4 :
-    3;
+    theme === "trap" ? 10 :
+    theme === "crypt" ? 8 :
+    theme === "prison" || theme === "flooded" ? 7 :
+    theme === "vault" || theme === "shrine" ? 5 :
+    6;
   let cracks = 0;
   for (let i = 0; i < crackTarget * 5 && cracks < crackTarget; i++) {
     const x = 2 + Math.floor(rng() * Math.max(1, width - 4));
@@ -842,6 +843,26 @@ function placeEnvironmental(layout: Layout) {
     if (place(layout, "inscribed-floor", x, y)) ins++;
   }
 
+}
+
+function placeSkulls(layout: Layout) {
+  const { theme, width, height, rng } = layout;
+  const target =
+    theme === "crypt" ? 9 :
+    theme === "trap" || theme === "prison" ? 7 :
+    theme === "vault" || theme === "shrine" || theme === "flooded" ? 5 :
+    rng() < 0.7 ? 4 :
+    3;
+  let placed = 0;
+  for (let i = 0; i < target * 14 && placed < target; i++) {
+    const x = 2 + Math.floor(rng() * Math.max(1, width - 4));
+    const y = 2 + Math.floor(rng() * Math.max(1, height - 4));
+    if (place(layout, "skull", x, y)) placed++;
+  }
+  for (const cell of shuffle(interiorCells(width, height), rng)) {
+    if (placed >= target) break;
+    if (place(layout, "skull", cell.x, cell.y)) placed++;
+  }
 }
 
 // ---------- center accent: fill the empty middle of the room ----------
@@ -1162,6 +1183,7 @@ export function generateRoom(spec: RoomSpec, nonce = 0): Room {
   placeClusters(layout);
   placeCenterAccent(layout);
   placeEnvironmental(layout);
+  placeSkulls(layout);
   densityFill(layout);
 
   return {

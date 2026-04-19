@@ -200,6 +200,12 @@
   .torch-flicker {
     animation: torch-flicker 1.6s infinite alternate ease-in-out;
   }
+  .torch-glow {
+    animation: torch-flicker 1.55s infinite alternate ease-in-out;
+    filter:
+      drop-shadow(0 0 7px hsl(var(--torch-glow) / 0.85))
+      drop-shadow(0 0 14px hsl(38 100% 58% / 0.42));
+  }
   .player-bob {
     animation: player-bob 0.8s infinite alternate ease-in-out;
   }

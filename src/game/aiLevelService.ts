@@ -465,7 +465,60 @@ const glyphFor = (name: string) => {
   return "□";
 };
 
-export function levelToRooms(level: Omit<GeneratedLevel, "roomMap" | "targetFile">): Record<string, Room> {
+const roomNounDescriptions: Record<string, string> = {
+  archive: "Dusty shelves lean over narrow paths, hiding clues between old records.",
+  cellar: "Damp stone and low vents make every footstep sound closer than it is.",
+  chamber: "A worked stone room waits in silence, marked by old travel and newer danger.",
+  crypt: "Cold graves and cracked floor tiles make the air feel heavy.",
+  forge: "Scorched brick and rusted tools hint at work abandoned in a hurry.",
+  foyer: "A threshold room opens into branching passages and watchful shadows.",
+  gallery: "Long walls carry banners, scratches, and signs of previous explorers.",
+  hall: "A broad passage pulls your attention toward every doorway at once.",
+  keep: "Reinforced stone and old storage crates make this room feel defended.",
+  library: "Broken stacks and scattered notes turn the room into a puzzle of paper.",
+  observatory: "Dark vents and old markings suggest someone studied the maze from here.",
+  sanctum: "Quiet symbols and candle-stained stone make the room feel deliberate.",
+  vault: "Heavy masonry and guarded corners make this chamber feel important.",
+};
+
+const roomMoodDescriptions: Record<string, string> = {
+  ancient: "Ancient dust hangs in the torchlight.",
+  cold: "Cold air gathers near the floor.",
+  dusty: "Dust curls around every movement.",
+  ember: "Emberlight warms the nearest stones.",
+  forgotten: "Forgotten marks fade along the walls.",
+  hidden: "Hidden seams break up the stonework.",
+  moonlit: "Pale light catches on chipped edges.",
+  mossy: "Moss creeps through the cracks.",
+  shadow: "Shadows pool between the tiles.",
+  silent: "Silence presses against the walls.",
+};
+
+function describeLevelRoom(room: LevelRoom, goal: string) {
+  const parts = room.id.split(/[._-]+/).filter(Boolean);
+  const noun = [...parts].reverse().find((part) => roomNounDescriptions[part]) ?? "chamber";
+  const mood = parts.find((part) => roomMoodDescriptions[part]);
+  const itemNames = room.items.map(itemName);
+  const goalLower = goal.toLowerCase();
+  const hasGoalItem = itemNames.some((name) => goalLower.includes(name.toLowerCase()));
+  const hasKey = itemNames.some((name) => name.toLowerCase().includes("key"));
+  const hasClues = itemNames.length > 0;
+  const branches = room.exits.length >= 3;
+
+  const detail = hasGoalItem
+    ? "Something worth carrying out of the dungeon is tucked inside."
+    : hasKey
+      ? "A key glints where a careful explorer might notice it."
+      : hasClues
+        ? "A clue rests among the debris, waiting to be inspected."
+        : branches
+          ? "Several exits pull the route in different directions."
+          : "The safest path is not obvious at first glance.";
+
+  return `${mood ? `${roomMoodDescriptions[mood]} ` : ""}${roomNounDescriptions[noun]} ${detail}`;
+}
+
+export function levelToRooms(level: Omit<GeneratedLevel, "roomMap" | "targetFile">, generationSeed?: string): Record<string, Room> {
   const roomById = new Map(level.rooms.map((room) => [room.id, room]));
   const children = new Map<string, string[]>();
   const parent = new Map<string, string | null>([[level.start, null]]);
@@ -494,7 +547,7 @@ export function levelToRooms(level: Omit<GeneratedLevel, "roomMap" | "targetFile
     return {
       path,
       name: room.id,
-      description: `A generated chamber named ${room.id}.`,
+      description: describeLevelRoom(room, level.goal),
       hasParent: room.id !== level.start,
       exits: children.get(room.id) ?? [],
       files: room.items.map((item) => {
@@ -509,7 +562,8 @@ export function levelToRooms(level: Omit<GeneratedLevel, "roomMap" | "targetFile
     };
   });
 
-  return markLevelLocks(level, generateDungeon(specs, START_PATH));
+  const nonce = generationSeed ? hashSeed(generationSeed) : 0;
+  return markLevelLocks(level, generateDungeon(specs, START_PATH, nonce));
 }
 
 function targetFromLevel(level: Omit<GeneratedLevel, "roomMap" | "targetFile">) {
@@ -571,14 +625,14 @@ export async function generateLevel(input: GenerateLevelInput): Promise<Generate
     const parsed = await requestAILevel(input);
     const valid = validateLevel(parsed, input);
     if (valid) {
-      return { ...valid, targetFile: targetFromLevel(valid), roomMap: levelToRooms(valid) };
+      return { ...valid, targetFile: targetFromLevel(valid), roomMap: levelToRooms(valid, input.generationSeed) };
     }
   } catch (error) {
     console.warn("AI level generation failed, using fallback:", error);
   }
 
   const fallback = fallbackLevel(input);
-  return { ...fallback, targetFile: targetFromLevel(fallback), roomMap: levelToRooms(fallback) };
+  return { ...fallback, targetFile: targetFromLevel(fallback), roomMap: levelToRooms(fallback, input.generationSeed) };
 }
 
 export function levelToStatePatch(level: GeneratedLevel): Pick<

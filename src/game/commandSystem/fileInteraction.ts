@@ -209,6 +209,25 @@ export const fileCommands: CommandDefinition[] = [
     },
   },
   {
+    name: "grep",
+    description: "Search for plain text inside files.",
+    usage: "grep <text> [file]",
+    run: (args, { room }) => {
+      const [query, fileName] = args;
+      if (!query) return { lines: [err("grep: usage: grep <text> [file]")] };
+      const files = fileName ? [findFile(room, fileName)].filter(Boolean) : room.files;
+      if (fileName && files.length === 0) return { lines: [err(`grep: ${fileName}: no such file`)] };
+      const matches = files.flatMap((file) => {
+        if (!file?.contents) return [];
+        return file.contents
+          .split("\n")
+          .filter((line) => line.toLowerCase().includes(query.toLowerCase()))
+          .map((line) => out(fileName ? line : `${file.name}: ${line}`));
+      });
+      return { lines: matches.length ? matches : [out("(no matches)")] };
+    },
+  },
+  {
     name: "rm",
     description: "Remove a file from the current directory.",
     usage: "rm <file>",

@@ -185,7 +185,7 @@ function isNear(a: { x: number; y: number }, b: { x: number; y: number }) {
 }
 
 function isDemoState(state: GameState) {
-  return Boolean(state.showcaseMode || state.difficultyValue === 50);
+  return Boolean(state.showcaseMode || state.difficultyValue === 0);
 }
 
 export function useGameState(options: UseGameStateOptions = {}) {

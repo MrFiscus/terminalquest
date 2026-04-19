@@ -14,7 +14,7 @@ export interface RunCommandContext {
 export async function runCommand(
   raw: string, 
   state: GameState,
-  ctx: RunCommandContext
+  ctx?: Partial<RunCommandContext>
 ): Promise<CommandResult> {
   const trimmed = raw.trim();
   if (!trimmed) return { lines: [] };
@@ -38,6 +38,11 @@ export async function runCommand(
     args, 
     state, 
     room,
-    ...ctx
+    startMauQuiz: () => undefined,
+    submitMauQuiz: () => undefined,
+    closeMauQuiz: () => undefined,
+    openScroll: () => undefined,
+    closeScroll: () => undefined,
+    ...ctx,
   });
 }

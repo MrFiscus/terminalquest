@@ -74,6 +74,7 @@ export type DecorKind =
   | "banner"
   | "pillar"
   | "sack"
+  | "skull"
   | "statue"
   | "water";
 
