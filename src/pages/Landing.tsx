@@ -477,6 +477,7 @@ function CommandsCarousel() {
               </div>
             </div>
           ))}
+          </div>
         </div>
       </div>
     </StoneSection>
