@@ -18,6 +18,7 @@ const helpCommand: CommandDefinition = {
       out(`Goal: ${state.winCondition}`),
       dm(`Hint: ${generateSmartHint(state, "light")}`),
     ],
+    vfx: { kind: "ghost", cells: [{ x: state.player.x, y: state.player.y }], durationMs: 1600 },
   }),
 };
 
@@ -25,7 +26,7 @@ const manCommand: CommandDefinition = {
   name: "man",
   description: "Show a short manual page for a command.",
   usage: "man <command>",
-  run: (args) => {
+  run: (args, { state }) => {
     const name = args[0];
     if (!name) return { lines: [out("man: usage: man <command>")] };
     const command = commandRegistry.get(name);
@@ -35,6 +36,7 @@ const manCommand: CommandDefinition = {
         out(`${command.name} - ${command.description}`),
         out(`usage: ${command.usage}`),
       ],
+      vfx: { kind: "inspect", cells: [{ x: state.player.x, y: state.player.y }], durationMs: 1300 },
     };
   },
 };

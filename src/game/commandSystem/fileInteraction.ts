@@ -1,4 +1,4 @@
-import { INVENTORY_PATH, TARGET_FILE, findFile, resolvePath } from "../dungeon";
+import { INVENTORY_PATH, findFile, resolvePath } from "../dungeon";
 import { addDoorToRoom } from "../generator";
 import { mauKeyQuizForDoor, mauQuizForMechanic } from "../difficultyMechanics";
 import type { Room } from "../types";
@@ -160,6 +160,7 @@ export const fileCommands: CommandDefinition[] = [
           return {
             lines: [out(`copied ${sourceFile.name} to ~/inventory`)],
             patch: { inventory: [...state.inventory, cloneFile(sourceFile, sourceFile, name)] },
+            vfx: { kind: "manifest", cells: [{ x: sourceFile.x, y: sourceFile.y }], durationMs: 1100 },
           };
         }
         if (destinationRoom) {
@@ -173,6 +174,7 @@ export const fileCommands: CommandDefinition[] = [
           return {
             lines: [out(`copied ${sourceFile.name} to ${destinationRoom.path}`)],
             patch: { rooms: { ...state.rooms, [destinationRoom.path]: copiedRoom } },
+            vfx: { kind: "manifest", cells: [{ x: sourceFile.x, y: sourceFile.y }], durationMs: 1100 },
           };
         }
 
@@ -185,6 +187,7 @@ export const fileCommands: CommandDefinition[] = [
         return {
           lines: [out(`copied ${sourceFile.name} to ${safeName}`)],
           patch: { rooms: { ...state.rooms, [room.path]: newRoom } },
+          vfx: { kind: "manifest", cells: [pos, { x: sourceFile.x, y: sourceFile.y }], durationMs: 1300 },
         };
       }
 
@@ -216,16 +219,21 @@ export const fileCommands: CommandDefinition[] = [
       const files = fileName ? [currentFile(state, room, fileName)].filter(Boolean) : room.files;
       if (fileName && !files.length) return { lines: [err(`grep: ${fileName}: no such file`)] };
       const matches: string[] = [];
+      const cells: { x: number; y: number }[] = [];
       for (const file of files) {
         const body = file?.contents ?? "";
         const lines = body.split("\n");
         lines.forEach((line, index) => {
           if (line.toLowerCase().includes(needle.toLowerCase())) {
             matches.push(`${file.name}:${index + 1}: ${line}`);
+            if (file) cells.push({ x: file.x, y: file.y });
           }
         });
       }
-      return { lines: matches.length ? matches.map(out) : [out("(no matches)")] };
+      return {
+        lines: matches.length ? matches.map(out) : [out("(no matches)")],
+        vfx: cells.length ? { kind: "find", cells, durationMs: 1800 } : undefined,
+      };
     },
   },
   {
@@ -237,7 +245,7 @@ export const fileCommands: CommandDefinition[] = [
       if (!name) return { lines: [err("rm: missing operand")] };
       const file = findFile(room, name);
       if (!file) return { lines: [err(`rm: ${name}: no such file`)] };
-      if (name === state.targetFile) return { lines: [err(`rm: ${name}: the relic resists destruction`)] };
+      if (name === state.targetFile) return { lines: [err(`rm: ${name}: the objective resists destruction`)] };
       return {
         lines: [dm(`Dungeon Master: You raise your hand toward '${name}'.`)],
         vfx: { kind: "rm", cells: [{ x: file.x, y: file.y }], durationMs: 1100 },
@@ -286,7 +294,7 @@ export const fileCommands: CommandDefinition[] = [
         };
       }
       // Key items must never trigger victory — they are tools, not relics.
-      const isWin = file.name === TARGET_FILE && state.targetFile === TARGET_FILE && file.type !== "key";
+      const isWin = file.name === state.targetFile && file.type !== "key";
       console.log(`[mv] file="${fileArg}" targetFile="${state.targetFile}" type="${file.type}" isWin=${isWin}`);
       return {
         lines: [dm(`Dungeon Master: You stride toward '${fileArg}'.`)],

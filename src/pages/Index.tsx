@@ -11,7 +11,7 @@ import { ScrollModal } from "@/components/ScrollModal";
 import { WizardDialog } from "@/components/WizardDialog";
 import { DEMO_CONTEXT, useGameState } from "@/hooks/useGameState";
 import { getRoom } from "@/game/dungeon";
-import { type Difficulty } from "@/game/aiLevelService";
+import { generateLevel, type Difficulty } from "@/game/aiLevelService";
 import { generateDifficultyMechanicLevel } from "@/game/difficultyMechanics";
 import { adaptationMessage, getWeakCommands } from "@/game/adaptiveDungeon";
 import { startGameAmbience, stopGameAmbience } from "@/game/audio";
@@ -46,12 +46,27 @@ const Index = () => {
     if (generating || state.animating) return false;
     setGenerating(difficulty);
     try {
-      const showcaseMode = familiarity === 50;
+      const showcaseMode = familiarity === 0;
       const weakCommands = showcaseMode
         ? ["mkdir", "cd", "ls", "mv"]
         : getWeakCommands(state.commandStats, 4);
       const playMode = showcaseMode ? "guided" : (familiarity ?? 0) >= 67 ? "real" : "guided";
-      const level = generateDifficultyMechanicLevel(difficulty, familiarity, weakCommands);
+      const generationSeed = [
+        difficulty,
+        familiarity ?? "unknown",
+        Date.now().toString(36),
+        Math.random().toString(36).slice(2, 10),
+        state.commandHistory.length,
+      ].join("-");
+      const level = showcaseMode
+        ? generateDifficultyMechanicLevel(difficulty, familiarity, weakCommands)
+        : await generateLevel({
+            difficulty,
+            familiarity,
+            weakCommands,
+            recentMistakes: state.recentMistakes,
+            generationSeed,
+          });
       loadLevel(
         level,
         `${difficulty} (${level.rooms.length} rooms)`,

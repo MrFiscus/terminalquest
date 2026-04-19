@@ -27,10 +27,21 @@ const feedback: Record<string, string> = {
 };
 
 const screenEffects: Record<string, ScreenEffect["kind"]> = {
+  ls: "reveal",
   cd: "traverse",
+  cat: "aware",
+  file: "aware",
+  rm: "error",
   mkdir: "create",
+  touch: "create",
   pwd: "aware",
   find: "track",
+  grep: "track",
+  echo: "aware",
+  help: "aware",
+  hint: "track",
+  man: "aware",
+  whoami: "aware",
 };
 
 export function runCommandEffect(input: string, result: CommandResult, failed: boolean): CommandEffectPlan {
