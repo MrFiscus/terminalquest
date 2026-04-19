@@ -1,4 +1,4 @@
-import { generateSmartHint } from "../smartHints";
+import { generateSmartHint, smartHintCells } from "../smartHints";
 import { dm, out } from "./helpers";
 import { generateMauQuiz } from "../mauQuizService";
 import { mauQuizForMechanic } from "../difficultyMechanics";
@@ -30,7 +30,21 @@ export const basicCommands: CommandDefinition[] = [
     name: "hint",
     description: "Ask the Dungeon Master for a contextual nudge.",
     usage: "hint",
-    run: (_args, { state }) => ({ lines: [dm(`Hint: ${generateSmartHint(state, "direct")}`)] }),
+    run: (_args, { state }) => {
+      const nextStage = (state.hintStage ?? 0) + 1;
+      const direct = state.playMode === "guided" && nextStage >= 2;
+      const exact = state.playMode === "guided" && nextStage >= 4;
+      const cells = state.playMode === "guided" && nextStage >= 3 ? smartHintCells(state) : [];
+      const prefix =
+        exact ? "Exact command" :
+        direct ? "Direct hint" :
+        "Hint";
+      return {
+        lines: [dm(`${prefix}: ${generateSmartHint(state, direct ? "direct" : "light")}`)],
+        patch: { hintStage: nextStage },
+        vfx: cells.length ? { kind: "ghost", cells, durationMs: 2600 } : undefined,
+      };
+    },
   },
   {
     name: "whoami",

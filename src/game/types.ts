@@ -121,7 +121,7 @@ export type PlayerFacing = "down" | "up" | "left" | "right";
 export interface VfxPulse {
   id: number;
   cells: { x: number; y: number }[];
-  kind: "ls" | "find" | "rm" | "manifest" | "inspect" | "pwd";
+  kind: "ls" | "find" | "rm" | "manifest" | "inspect" | "pwd" | "combo" | "ghost";
   expiresAt: number;
 }
 
@@ -134,6 +134,20 @@ export interface ScrollPopup {
 export interface ScreenEffect {
   id: number;
   kind: "reveal" | "error" | "create" | "traverse" | "track" | "aware";
+}
+
+export type PlayMode = "guided" | "real";
+
+export interface VictoryReport {
+  title: string;
+  time: string;
+  commandsUsed: number;
+  mistakesMade: number;
+  strongestCommand: string;
+  weakestCommand: string;
+  skillUnlocked: string;
+  feedback: string;
+  nextLesson: string;
 }
 
 export interface MauQuiz {
@@ -172,6 +186,9 @@ export interface GameState {
   requiredCommands: string[];
   winCondition: string;
   completionMessage: string | null;
+  completionReport: VictoryReport | null;
+  playMode: PlayMode;
+  hintStage: number;
   activeMauQuiz?: MauQuiz;
   difficultyValue?: number;
   mechanic?: DifficultyMechanic;

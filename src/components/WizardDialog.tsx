@@ -6,9 +6,10 @@ import { cn } from "@/lib/utils";
 
 interface WizardDialogProps {
   context: DungeonMasterContext;
+  externalMessage?: string | null;
 }
 
-export function WizardDialog({ context }: WizardDialogProps) {
+export function WizardDialog({ context, externalMessage }: WizardDialogProps) {
   const [isOpen, setIsOpen] = useState(true);
   const [isChatting, setIsChatting] = useState(false);
   const [message, setMessage] = useState("Greetings, traveler. Click my thoughts if you seek guidance.");
@@ -40,15 +41,21 @@ export function WizardDialog({ context }: WizardDialogProps) {
     }
   }, [isChatting]);
 
+  useEffect(() => {
+    if (!externalMessage) return;
+    setMessage(externalMessage);
+    setIsOpen(true);
+    setIsChatting(false);
+  }, [externalMessage]);
+
   // Auto-close welcome dialog after 7 seconds if not chatting
   useEffect(() => {
+    if (!isOpen || isChatting) return;
     const timer = setTimeout(() => {
-      if (!isChatting) {
-        setIsOpen(false);
-      }
+      setIsOpen(false);
     }, 7000);
     return () => clearTimeout(timer);
-  }, [isChatting]);
+  }, [isChatting, isOpen, message]);
 
   return (
     <div className="fixed bottom-0 right-0 z-40 pointer-events-none flex items-end justify-end p-2 gap-0 h-64 w-full max-w-2xl">

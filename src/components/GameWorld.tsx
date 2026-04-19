@@ -1077,6 +1077,12 @@ export function GameWorld({ state, onDismissPopup, headerRight }: GameWorldProps
                 </div>
               );
               if (k === "pwd") return <div key={i} className="vfx-pulse" style={{ background: "hsl(var(--accent) / 0.45)" }} />;
+              if (k === "ghost") return (
+                <div key={i} className="vfx-trail flex items-center justify-center text-[14px]">
+                  <span style={{ color: "hsl(var(--gold))", textShadow: "0 0 10px hsl(var(--gold))" }}>◆</span>
+                </div>
+              );
+              if (k === "combo") return <div key={i} className="vfx-manifest" style={{ background: "hsl(48 96% 58% / 0.38)" }} />;
               return <div key={i} />;
             })}
           </div>

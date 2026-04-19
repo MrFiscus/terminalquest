@@ -5,7 +5,6 @@ import { BookOfSecrets } from "@/components/BookOfSecrets";
 import { ProfileModal } from "@/components/ProfileModal";
 import { VictoryOverlay } from "@/components/VictoryOverlay";
 import { DifficultyMenu } from "@/components/DifficultyMenu";
-import { WizardPopup } from "@/components/WizardPopup";
 import { RoomFlavorSubtitle } from "@/components/RoomFlavorSubtitle";
 import { MauQuizOverlay } from "@/components/MauQuizOverlay";
 import { ScrollModal } from "@/components/ScrollModal";
@@ -25,7 +24,7 @@ const Index = () => {
   const openProfile = useCallback(() => setProfileOpen(true), []);
   const { 
     state, submit, reset, dismissPopup, loadLevel, 
-    teachingTip, dismissTeaching, roomSubtitle,
+    teachingTip, dungeonMasterTip, roomSubtitle,
     submitMauQuiz, closeMauQuiz, openScroll, closeScroll
   } = useGameState({
     onOpenProfile: openProfile,
@@ -40,9 +39,21 @@ const Index = () => {
     if (generating || state.animating) return false;
     setGenerating(difficulty);
     try {
-      const weakCommands = getWeakCommands(state.commandStats, 4);
-      const level = generateDifficultyMechanicLevel(difficulty, familiarity);
-      loadLevel(level, `${difficulty} (${level.rooms.length} rooms)`, adaptationMessage(weakCommands));
+      const demoMode = familiarity === 0;
+      const weakCommands = demoMode
+        ? ["find", "cat", "cd", "mv"]
+        : getWeakCommands(state.commandStats, 4);
+      const playMode = demoMode ? "guided" : (familiarity ?? 0) >= 67 ? "real" : "guided";
+      const level = generateDifficultyMechanicLevel(difficulty, familiarity, weakCommands);
+      loadLevel(
+        level,
+        demoMode ? `judge demo (${level.rooms.length} rooms)` : `${difficulty} (${level.rooms.length} rooms)`,
+        demoMode
+          ? "Judge Demo: use `ls`, `find relic.txt`, talk to Mau, read the scroll, and finish with the relic report."
+          : playMode === "guided" ? adaptationMessage(weakCommands) : null,
+        playMode,
+        { demoMode, weakCommands },
+      );
       setActiveDifficulty(difficulty);
       return true;
     } finally {
@@ -62,6 +73,11 @@ const Index = () => {
       />
     );
   }
+
+  const currentRoom = getRoom(state.rooms, state.cwd);
+  const mapSubtitle = roomSubtitle || (
+    currentRoom ? `${currentRoom.name}: ${currentRoom.description}` : state.goal
+  );
 
   const difficultyToggles = (
     <div className="flex items-center gap-1.5">
@@ -108,7 +124,7 @@ const Index = () => {
         <div className="min-h-0 flex-1">
           <GameWorld state={state} onDismissPopup={dismissPopup} headerRight={difficultyToggles} />
         </div>
-        <RoomFlavorSubtitle text={roomSubtitle} />
+        <RoomFlavorSubtitle text={mapSubtitle} />
         <InventoryBar items={state.inventory} slots={5} onOpenBook={() => setBookOpen(true)} />
       </section>
 
@@ -117,10 +133,9 @@ const Index = () => {
           onReset={reset}
           targetFile={state.targetFile}
           completionMessage={state.completionMessage}
+          report={state.completionReport}
         />
       )}
-      <WizardPopup tip={teachingTip} onDismiss={dismissTeaching} />
-
       {bookOpen && <BookOfSecrets onClose={() => setBookOpen(false)} />}
       {profileOpen && <ProfileModal onClose={() => setProfileOpen(false)} />}
 
@@ -145,11 +160,12 @@ const Index = () => {
       </AnimatePresence>
 
       <WizardDialog 
+        externalMessage={dungeonMasterTip || teachingTip?.message || null}
         context={{
           goal: state.goal,
           requiredCommands: state.requiredCommands,
           winCondition: state.winCondition,
-          currentRoom: getRoom(state.rooms, state.cwd)?.name || state.cwd,
+          currentRoom: currentRoom?.name || state.cwd,
         }}
       />
     </main>
