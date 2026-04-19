@@ -959,7 +959,7 @@ export function GameWorld({ state, onDismissPopup, headerRight }: GameWorldProps
           {room.doors.map((d) => (
             <img
               key={`door-${d.x}-${d.y}`}
-              src={elementAsset("Door-Closed")}
+              src={d.broken ? elementAsset("Broken_door") : elementAsset("Door-Closed")}
               alt={d.target === ".." ? "exit archway" : `${d.target} archway`}
               draggable={false}
               className={cn(
