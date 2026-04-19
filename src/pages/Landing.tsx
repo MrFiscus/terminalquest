@@ -4,8 +4,7 @@ import { UserRound } from "lucide-react";
 import { ProfileModal } from "@/components/ProfileModal";
 import { useIsMobile } from "@/hooks/use-mobile";
 import loginBg from "@/assets/landing_bg.png";
-import commandsIcon from "@/assets/commands.png";
-import dungeonsIcon from "@/assets/dungeons.png";
+import showImage from "@/assets/show.png";
 import slateTexture from "@/assets/slate-texture.jpg";
 import logoImage from "@/assets/logo_updated.png";
 import tileWall from "@/assets/tile-wall.png";
@@ -378,64 +377,6 @@ const TAGLINES = [
   "EVERY COMMAND IS A SPELL.",
 ];
 
-// ── Animated count-up ─────────────────────────────────────────────────────────
-function useCountUp(target: number, durationMs = 1400) {
-  const ref = useRef<HTMLSpanElement | null>(null);
-  const [val, setVal] = useState(0);
-  const started = useRef(false);
-  useEffect(() => {
-    const el = ref.current;
-    if (!el) return;
-    const io = new IntersectionObserver((entries) => {
-      entries.forEach((e) => {
-        if (e.isIntersecting && !started.current) {
-          started.current = true;
-          const start = performance.now();
-          const tick = (t: number) => {
-            const p = Math.min(1, (t - start) / durationMs);
-            const eased = 1 - Math.pow(1 - p, 3);
-            setVal(Math.round(target * eased));
-            if (p < 1) requestAnimationFrame(tick);
-          };
-          requestAnimationFrame(tick);
-          io.unobserve(e.target);
-        }
-      });
-    }, { threshold: 0.4 });
-    io.observe(el);
-    return () => io.disconnect();
-  }, [target, durationMs]);
-  return { ref, val };
-}
-
-// ── Stat ribbon ───────────────────────────────────────────────────────────────
-function StatRibbon() {
-  const a = useCountUp(47);
-  const b = useCountUp(12);
-  return (
-    <StoneSection tint="transparent">
-      <div style={{ position: "relative", padding: "18px 24px" }}>
-        <div className="lp-breathe" style={{ position: "absolute", inset: 0, pointerEvents: "none", background: "radial-gradient(ellipse 60% 80% at 50% 50%, hsl(33 100%50%/0.08) 0%, transparent 70%)" }} />
-        <div className="lp-eng" style={{ position: "relative", zIndex: 1, display: "flex", flexWrap: "wrap", justifyContent: "center", alignItems: "center", gap: "clamp(18px, 4.5vw, 56px)", fontSize: "clamp(12px, 1.6vw, 16px)", letterSpacing: "0.22em", color: "hsl(0 0% 72%)", fontWeight: 700 }}>
-          <span style={{ display: "inline-flex", alignItems: "center", gap: 8 }}>
-            <img className="lp-stat-icon" src={commandsIcon} alt="" aria-hidden style={{ width: 20, height: 20, objectFit: "contain" }} />
-            <span ref={a.ref}>{a.val}</span> COMMANDS
-          </span>
-          <span>·</span>
-          <span style={{ display: "inline-flex", alignItems: "center", gap: 8 }}>
-            <img className="lp-stat-icon" src={dungeonsIcon} alt="" aria-hidden style={{ width: 20, height: 20, objectFit: "contain" }} />
-            <span ref={b.ref}>{b.val}</span> DUNGEONS
-          </span>
-          <span>·</span>
-          <span>🤖 AI MENTOR</span>
-          <span>·</span>
-          <span>🆓 FREE TO PLAY</span>
-        </div>
-      </div>
-    </StoneSection>
-  );
-}
-
 // ── Featured commands carousel ────────────────────────────────────────────────
 const FEATURED_CMDS: { cmd: string; flavor: string }[] = [
   { cmd: "ls",    flavor: "survey the chamber for items and doorways" },
@@ -530,11 +471,36 @@ const QUOTES = [
 ];
 function TestimonialScroll() {
   return (
-    <StoneSection tint="radial-gradient(ellipse at 50% 50%,hsl(42 30%20%/0.10) 0%,transparent 65%),hsl(0 0%0%/0.24)">
+    <StoneSection tint="radial-gradient(ellipse at 50% 50%,hsl(30 70%16%/0.18) 0%,transparent 65%),hsl(0 0%0%/0.24)">
       <div style={{ position: "relative", padding: "56px 32px 60px", maxWidth: 720, margin: "0 auto" }}>
         <div className="lp-breathe" style={{ position: "absolute", inset: 0, pointerEvents: "none", background: "radial-gradient(ellipse 60% 50% at 50% 50%,hsl(42 60%30%/0.10) 0%,transparent 60%)" }} />
           <SectionTitle>VOICES FROM THE CRYPT</SectionTitle>
-        <div className="scriptorium-bg scriptorium-frame iron-rivets" style={{ position: "relative", padding: "32px 36px", minHeight: 140, display: "flex", alignItems: "center", justifyContent: "center", overflow: "hidden" }}>
+        <div
+          className="scriptorium-bg scriptorium-frame iron-rivets"
+          style={{
+            position: "relative",
+            padding: "32px 36px",
+            minHeight: 140,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            overflow: "hidden",
+            border: "2px solid hsl(28 70% 18% / 0.8)",
+            borderRadius: 4,
+            backgroundColor: "hsl(28 34% 12%)",
+            backgroundImage: [
+              "radial-gradient(120% 80% at 50% 8%, hsl(33 80% 60% / 0.12), transparent 56%)",
+              "linear-gradient(180deg, hsl(30 34% 20% / 0.9), hsl(28 36% 10% / 0.94))",
+            ].join(", "),
+            boxShadow: [
+              "inset 1px 1px 0 hsl(33 100% 75% / 0.14)",
+              "inset -1px -1px 0 hsl(0 0% 0% / 0.82)",
+              "inset 0 0 22px hsl(0 0% 0% / 0.5)",
+              "0 0 12px hsl(30 70% 40% / 0.2)",
+              "0 12px 28px hsl(0 0% 0% / 0.5)",
+            ].join(", "),
+          }}
+        >
           <div style={{ position: "absolute", inset: 0, pointerEvents: "none", background: "repeating-linear-gradient(to bottom, transparent 0, transparent 2px, hsl(0 0% 0% / 0.13) 3px)" }} />
           <div style={{ position: "relative", width: "100%", height: 80 }}>
             {QUOTES.map((q, i) => (
@@ -549,10 +515,10 @@ function TestimonialScroll() {
                   animationDuration: `${QUOTES.length * 7}s`,
                 }}
               >
-                <div style={{ fontFamily: "'VT323', monospace", fontSize: 22, lineHeight: 1.4, color: "hsl(42 35% 75%)", fontStyle: "italic", textShadow: "0 1px 0 hsl(0 0% 0% / 0.85)" }}>
+                <div style={{ fontFamily: "'VT323', monospace", fontSize: 22, lineHeight: 1.4, color: "hsl(36 85% 80%)", fontStyle: "italic", textShadow: "0 1px 0 hsl(0 0% 0% / 0.85)" }}>
                   "{q.t}"
                 </div>
-                <div className="lp-eng" style={{ fontSize: 10, letterSpacing: "0.22em", color: "hsl(38 60% 50%)", fontWeight: 600 }}>
+                <div className="lp-eng" style={{ fontSize: 10, letterSpacing: "0.22em", color: "hsl(30 80% 62%)", fontWeight: 600 }}>
                   — {q.a}
                 </div>
               </div>
@@ -747,9 +713,6 @@ export default function Landing() {
         </div>
       </section>
 
-      {/* ══ STAT RIBBON ══════════════════════════════════════════════════════ */}
-      <StatRibbon />
-
       {/* ══ FEATURED COMMANDS ════════════════════════════════════════════════ */}
       <CommandsCarousel />
 
@@ -787,10 +750,11 @@ export default function Landing() {
             <MonitorFrame title="DUNGEON  /  ENTRANCE" accent="hsl(140 60% 45%)">
               <div style={{ height: "100%", background: "hsl(230 18%5%)", display: "flex", alignItems: "center", justifyContent: "center", position: "relative", overflow: "hidden" }}>
                 <div className="lp-breathe" style={{ position: "absolute", inset: 0, pointerEvents: "none", background: "radial-gradient(ellipse at 50% 35%,hsl(33 80%22%/0.18) 0%,transparent 60%)" }} />
-                <PixelDungeon sz={23} />
-                <div style={{ position: "absolute", bottom: 8, left: "50%", transform: "translateX(-50%)", background: "hsl(0 60%12%/0.9)", border: "1px solid hsl(0 65%35%/0.55)", borderRadius: 2, padding: "2px 8px", fontFamily: "'Press Start 2P',monospace", fontSize: 6, color: "hsl(0 75%65%)", whiteSpace: "nowrap" }}>
-                  ⚠ BRIDGE MISSING
-                </div>
+                <img
+                  src={showImage}
+                  alt="Dungeon showcase"
+                  style={{ width: "100%", height: "100%", objectFit: "contain", objectPosition: "center" }}
+                />
               </div>
             </MonitorFrame>
           </div>
@@ -872,7 +836,7 @@ export default function Landing() {
                 {/* Archway */}
                 <img src={archwayDoor} alt="" style={{ position: "absolute", right: 2, top: 8, height: 66, imageRendering: "pixelated" }} />
                 {/* Player */}
-                <img src={walking ? gif("running-4-frames_south-west.gif") : gif("breathing-idle_south.gif")} alt="player" style={{ position: "absolute", width: 40, height: 40, bottom: 14, left: walking ? "55%" : "10%", imageRendering: "pixelated", zIndex: 4, transition: walking ? "left 1.8s linear" : undefined }} />
+                <img src={walking ? gif("running-4-frames_west.gif") : gif("breathing-idle_south.gif")} alt="player" style={{ position: "absolute", width: 40, height: 40, bottom: 14, left: walking ? "55%" : "10%", imageRendering: "pixelated", zIndex: 4, transition: walking ? "left 1.8s linear" : undefined }} />
               </div>
               <div style={{ fontFamily: "'Cinzel',serif", fontSize: 10, letterSpacing: "0.08em", color: submitted ? "hsl(140 50%45%)" : "hsl(0 0%32%)", transition: "color 300ms", textShadow: submitted ? "0 0 8px hsl(140 55%35%/0.5)" : "none" }}>
                 {submitted ? "ENTERING CRYPT..." : "AWAITING COMMAND..."}

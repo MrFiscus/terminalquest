@@ -6,6 +6,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { supabase } from "@/integrations/supabase/client";
 import { setProgressProfileUser } from "@/game/progressStats";
+import { DifficultyMenu } from "@/components/DifficultyMenu";
 import Landing from "./pages/Landing.tsx";
 import Index from "./pages/Index.tsx";
 import Auth from "./pages/Auth.tsx";
@@ -13,6 +14,10 @@ import NotFound from "./pages/NotFound.tsx";
 import type { Session } from "@supabase/supabase-js";
 
 const queryClient = new QueryClient();
+
+function DifficultyPreview() {
+  return <DifficultyMenu onConfirm={() => {}} />;
+}
 
 function RequireAuth({ children }: { children: React.ReactNode }) {
   const [session, setSession] = useState<Session | null | undefined>(undefined);
@@ -44,6 +49,7 @@ const App = () => (
           <Route path="/auth" element={<Auth />} />
           <Route path="/" element={<Landing />} />
           <Route path="/play" element={<RequireAuth><Index /></RequireAuth>} />
+          <Route path="/difficulty" element={<DifficultyPreview />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>
