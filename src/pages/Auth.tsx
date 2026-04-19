@@ -152,7 +152,29 @@ export default function Auth() {
       <form
         onSubmit={handleSubmit}
         className="relative z-10 flex flex-col gap-4"
-        style={{ width: "360px", maxHeight: "90vh", overflowY: "auto", marginLeft: "0%" }}
+        style={{
+          width: "clamp(390px, 30vw, 460px)",
+          maxHeight: "90vh",
+          overflowY: "auto",
+          marginLeft: "0%",
+          padding: "18px",
+          borderRadius: "10px",
+          backgroundColor: "hsl(226 12% 8% / 0.42)",
+          backgroundImage: [
+            "radial-gradient(120% 90% at 86% 8%, hsl(34 92% 50% / 0.14), transparent 54%)",
+            "radial-gradient(120% 130% at 18% 100%, hsl(214 42% 30% / 0.16), transparent 62%)",
+            "linear-gradient(180deg, hsl(226 12% 15% / 0.5), hsl(224 16% 7% / 0.62))",
+            "repeating-linear-gradient(45deg, hsl(0 0% 100% / 0.02) 0 2px, transparent 2px 7px)",
+          ].join(", "),
+          border: "1px solid hsl(34 30% 58% / 0.22)",
+          backdropFilter: "blur(12px) saturate(115%)",
+          boxShadow: [
+            "0 18px 42px hsl(0 0% 0% / 0.55)",
+            "0 0 22px hsl(32 100% 45% / 0.15)",
+            "inset 0 1px 0 hsl(0 0% 100% / 0.08)",
+            "inset 0 -2px 16px hsl(0 0% 0% / 0.5)",
+          ].join(", "),
+        }}
       >
         {/* Title box */}
         <div style={{ ...boxStyle, padding: "20px 22px 16px" }}>

@@ -1,7 +1,11 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { Link } from "react-router-dom";
-import { FireBlazes } from "@/components/FireBlazes";
-import { RepelDots } from "@/components/RepelDots";
+import { UserRound } from "lucide-react";
+import { ProfileModal } from "@/components/ProfileModal";
+import { useIsMobile } from "@/hooks/use-mobile";
+import loginBg from "@/assets/landing_bg.png";
+import commandsIcon from "@/assets/commands.png";
+import dungeonsIcon from "@/assets/dungeons.png";
 import slateTexture from "@/assets/slate-texture.jpg";
 import logoImage from "@/assets/logo_updated.png";
 import tileWall from "@/assets/tile-wall.png";
@@ -105,7 +109,7 @@ function PixelDungeon({ sz = 24 }: { sz?: number }) {
 
           if (ch === "T") return (
             <div key={key} style={{ width: sz, height: sz, ...floor, position: "relative" }}>
-              <img src={dungeon.new("Engraved-Torch-Wall")} alt="" style={{ position: "absolute", inset: 0, width: "100%", height: "100%", imageRendering: "pixelated", animation: "torch-flicker 1.6s infinite alternate ease-in-out" }} />
+              <img src={dungeon.new("Engraved-Torch-Wall")} alt="" style={{ position: "absolute", inset: 0, width: "100%", height: "100%", imageRendering: "pixelated" }} />
             </div>
           );
           if (ch === "P") return (
@@ -150,7 +154,7 @@ const CANNED: Record<string, PreviewLine[]> = {
     { k: "dm",  t: "  ✦ The Dungeon Master nods approvingly." },
   ],
   cd: [
-    { k: "sys", t: "  You step into the crypt. Torches flicker." },
+    { k: "sys", t: "  You step into the crypt. Torches glow dimly." },
     { k: "dm",  t: "  ✦ Hint: try  ls  to see what awaits." },
   ],
   cat: [
@@ -289,7 +293,7 @@ function SectionTitle({ children }: { children: React.ReactNode }) {
   return (
     <div style={{ display: "flex", alignItems: "center", gap: 16, marginBottom: 40 }}>
       <div style={{ flex: 1, height: 1, background: "linear-gradient(90deg,transparent,hsl(0 0% 100%/0.1),transparent)" }} />
-      <h2 style={{ fontFamily: "'Cinzel',serif", fontWeight: 700, fontSize: "clamp(13px,1.8vw,20px)", letterSpacing: "0.3em", margin: 0, color: "hsl(0 0% 18%)", textShadow: "-1px -1px 0 hsl(0 0% 0%/0.85),-1px -1px 2px hsl(0 0% 0%/0.6),1px 1px 0 hsl(0 0% 100%/0.22),1px 2px 2px hsl(0 0% 100%/0.12)", whiteSpace: "nowrap" }}>
+      <h2 className="lp-title-soft" style={{ fontFamily: "'Cinzel',serif", fontWeight: 700, fontSize: "clamp(13px,1.8vw,20px)", letterSpacing: "0.3em", margin: 0, color: "hsl(0 0% 72%)", textShadow: "-1px -1px 0 hsl(0 0% 0%/0.85),-1px -1px 2px hsl(0 0% 0%/0.6),1px 1px 0 hsl(0 0% 100%/0.22),1px 2px 2px hsl(0 0% 100%/0.12)", whiteSpace: "nowrap" }}>
         {children}
       </h2>
       <div style={{ flex: 1, height: 1, background: "linear-gradient(90deg,transparent,hsl(0 0% 100%/0.1),transparent)" }} />
@@ -409,17 +413,23 @@ function StatRibbon() {
   const a = useCountUp(47);
   const b = useCountUp(12);
   return (
-    <StoneSection tint="hsl(0 0%0%/0.32)">
-      <div style={{ position: "relative", padding: "18px 24px", borderTop: "1px solid hsl(0 0%100%/0.05)", borderBottom: "1px solid hsl(0 0%100%/0.05)", background: "linear-gradient(180deg, hsl(0 0%0%/0.35), hsl(0 0%0%/0.5))" }}>
+    <StoneSection tint="transparent">
+      <div style={{ position: "relative", padding: "18px 24px" }}>
         <div className="lp-breathe" style={{ position: "absolute", inset: 0, pointerEvents: "none", background: "radial-gradient(ellipse 60% 80% at 50% 50%, hsl(33 100%50%/0.08) 0%, transparent 70%)" }} />
-        <div className="lp-eng" style={{ position: "relative", zIndex: 1, display: "flex", flexWrap: "wrap", justifyContent: "center", alignItems: "center", gap: "clamp(14px, 4vw, 48px)", fontSize: "clamp(10px, 1.3vw, 13px)", letterSpacing: "0.22em", color: "hsl(0 0% 30%)", fontWeight: 700 }}>
-          <span><span ref={a.ref} style={{ color: "hsl(38 80% 58%)", textShadow: "0 0 8px hsl(33 100% 45% / 0.4)" }}>⚔ {a.val}</span> COMMANDS</span>
-          <span style={{ color: "hsl(0 0% 18%)" }}>·</span>
-          <span><span ref={b.ref} style={{ color: "hsl(140 55% 50%)", textShadow: "0 0 8px hsl(140 55% 35% / 0.4)" }}>🗝 {b.val}</span> DUNGEONS</span>
-          <span style={{ color: "hsl(0 0% 18%)" }}>·</span>
-          <span style={{ color: "hsl(280 50% 60%)", textShadow: "0 0 8px hsl(280 50% 40% / 0.4)" }}>🤖 AI MENTOR</span>
-          <span style={{ color: "hsl(0 0% 18%)" }}>·</span>
-          <span style={{ color: "hsl(38 80% 58%)" }}>🆓 FREE TO PLAY</span>
+        <div className="lp-eng" style={{ position: "relative", zIndex: 1, display: "flex", flexWrap: "wrap", justifyContent: "center", alignItems: "center", gap: "clamp(18px, 4.5vw, 56px)", fontSize: "clamp(12px, 1.6vw, 16px)", letterSpacing: "0.22em", color: "hsl(0 0% 72%)", fontWeight: 700 }}>
+          <span style={{ display: "inline-flex", alignItems: "center", gap: 8 }}>
+            <img className="lp-stat-icon" src={commandsIcon} alt="" aria-hidden style={{ width: 20, height: 20, objectFit: "contain" }} />
+            <span ref={a.ref}>{a.val}</span> COMMANDS
+          </span>
+          <span>·</span>
+          <span style={{ display: "inline-flex", alignItems: "center", gap: 8 }}>
+            <img className="lp-stat-icon" src={dungeonsIcon} alt="" aria-hidden style={{ width: 20, height: 20, objectFit: "contain" }} />
+            <span ref={b.ref}>{b.val}</span> DUNGEONS
+          </span>
+          <span>·</span>
+          <span>🤖 AI MENTOR</span>
+          <span>·</span>
+          <span>🆓 FREE TO PLAY</span>
         </div>
       </div>
     </StoneSection>
@@ -454,7 +464,7 @@ function CommandsCarousel() {
           );
         })}
         <div style={{ padding: "0 32px" }}>
-          <SectionTitle>✦ SPELLS YOU WILL LEARN ✦</SectionTitle>
+          <SectionTitle>SPELLS YOU WILL LEARN</SectionTitle>
         </div>
         <div
           style={{
@@ -523,7 +533,7 @@ function TestimonialScroll() {
     <StoneSection tint="radial-gradient(ellipse at 50% 50%,hsl(42 30%20%/0.10) 0%,transparent 65%),hsl(0 0%0%/0.24)">
       <div style={{ position: "relative", padding: "56px 32px 60px", maxWidth: 720, margin: "0 auto" }}>
         <div className="lp-breathe" style={{ position: "absolute", inset: 0, pointerEvents: "none", background: "radial-gradient(ellipse 60% 50% at 50% 50%,hsl(42 60%30%/0.10) 0%,transparent 60%)" }} />
-        <SectionTitle>✦ VOICES FROM THE CRYPT ✦</SectionTitle>
+          <SectionTitle>VOICES FROM THE CRYPT</SectionTitle>
         <div className="scriptorium-bg scriptorium-frame iron-rivets" style={{ position: "relative", padding: "32px 36px", minHeight: 140, display: "flex", alignItems: "center", justifyContent: "center", overflow: "hidden" }}>
           <div style={{ position: "absolute", inset: 0, pointerEvents: "none", background: "repeating-linear-gradient(to bottom, transparent 0, transparent 2px, hsl(0 0% 0% / 0.13) 3px)" }} />
           <div style={{ position: "relative", width: "100%", height: 80 }}>
@@ -556,26 +566,35 @@ function TestimonialScroll() {
 
 // ═════════════════════════════════════════════════════════════════════════════
 export default function Landing() {
+  const isMobile = useIsMobile();
   const cmdFull = "user@dungeon:~/entrance$ cd crypt";
   const { displayed, submitted } = useCommandLoop(cmdFull, 62);
   const cmdTyped = displayed.replace("user@dungeon:~/entrance$ ", "");
 
   const [walking, setWalking] = useState(false);
+  const [profileOpen, setProfileOpen] = useState(false);
   useEffect(() => {
     if (submitted) { const t = setTimeout(() => setWalking(true), 350); return () => clearTimeout(t); }
     setWalking(false);
   }, [submitted]);
 
   return (
-    <div style={{ position: "fixed", inset: 0, overflowY: "auto", overflowX: "hidden", backgroundColor: "hsl(230 18% 5%)", backgroundImage: `radial-gradient(ellipse at 50% 30%, hsl(230 14% 14%) 0%, hsl(230 18% 7%) 55%, hsl(230 22% 3%) 100%), url(${slateTexture})`, backgroundRepeat: "no-repeat, no-repeat", backgroundSize: "100% 100%, cover", backgroundPosition: "center, center", backgroundAttachment: "fixed, fixed", backgroundBlendMode: "multiply, normal" }}>
+    <div style={{ position: "fixed", inset: 0, overflowY: "auto", overflowX: "hidden", backgroundColor: "hsl(230 18% 5%)", backgroundImage: `url(${loginBg})`, backgroundRepeat: "no-repeat", backgroundSize: "cover", backgroundPosition: isMobile ? "center top" : "center center", backgroundAttachment: isMobile ? "scroll" : "fixed" }}>
+      <div style={{ position: "fixed", top: 12, right: 12, zIndex: 60 }}>
+        <button
+          type="button"
+          onClick={() => setProfileOpen(true)}
+          aria-label="Open profile"
+          title="Open profile"
+          className="lp-profile-btn z-[60] flex h-10 w-10 items-center justify-center rounded-full border border-amber-500 bg-gray-900 text-amber-300 shadow-[0_0_0_hsl(38_92%_50%/0)] transition hover:scale-105 hover:shadow-[0_0_18px_hsl(38_92%_50%/0.75)]"
+        >
+          <UserRound className="h-5 w-5" aria-hidden />
+        </button>
+      </div>
+
       {/* Global vignette + grain overlay (fixed — no seams) */}
       <div style={{ position: "fixed", inset: 0, pointerEvents: "none", zIndex: 0, background: "radial-gradient(ellipse at center, transparent 38%, hsl(0 0% 0% / 0.85) 100%)" }} />
       <div style={{ position: "fixed", inset: 0, pointerEvents: "none", zIndex: 0, opacity: 0.35, mixBlendMode: "overlay", backgroundImage: "radial-gradient(hsl(0 0% 100% / 0.06) 1px, transparent 1.4px), radial-gradient(hsl(0 0% 0% / 0.4) 1px, transparent 1.4px)", backgroundSize: "5px 5px, 7px 7px", backgroundPosition: "0 0, 2px 3px" }} />
-      {/* Fire blazes along the bottom */}
-      <div style={{ position: "fixed", inset: 0, pointerEvents: "none", zIndex: 1, overflow: "hidden" }} aria-hidden>
-        <FireBlazes count={22} />
-      </div>
-      <RepelDots count={80} />
       <style>{`
         .lp-eng {
           font-family: 'Cinzel','MedievalSharp',serif; font-weight:700; color:hsl(0 0% 18%);
@@ -584,8 +603,8 @@ export default function Landing() {
         }
         .lp-eng-glow {
           font-family:'Cinzel','MedievalSharp',serif; font-weight:700;
-          color:hsl(38 80% 60%);
-          text-shadow:-1px -1px 0 hsl(0 0%0%/0.9),1px 1px 0 hsl(0 0%100%/0.12),0 0 8px hsl(30 100%50%/0.7),0 0 20px hsl(30 100%45%/0.45),0 0 36px hsl(30 100%40%/0.25);
+          color:hsl(0 0% 74%);
+          text-shadow:-1px -1px 0 hsl(0 0%0%/0.9),1px 1px 0 hsl(0 0%100%/0.12),0 0 6px hsl(0 0% 100% / 0.12);
         }
         .lp-stone-btn {
           font-family:'Cinzel',serif; font-weight:700; letter-spacing:0.16em; cursor:pointer;
@@ -596,9 +615,62 @@ export default function Landing() {
           transition:box-shadow 250ms,transform 120ms;
         }
         .lp-stone-btn:hover {
-          box-shadow:inset 1px 1px 0 hsl(0 0%100%/0.12),inset -1px -1px 0 hsl(0 0%0%/0.85),inset 0 0 24px hsl(30 100%50%/0.4),0 0 18px hsl(30 100%50%/0.5),0 0 36px hsl(30 100%45%/0.3);
+          box-shadow:inset 1px 1px 0 hsl(0 0%100%/0.12),inset -1px -1px 0 hsl(0 0%0%/0.85),inset 0 0 14px hsl(0 0% 100% / 0.06),0 0 12px hsl(0 0% 100% / 0.08);
         }
         .lp-stone-btn:active { transform:translateY(2px); }
+        .lp-hover-text {
+          color: hsl(0 0% 72%);
+          transition: color 200ms;
+        }
+        .lp-hover-text:hover {
+          color: hsl(38 80% 58%);
+        }
+        .lp-stone-btn .lp-eng-glow {
+          transition: color 200ms;
+        }
+        .lp-stone-btn:hover .lp-eng-glow {
+          color: hsl(38 80% 58%);
+        }
+        .lp-title-soft {
+          animation: lp-title-breathe 6s ease-in-out infinite;
+        }
+        .lp-profile-btn {
+          animation: lp-soft-float 4.8s ease-in-out infinite;
+        }
+        .lp-scroll-cue {
+          animation: lp-soft-float 3.2s ease-in-out infinite;
+        }
+        .lp-stat-icon {
+          animation: lp-icon-breathe 5.5s ease-in-out infinite;
+        }
+        @keyframes lp-soft-float {
+          0%,
+          100% { transform: translateY(0); }
+          50% { transform: translateY(-3px); }
+        }
+        @keyframes lp-title-breathe {
+          0%,
+          100% { opacity: 0.92; }
+          50% { opacity: 1; }
+        }
+        @keyframes lp-icon-breathe {
+          0%,
+          100% { transform: translateY(0) scale(1); filter: brightness(0.95); }
+          50% { transform: translateY(-1px) scale(1.03); filter: brightness(1.08); }
+        }
+        @media (prefers-reduced-motion: reduce) {
+          .lp-title-soft,
+          .lp-profile-btn,
+          .lp-scroll-cue,
+          .lp-stat-icon {
+            animation: none !important;
+          }
+        }
+        .lp-breathe,
+        .lp-ember {
+          display: none !important;
+          animation: none !important;
+        }
       `}</style>
 
       {/* ══ 1. HERO ═══════════════════════════════════════════════════════════ */}
@@ -625,12 +697,6 @@ export default function Landing() {
           );
         })}
 
-        {/* Nav */}
-        <div style={{ position: "relative", zIndex: 10, display: "flex", alignItems: "center", gap: 12, padding: "10px 20px", background: "hsl(0 0%0%/0.38)", borderBottom: "1px solid hsl(0 0%0%/0.5)", backdropFilter: "blur(2px)" }}>
-          <span className="lp-eng" style={{ fontSize: 13, letterSpacing: "0.2em" }}>Terminal Quest</span>
-          <span className="lp-eng" style={{ marginLeft: "auto", fontSize: 10, letterSpacing: "0.25em", color: "hsl(0 0%25%)", fontWeight: 600 }}>Chamber of Origin</span>
-        </div>
-
         {/* Hero content */}
         <div style={{ position: "relative", zIndex: 5, display: "flex", flexDirection: "column", alignItems: "center", padding: "72px 32px 70px", textAlign: "center" }}>
           <img
@@ -639,8 +705,8 @@ export default function Landing() {
             className="lp-hero-in"
             style={{ width: 900, maxWidth: "94vw", animationDelay: "0ms" }}
           />
-          <p className="lp-eng lp-hero-in" style={{ fontSize: "clamp(12px,1.8vw,18px)", letterSpacing: "0.32em", marginTop: 22, color: "hsl(0 0%26%)", fontWeight: 600, animationDelay: "220ms" }}>
-            ☩ DON'T JUST PLAY THE GAME. WRITE THE REALITY. ☩
+          <p className="lp-eng lp-hero-in" style={{ fontSize: "clamp(12px,1.8vw,18px)", letterSpacing: "0.32em", marginTop: 22, color: "hsl(0 0% 72%)", fontWeight: 600, animationDelay: "220ms" }}>
+            DON'T JUST PLAY THE GAME. WRITE THE REALITY.
           </p>
 
           {/* Tagline rotator */}
@@ -670,11 +736,11 @@ export default function Landing() {
             className="lp-stone-btn lp-stone-btn-sweep lp-hero-in"
             style={{ marginTop: 32, padding: "16px 40px", fontSize: "clamp(11px,1.5vw,15px)", animationDelay: "640ms" }}
           >
-            <span className="lp-eng-glow">▶&nbsp;&nbsp;ENTER THE DUNGEON</span>
+            <span className="lp-eng-glow lp-hover-text">▶&nbsp;&nbsp;ENTER THE DUNGEON</span>
           </Link>
 
           {/* Scroll cue */}
-          <div className="lp-scroll-cue lp-eng" style={{ marginTop: 56, fontSize: 9, letterSpacing: "0.3em", color: "hsl(0 0% 26%)", fontWeight: 600, display: "flex", flexDirection: "column", alignItems: "center", gap: 4 }}>
+          <div className="lp-scroll-cue lp-eng" style={{ marginTop: 56, fontSize: 9, letterSpacing: "0.3em", color: "hsl(0 0% 72%)", fontWeight: 600, display: "flex", flexDirection: "column", alignItems: "center", gap: 4 }}>
             <span>SCROLL TO PEEK INSIDE</span>
             <span style={{ fontSize: 14, lineHeight: 1 }}>▼</span>
           </div>
@@ -708,7 +774,7 @@ export default function Landing() {
             );
           })}
 
-          <SectionTitle>✦ TWO WORLDS · ONE KEYBOARD ✦</SectionTitle>
+          <SectionTitle>TWO WORLDS · ONE KEYBOARD</SectionTitle>
 
           <div style={{ position: "relative", zIndex: 1, display: "grid", gridTemplateColumns: "1fr 4px 1fr", height: 288 }}>
             <MonitorFrame title="TERMINAL  /  DUNGEON-01" accent="hsl(38 100% 50%)">
@@ -762,7 +828,7 @@ export default function Landing() {
               }} />
             );
           })}
-          <SectionTitle>✦ HOW WE PLAY ✦</SectionTitle>
+          <SectionTitle>HOW WE PLAY</SectionTitle>
 
           <div style={{ position: "relative", zIndex: 1, display: "flex", gap: 36, alignItems: "center" }}>
             {/* Left: command input + floppy */}
@@ -779,7 +845,7 @@ export default function Landing() {
                   <span style={{ color: "#f3f4f6" }}>$ </span>
                   <span style={{ color: "hsl(38 100% 55%)" }}>{cmdTyped}</span>
                 </span>
-                <span style={{ display: "inline-block", width: 7, height: 14, background: "hsl(38 100%55%)", animation: "cursor-blink 1s step-end infinite", boxShadow: "0 0 8px hsl(38 100%55%/0.8)", marginLeft: 1, position: "relative", zIndex: 2 }} />
+                <span style={{ display: "inline-block", width: 7, height: 14, background: "hsl(0 0%65%)", marginLeft: 1, position: "relative", zIndex: 2 }} />
               </div>
 
               {/* Floppy + label */}
@@ -838,7 +904,7 @@ export default function Landing() {
               }} />
             );
           })}
-          <SectionTitle>✦ YOUR AI MENTOR ✦</SectionTitle>
+          <SectionTitle>YOUR AI MENTOR</SectionTitle>
 
           {/* Mentor card — styled like the in-game WizardPopup + ScrollPopup */}
           <div style={{ position: "relative", border: "2px solid hsl(0 0%0%/0.7)", borderRadius: 4, overflow: "hidden", boxShadow: "inset 0 2px 0 hsl(0 0%100%/0.08),inset 0 -2px 0 hsl(0 0%0%/0.6),0 8px 28px hsl(0 0%0%/0.55),0 0 30px hsl(280 40%30%/0.08)" }}>
@@ -916,9 +982,9 @@ export default function Landing() {
             );
           })}
           <Link to="/play" className="lp-stone-btn lp-stone-btn-sweep" style={{ padding: "20px 56px", fontSize: "clamp(13px,2vw,20px)", position: "relative", zIndex: 1 }}>
-            <span className="lp-eng-glow">⚔&nbsp;&nbsp;ENTER THE DUNGEON&nbsp;&nbsp;⚔</span>
+            <span className="lp-eng-glow lp-hover-text">ENTER THE DUNGEON</span>
           </Link>
-          <p className="lp-eng" style={{ fontSize: 10, letterSpacing: "0.26em", color: "hsl(0 0%22%)", margin: 0, fontWeight: 600, position: "relative", zIndex: 1 }}>
+          <p className="lp-eng" style={{ fontSize: 10, letterSpacing: "0.26em", color: "hsl(0 0% 72%)", margin: 0, fontWeight: 600, position: "relative", zIndex: 1 }}>
             NO EXPERIENCE REQUIRED — JUST A KEYBOARD
           </p>
         </div>
@@ -956,11 +1022,9 @@ export default function Landing() {
    \`-=-=-'`}</pre>
 
           {/* Footer links */}
-          <div className="lp-eng" style={{ position: "relative", zIndex: 1, display: "flex", flexWrap: "wrap", justifyContent: "center", gap: "clamp(14px, 3vw, 28px)", fontSize: 10, letterSpacing: "0.22em", color: "hsl(0 0% 30%)", fontWeight: 600, marginTop: 4 }}>
+          <div className="lp-eng" style={{ position: "relative", zIndex: 1, display: "flex", flexWrap: "wrap", justifyContent: "center", gap: "clamp(14px, 3vw, 28px)", fontSize: 10, letterSpacing: "0.22em", color: "hsl(0 0% 72%)", fontWeight: 600, marginTop: 4 }}>
             {["GITHUB", "DISCORD", "ABOUT", "HOW IT WORKS"].map((label) => (
-              <a key={label} href="#" style={{ color: "inherit", textDecoration: "none", transition: "color 200ms" }}
-                onMouseEnter={(e) => { e.currentTarget.style.color = "hsl(38 80% 58%)"; }}
-                onMouseLeave={(e) => { e.currentTarget.style.color = "hsl(0 0% 30%)"; }}>
+              <a key={label} href="#" className="lp-hover-text" style={{ textDecoration: "none" }}>
                 {label}
               </a>
             ))}
@@ -968,11 +1032,13 @@ export default function Landing() {
 
           <div style={{ position: "relative", zIndex: 1, height: 1, width: "60%", maxWidth: 320, background: "linear-gradient(90deg, transparent, hsl(0 0% 100% / 0.08), transparent)" }} />
 
-          <span className="lp-eng" style={{ position: "relative", zIndex: 1, fontSize: 9, letterSpacing: "0.28em", color: "hsl(0 0% 22%)", fontWeight: 600 }}>
+          <span className="lp-eng" style={{ position: "relative", zIndex: 1, fontSize: 9, letterSpacing: "0.28em", color: "hsl(0 0% 72%)", fontWeight: 600 }}>
             TERMINAL QUEST · LEARN LINUX · CONQUER THE DUNGEON
           </span>
         </div>
       </StoneSection>
+
+      {profileOpen && <ProfileModal onClose={() => setProfileOpen(false)} />}
     </div>
   );
 }
