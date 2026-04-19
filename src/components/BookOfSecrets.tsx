@@ -449,8 +449,8 @@ export function BookOfSecrets({ onClose }: BookOfSecretsProps) {
                 style={{
                   flex: 1, display: "flex", minHeight: 0,
                   animation: fading
-                    ? `pageFadeOut ${FADE_MS}ms ease-in forwards`
-                    : `pageFadeIn ${FADE_MS}ms ease-out forwards`,
+                    ? `pageFadeOut ${FADE_MS}ms ease-in-out forwards`
+                    : `pageFadeIn ${FADE_MS}ms ease-in-out forwards`,
                 }}
               >
                 {/* Left page */}
