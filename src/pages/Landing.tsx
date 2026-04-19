@@ -5,7 +5,6 @@ import slateTexture from "@/assets/slate-texture.jpg";
 import tileWall from "@/assets/tile-wall.png";
 import tileFloor from "@/assets/tile-floor.png";
 import tileFloorAlt from "@/assets/tile-floor-alt.png";
-import tileTorch from "@/assets/tile-torch.png";
 import archwayDoor from "@/assets/archway-door.png";
 
 const gif = (name: string) => new URL(`../../gifs/${name}`, import.meta.url).href;
@@ -57,6 +56,11 @@ const MAP = [
   "WWWWWWWWWWW",
 ];
 
+const dungeon = {
+  wall:    (name: string) => `/assets/dungeon/elements/${name}.png`,
+  new:     (name: string) => `/assets/dungeon/new/${name}.png`,
+};
+
 function PixelDungeon({ sz = 24 }: { sz?: number }) {
   return (
     <div style={{
@@ -67,16 +71,39 @@ function PixelDungeon({ sz = 24 }: { sz?: number }) {
       {MAP.map((row, y) =>
         row.split("").map((ch, x) => {
           const key = `${y}-${x}`;
-          const floorImg = (x + y) % 3 === 0 ? tileFloorAlt : tileFloor;
-          const floor = { backgroundImage: `url(${floorImg})`, backgroundSize: "cover", imageRendering: "pixelated" as const };
+          const isTopEdge    = y === 0;
+          const isBottomEdge = y === MAP.length - 1;
+          const isLeftEdge   = x === 0;
+          const isRightEdge  = x === row.length - 1;
+          const isCorner     = (isLeftEdge || isRightEdge) && (isTopEdge || isBottomEdge);
 
-          if (ch === "W") return <div key={key} style={{ width: sz, height: sz, backgroundImage: `url(${tileWall})`, backgroundSize: "cover", imageRendering: "pixelated" }} />;
-          if (ch === "~") return <div key={key} style={{ width: sz, height: sz, background: "linear-gradient(160deg,hsl(215 60% 9%),hsl(210 65% 7%))", boxShadow: "inset 0 0 8px hsl(210 80% 20%/0.5)" }} />;
+          const floorSrc = (x * 5 + y * 13) % 41 === 0
+            ? dungeon.wall("Floor-Crack")
+            : dungeon.wall("Floor-Plain");
+
+          const floor = { backgroundImage: `url(${floorSrc})`, backgroundSize: "cover", imageRendering: "pixelated" as const };
+
           if (ch === " ") return <div key={key} style={{ width: sz, height: sz, background: "#000" }} />;
+          if (ch === "~") return <div key={key} style={{ width: sz, height: sz, background: "linear-gradient(160deg,hsl(215 60% 9%),hsl(210 65% 7%))" }} />;
+
+          if (ch === "W") {
+            let wallSrc = dungeon.wall("Normal-Wall");
+            let transform: string | undefined;
+            if (isCorner)        { wallSrc = dungeon.new("Soil-1"); }
+            else if (isTopEdge)  { wallSrc = dungeon.new("Top-Soil-Wall"); }
+            else if (isBottomEdge){ wallSrc = dungeon.new("Top-Soil-Wall"); transform = "rotate(180deg)"; }
+            else if (isLeftEdge) { wallSrc = dungeon.new("Top-Soil-Wall"); transform = "rotate(-90deg)"; }
+            else if (isRightEdge){ wallSrc = dungeon.new("Top-Soil-Wall"); transform = "rotate(90deg)"; }
+            return (
+              <div key={key} style={{ width: sz, height: sz, position: "relative", overflow: "hidden" }}>
+                <img src={wallSrc} alt="" style={{ position: "absolute", inset: 0, width: "100%", height: "100%", imageRendering: "pixelated", transform }} />
+              </div>
+            );
+          }
 
           if (ch === "T") return (
             <div key={key} style={{ width: sz, height: sz, ...floor, position: "relative" }}>
-              <img src={tileTorch} alt="" style={{ position: "absolute", inset: 0, width: "100%", height: "100%", imageRendering: "pixelated", animation: "torch-flicker 1.6s infinite alternate ease-in-out" }} />
+              <img src={dungeon.new("Engraved-Torch-Wall")} alt="" style={{ position: "absolute", inset: 0, width: "100%", height: "100%", imageRendering: "pixelated", animation: "torch-flicker 1.6s infinite alternate ease-in-out" }} />
             </div>
           );
           if (ch === "P") return (
@@ -85,7 +112,9 @@ function PixelDungeon({ sz = 24 }: { sz?: number }) {
             </div>
           );
           if (ch === "C") return (
-            <div key={key} style={{ width: sz, height: sz, ...floor, display: "flex", alignItems: "center", justifyContent: "center", fontSize: sz * 0.6, animation: "item-float 2.4s infinite alternate ease-in-out" }}>🔒</div>
+            <div key={key} style={{ width: sz, height: sz, ...floor, position: "relative", display: "flex", alignItems: "center", justifyContent: "center" }}>
+              <img src={dungeon.wall("Chest-Full")} alt="chest" style={{ width: "90%", height: "90%", imageRendering: "pixelated", objectFit: "contain", animation: "item-float 2.4s infinite alternate ease-in-out" }} />
+            </div>
           );
           return <div key={key} style={{ width: sz, height: sz, ...floor }} />;
         })

@@ -879,6 +879,42 @@
   100% { opacity: 1; transform: translateX(-50%) scale(1); }
 }
 
+/* ── Landing page shared animations ── */
+@keyframes lp-breathe {
+  0%, 100% { opacity: 0.55; }
+  50%       { opacity: 1; }
+}
+@keyframes lp-spell-marquee {
+  0%   { transform: translateX(0); }
+  100% { transform: translateX(-50%); }
+}
+@keyframes lp-fade-up {
+  from { opacity: 0; transform: translateY(24px) scale(0.98); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+@keyframes lp-tagline-fade {
+  0%,  4%  { opacity: 0; transform: translateY(6px); }
+  10%, 22% { opacity: 1; transform: translateY(0); }
+  28%,100% { opacity: 0; transform: translateY(-6px); }
+}
+@keyframes lp-scroll-bounce {
+  0%, 100% { transform: translateY(0);  opacity: 0.55; }
+  50%       { transform: translateY(6px); opacity: 1; }
+}
+.lp-breathe { animation: lp-breathe 4.5s ease-in-out infinite; }
+.lp-tagline { animation: lp-tagline-fade 4s ease-in-out infinite; }
+.lp-scroll-cue { animation: lp-scroll-bounce 1.8s ease-in-out infinite; }
+.lp-tablet {
+  transition: box-shadow 200ms ease, transform 150ms ease;
+}
+.lp-tablet:hover {
+  transform: translateY(-2px);
+  box-shadow:
+    inset 1px 1px 0 hsl(0 0%100%/0.14), inset -1px -1px 0 hsl(0 0%0%/0.85),
+    inset 0 0 24px hsl(0 0%0%/0.45),
+    0 8px 22px hsl(0 0%0%/0.65), 0 0 20px hsl(33 100%45%/0.18) !important;
+}
+
 /* ── Voices from the Crypt testimonial loop ── */
 @keyframes lp-quote-fade {
   0%   { opacity: 0; transform: translateY(8px); }
