@@ -192,11 +192,10 @@ export const fileCommands: CommandDefinition[] = [
       const file = findFile(room, name);
       if (!file) return { lines: [err(`rm: ${name}: no such file`)] };
       if (name === state.targetFile) return { lines: [err(`rm: ${name}: the relic resists destruction`)] };
-      const newRoom = { ...room, files: room.files.filter((item) => item.name !== name) };
       return {
-        lines: [out(`You smash '${name}' into nothing.`)],
-        patch: { rooms: { ...state.rooms, [room.path]: newRoom } },
+        lines: [out(`You raise your hand toward '${name}'.`)],
         vfx: { kind: "rm", cells: [{ x: file.x, y: file.y }], durationMs: 1100 },
+        effect: { type: "removeFile", fileName: name },
       };
     },
   },

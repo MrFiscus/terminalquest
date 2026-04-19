@@ -27,7 +27,7 @@ const Index = () => {
   const [bookOpen, setBookOpen] = useState(false);
 
   const loadAIDungeon = async (difficulty: Difficulty, familiarity = linuxFamiliarity) => {
-    if (generating || state.animating) return;
+    if (generating || state.animating) return false;
     const generationSeed = `${difficulty}-${familiarity ?? "tier"}-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
     setGenerating(difficulty);
     try {
@@ -41,6 +41,7 @@ const Index = () => {
       });
       loadLevel(level, `${difficulty} (${level.rooms.length} rooms)`, adaptationMessage(weakCommands));
       setActiveDifficulty(difficulty);
+      return true;
     } finally {
       setGenerating(null);
     }
@@ -50,10 +51,10 @@ const Index = () => {
     return (
       <DifficultyMenu
         busy={Boolean(generating)}
-        onConfirm={(difficulty, familiarity) => {
+        onConfirm={async (difficulty, familiarity) => {
           setLinuxFamiliarity(familiarity);
-          setHasEntered(true);
-          void loadAIDungeon(difficulty, familiarity);
+          const loaded = await loadAIDungeon(difficulty, familiarity);
+          if (loaded) setHasEntered(true);
         }}
       />
     );
@@ -116,7 +117,7 @@ const Index = () => {
           <GameWorld state={state} onDismissPopup={dismissPopup} headerRight={difficultyToggles} />
         </div>
         <RoomFlavorSubtitle text={roomSubtitle} />
-        <InventoryBar items={state.inventory} slots={5} />
+        <InventoryBar items={state.inventory} slots={5} onOpenBook={() => setBookOpen(true)} />
       </section>
 
       {state.won && (

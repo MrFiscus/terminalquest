@@ -56,11 +56,19 @@ export interface FileItem {
 export type DecorKind =
   | "barrel"
   | "chest"
+  | "chest-empty"
+  | "chest-full"
   | "crack"
   | "crate"
+  | "inscribed-floor"
+  | "interior-door"
+  | "interior-wall"
   | "ladder"
   | "lamp"
+  | "banner"
+  | "pillar"
   | "sack"
+  | "statue"
   | "water";
 
 export interface DecorItem {
@@ -107,6 +115,11 @@ export interface ScrollPopup {
   body: string;
 }
 
+export interface ScreenEffect {
+  id: number;
+  kind: "reveal" | "error" | "create" | "traverse" | "track" | "aware";
+}
+
 export interface GameState {
   cwd: string;
   rooms: Record<string, Room>;
@@ -124,6 +137,7 @@ export interface GameState {
   animating: boolean;
   transitioning: boolean;
   vfx: VfxPulse[];
+  screenEffect: ScreenEffect | null;
   popup: ScrollPopup | null;
   goal: string;
   requiredCommands: string[];
@@ -144,6 +158,7 @@ export interface CommandResult {
         requiredKey?: string;
       }
     | { type: "pickup"; fileName: string }
+    | { type: "removeFile"; fileName: string }
     | { type: "win"; fileName: string };
   clear?: boolean;
   vfx?: Omit<VfxPulse, "id" | "expiresAt"> & { durationMs?: number };

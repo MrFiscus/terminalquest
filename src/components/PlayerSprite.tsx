@@ -1,5 +1,8 @@
-import { cn } from "@/lib/utils";
-import knight from "@/assets/knight-topdown.png";
+import { useEffect } from "react";
+import {
+  getCharacterAnimation,
+  preloadCharacterAnimations,
+} from "@/game/characterAnimation";
 import type { PlayerAnim, PlayerFacing } from "@/game/types";
 
 interface PlayerSpriteProps {
@@ -8,34 +11,41 @@ interface PlayerSpriteProps {
   size?: number;
 }
 
-/**
- * Knight sprite — top-down pixel art of a knight in heavy armor with a blue cape.
- * Animation states (idle bob, walking tilt, pickup squash) are pure-CSS classes.
- */
+const facingToDirection = (facing: PlayerFacing) => {
+  if (facing === "up") return "north";
+  if (facing === "left") return "west";
+  if (facing === "right") return "east";
+  return "south";
+};
+
 export function PlayerSprite({ anim, facing, size = 32 }: PlayerSpriteProps) {
+  useEffect(() => {
+    preloadCharacterAnimations();
+  }, []);
+
+  const animation = getCharacterAnimation(anim, facingToDirection(facing));
+
   return (
     <div
-      className={cn(
-        "relative flex items-center justify-center",
-        anim === "idle" && "player-idle",
-        anim === "walking" && "player-walk",
-        anim === "pickingUp" && "player-pickup",
-      )}
+      className="relative flex items-center justify-center"
       style={{ width: size, height: size }}
       data-facing={facing}
-      aria-label={`knight ${anim} facing ${facing}`}
+      aria-label={`adventurer ${anim} facing ${facing}`}
     >
       <img
-        src={knight}
+        key={`${anim}-${facing}-${animation.src}`}
+        src={animation.src}
         alt=""
         aria-hidden
-        className="h-full w-full object-contain"
+        className="h-[145%] w-[145%] object-contain"
         style={{
           imageRendering: "pixelated",
-          transform: facing === "left" ? "scaleX(-1)" : undefined,
-          filter: "drop-shadow(0 2px 3px hsl(0 0% 0% / 0.7)) drop-shadow(0 0 10px hsl(var(--torch-glow) / 0.45))",
+          transform: animation.mirror ? "scaleX(-1)" : undefined,
+          filter:
+            "drop-shadow(0 2px 3px hsl(0 0% 0% / 0.7)) drop-shadow(0 0 10px hsl(var(--torch-glow) / 0.45))",
         }}
       />
     </div>
   );
 }
+

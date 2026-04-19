@@ -16,6 +16,7 @@ const tierFor = (v: number): { label: string; difficulty: Difficulty } => {
 export const DifficultyMenu = ({ onConfirm, busy }: DifficultyMenuProps) => {
   const [dungeonDifficulty, setDungeonDifficulty] = useState<number>(50);
   const [fading, setFading] = useState(false);
+  const [dragging, setDragging] = useState(false);
   const trackRef = useRef<HTMLDivElement>(null);
   const draggingRef = useRef(false);
   const tier = tierFor(dungeonDifficulty);
@@ -35,7 +36,10 @@ export const DifficultyMenu = ({ onConfirm, busy }: DifficultyMenuProps) => {
       e.preventDefault();
       setFromClientX(e.clientX);
     };
-    const onUp = () => { draggingRef.current = false; };
+    const onUp = () => {
+      draggingRef.current = false;
+      setDragging(false);
+    };
     window.addEventListener("pointermove", onMove);
     window.addEventListener("pointerup", onUp);
     return () => {
@@ -46,6 +50,7 @@ export const DifficultyMenu = ({ onConfirm, busy }: DifficultyMenuProps) => {
 
   const onTrackPointerDown = (e: React.PointerEvent) => {
     draggingRef.current = true;
+    setDragging(true);
     setFromClientX(e.clientX);
   };
 
@@ -72,37 +77,38 @@ export const DifficultyMenu = ({ onConfirm, busy }: DifficultyMenuProps) => {
       style={{
         width: "100vw",
         height: "100vh",
-        background: "#000",
         zIndex: 100,
         ["--glow" as string]: glowHue,
+        backgroundColor: "hsl(230 18% 5%)",
+        backgroundImage: `radial-gradient(ellipse at 50% 30%, hsl(230 14% 14%) 0%, hsl(230 18% 7%) 55%, hsl(230 22% 3%) 100%), url(${slateTexture})`,
+        backgroundRepeat: "no-repeat, no-repeat",
+        backgroundSize: "100% 100%, cover",
+        backgroundPosition: "center, center",
+        backgroundBlendMode: "multiply, normal",
       }}
     >
-      {/* Seamless slate stone background */}
-      <div
-        className="absolute inset-0"
-        aria-hidden
-        style={{
-          backgroundImage: `url(${slateTexture})`,
-          backgroundRepeat: "repeat",
-          backgroundSize: "512px 512px",
-        }}
-      />
-      {/* Darkening + central torch wash */}
+      {/* Global vignette */}
       <div
         className="absolute inset-0 pointer-events-none"
         aria-hidden
         style={{
-          background: `
-            radial-gradient(ellipse 70% 55% at 50% 42%,
-              hsl(33 40% 30% / 0.35) 0%,
-              hsl(0 0% 0% / 0.0) 45%,
-              hsl(0 0% 0% / 0.55) 80%,
-              hsl(0 0% 0% / 0.9) 100%)
-          `,
-          mixBlendMode: "multiply",
+          background: "radial-gradient(ellipse at center, transparent 38%, hsl(0 0% 0% / 0.85) 100%)",
         }}
       />
-      {/* Soft top torch glow */}
+      {/* Grain overlay */}
+      <div
+        className="absolute inset-0 pointer-events-none"
+        aria-hidden
+        style={{
+          opacity: 0.35,
+          mixBlendMode: "overlay",
+          backgroundImage:
+            "radial-gradient(hsl(0 0% 100% / 0.06) 1px, transparent 1.4px), radial-gradient(hsl(0 0% 0% / 0.4) 1px, transparent 1.4px)",
+          backgroundSize: "5px 5px, 7px 7px",
+          backgroundPosition: "0 0, 2px 3px",
+        }}
+      />
+      {/* Tier-colored top torch glow */}
       <div
         className="absolute inset-0 pointer-events-none"
         aria-hidden
@@ -111,6 +117,47 @@ export const DifficultyMenu = ({ onConfirm, busy }: DifficultyMenuProps) => {
           transition: "background 400ms ease",
         }}
       />
+
+      {/* Breathing tier-colored washes (matches landing page hero) */}
+      <div
+        className="lp-breathe absolute inset-0 pointer-events-none"
+        aria-hidden
+        style={{
+          background: `radial-gradient(ellipse 80% 60% at 50% 45%, hsl(33 60% 22% / 0.28) 0%, transparent 60%)`,
+          mixBlendMode: "screen",
+        }}
+      />
+      <div
+        className="lp-breathe absolute inset-0 pointer-events-none"
+        aria-hidden
+        style={{
+          background: `radial-gradient(circle at 50% 10%, hsl(${glowHue} / 0.18) 0%, transparent 44%)`,
+          animationDelay: "1.2s",
+        }}
+      />
+
+      {/* Ember particles drifting upward */}
+      {Array.from({ length: 10 }).map((_, i) => {
+        const left = 6 + (i * 11) % 90;
+        const dur = 6 + (i % 4) * 1.2;
+        const delay = (i * 0.9) % 7;
+        const drift = (i % 2 === 0 ? 1 : -1) * (6 + (i % 3) * 4);
+        const bottom = 8 + (i * 7) % 32;
+        return (
+          <span
+            key={i}
+            className="lp-ember"
+            aria-hidden
+            style={{
+              left: `${left}%`,
+              bottom: `${bottom}%`,
+              animationDuration: `${dur}s`,
+              animationDelay: `${delay}s`,
+              ["--ember-drift" as never]: `${drift}px`,
+            }}
+          />
+        );
+      })}
 
       {/* Content */}
       <div className="relative z-10 h-full flex flex-col items-center justify-center px-8 pt-16">
@@ -126,7 +173,7 @@ export const DifficultyMenu = ({ onConfirm, busy }: DifficultyMenuProps) => {
           <div className="relative px-6 pt-20 pb-2">
             {/* Floating engraved counter above thumb */}
             <div
-              className="absolute pointer-events-none transition-[left] duration-75 engraved engraved-hover"
+              className={`absolute pointer-events-none transition-[left] duration-75 engraved engraved-hover ${dragging ? "engraved-active" : ""}`}
               style={{
                 left: `calc(28px + (100% - 56px) * ${dungeonDifficulty / 100})`,
                 top: 0,
@@ -279,7 +326,8 @@ export const DifficultyMenu = ({ onConfirm, busy }: DifficultyMenuProps) => {
 
         /* Molten-rune hover: glow from within with tier-colored drop-shadow */
         .engraved-menu .engraved-hover:hover,
-        .engraved-menu .engraved-hover:focus-visible {
+        .engraved-menu .engraved-hover:focus-visible,
+        .engraved-menu .engraved-active {
           color: hsl(var(--glow) / 0.92);
           text-shadow:
             -1px -1px 0 hsl(0 0% 0% / 0.9),

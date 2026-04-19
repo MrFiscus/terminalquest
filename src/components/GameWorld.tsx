@@ -4,9 +4,8 @@ import { cn } from "@/lib/utils";
 import { getRoom } from "@/game/dungeon";
 import { PlayerSprite } from "@/components/PlayerSprite";
 import { ScrollPopup } from "@/components/ScrollPopup";
-import archwayDoor from "@/assets/archway-door.png";
 import scrollItem from "@/assets/scroll-item.png";
-import type { DecorKind, GameState, VfxPulse } from "@/game/types";
+import type { DecorKind, GameState, Room, VfxPulse } from "@/game/types";
 
 interface GameWorldProps {
   state: GameState;
@@ -17,16 +16,10 @@ interface GameWorldProps {
 const MIN_TILE = 24;
 const MAX_TILE = 96;
 
-function dist(ax: number, ay: number, bx: number, by: number) {
-  return Math.max(Math.abs(ax - bx), Math.abs(ay - by));
-}
-
 function edist(ax: number, ay: number, bx: number, by: number) {
   return Math.hypot(ax - bx, ay - by);
 }
 
-// Smooth radial falloff used for opacity of items/doors/labels.
-// Returns 1 at the source and ~0 beyond `radius`.
 function smoothLight(d: number, radius: number) {
   if (d >= radius) return 0;
   const t = 1 - d / radius;
@@ -34,7 +27,6 @@ function smoothLight(d: number, radius: number) {
 }
 
 function brightnessFor(d: number): number {
-  // Smooth fade — used for proximity-based UI opacity (labels, items).
   return Math.max(0.38, smoothLight(d, 5.5));
 }
 
@@ -45,60 +37,285 @@ function vfxKindFor(vfx: VfxPulse[], x: number, y: number) {
   return null;
 }
 
-function wallTransform(x: number, y: number, width: number, height: number) {
-  if (x === 0) return "scaleX(-1)";
-  if (y === height - 1) return "scaleY(-1)";
-  if (x === width - 1) return "none";
-  return y === 0 ? "none" : undefined;
+function visualHash(value: string): number {
+  let h = 2166136261 >>> 0;
+  for (let i = 0; i < value.length; i++) {
+    h ^= value.charCodeAt(i);
+    h = Math.imul(h, 16777619);
+  }
+  return h >>> 0;
 }
 
-function floorTint(x: number, y: number) {
-  if ((x * 13 + y * 7) % 17 === 0) return "rgba(255,255,255,0.035)";
-  if ((x * 5 + y * 11) % 19 === 0) return "rgba(0,0,0,0.06)";
-  return "transparent";
+const elementAsset = (name: string) => `/assets/dungeon/elements/${name}.png`;
+const newAsset = (name: string) => `/assets/dungeon/new/${name}.png`;
+
+// ------------------------------------------------------------------
+// WALL TILE SELECTION
+// ------------------------------------------------------------------
+// Every wall cell renders exactly one wall asset. Corners use Corner-Wall,
+// torch positions use Engraved-Torch-Wall, everything else is Normal-Wall
+// with Fancy/Symbol variants only on the top wall (their Greek-key border
+// sits at the bottom of the tile, which only reads correctly up there).
+function pickWallSprite(
+  x: number,
+  y: number,
+  width: number,
+  height: number,
+  seed: number,
+): { src: string; transform?: string } {
+  const isLeftEdge = x === 0;
+  const isRightEdge = x === width - 1;
+  const isTopEdge = y === 0;
+  const isBottomEdge = y === height - 1;
+
+  const isCorner =
+    (isLeftEdge || isRightEdge) && (isTopEdge || isBottomEdge);
+
+  // -------------------------------------------------------------------
+  // CONTINUOUS OUTER BORDER
+  // -------------------------------------------------------------------
+  // All outer-ring tiles render as composite Top-Soil blocks so the edge
+  // matches the interior soil/wall style. The wall seam of Top-Soil-Wall
+  // always points toward the room interior, produced by rotation:
+  //   TOP    → natural                (wall seam at bottom, faces down/in)
+  //   BOTTOM → rotate(180deg)         (wall seam at top, faces UP/in — south fix)
+  //   LEFT   → rotate(-90deg)         (wall seam on right, faces right/in)
+  //   RIGHT  → rotate(90deg)          (wall seam on left, faces left/in)
+  // The 4 outer corners are pure soil — no wall seam anywhere.
+  // Deterministic per position; no RNG on edge tiles.
+
+  if (isCorner) {
+    return { src: newAsset("Soil-1") };
+  }
+  if (isTopEdge)    return { src: newAsset("Top-Soil-Wall") };
+  if (isBottomEdge) return { src: newAsset("Top-Soil-Wall"), transform: "rotate(180deg)" };
+  if (isLeftEdge)   return { src: newAsset("Top-Soil-Wall"), transform: "rotate(-90deg)" };
+  if (isRightEdge)  return { src: newAsset("Top-Soil-Wall"), transform: "rotate(90deg)" };
+
+  return { src: elementAsset("Normal-Wall") };
 }
 
-const decorSpriteFor = (kind: DecorKind) => `/assets/dungeon/props/${kind}.png`;
+// ------------------------------------------------------------------
+// FLOOR TILE SELECTION
+// ------------------------------------------------------------------
+function floorSpriteFor(x: number, y: number, seed: number) {
+  const roll = (x * 5 + y * 13 + seed) % 41;
+  if (roll === 0) return elementAsset("Floor-Crack");
+  if (roll === 17) return elementAsset("Inscribed-Floor");
+  return elementAsset("Floor-Plain");
+}
+
+// ------------------------------------------------------------------
+// DECOR SPRITE SELECTION
+// ------------------------------------------------------------------
+// Crates rotate through three wooden variants so clusters don't look cloned.
+function crateVariant(x: number, y: number, seed: number): string {
+  const roll = (x * 19 + y * 31 + seed * 7) % 3;
+  if (roll === 0) return newAsset("Broken-Crate");
+  if (roll === 1) return newAsset("Double-Broken-Box");
+  return newAsset("Box");
+}
+
+function barrelVariant(x: number, y: number, seed: number): string {
+  // Single barrel sprite, but the New pack's Barrel.png already shows two.
+  return newAsset("Barrel");
+}
+
+function decorSpriteFor(kind: DecorKind, x: number, y: number, seed: number): string {
+  switch (kind) {
+    case "barrel":      return barrelVariant(x, y, seed);
+    case "crate":       return crateVariant(x, y, seed);
+    case "chest":
+    case "chest-full":  return elementAsset("Chest-Full");
+    case "chest-empty": return elementAsset("Chest-Empty");
+    case "crack":       return elementAsset("Floor-Crack");
+    case "inscribed-floor": return elementAsset("Inscribed-Floor");
+    case "ladder":      return "/assets/dungeon/props/ladder.png";
+    case "lamp":        return elementAsset("Torch");
+    case "pillar":      return elementAsset("Pillar");
+    case "banner":      return elementAsset("Banner");
+    case "sack":        return "/assets/dungeon/props/sack.png";
+    case "statue":      return elementAsset("Statue");
+    default:            return `/assets/dungeon/props/${kind}.png`;
+  }
+}
+
+function decorSizeClass(kind: DecorKind): string {
+  if (kind === "statue")       return "h-[125%] w-[105%]";
+  if (kind === "pillar")       return "h-[180%] w-[110%]";
+  if (kind === "banner")       return "h-[160%] w-[115%]";
+  if (kind === "ladder")       return "h-[140%] w-[78%]";
+  if (kind === "chest" || kind === "chest-full" || kind === "chest-empty") return "h-[105%] w-[108%]";
+  if (kind === "barrel")       return "h-[112%] w-[108%]";
+  if (kind === "crate")        return "h-[105%] w-[102%]";
+  return "h-[92%] w-[92%]";
+}
+
+function isFloorFeature(kind: DecorKind): boolean {
+  return kind === "crack" || kind === "inscribed-floor" || kind === "water";
+}
+
+function isWallOnlyDecor(kind: DecorKind): boolean {
+  // Architectural decor has its own overlay passes, never rendered as a
+  // standing floor prop.
+  return (
+    kind === "banner" ||
+    kind === "pillar" ||
+    kind === "interior-wall" ||
+    kind === "interior-door"
+  );
+}
 
 function floorFeatureStyle(kind: DecorKind): CSSProperties | null {
-  if (kind === "crack") {
-    return {
-      width: "76%",
-      height: "42%",
-      opacity: 0.5,
-      transform: "rotate(-8deg)",
-      background:
-        "linear-gradient(150deg, transparent 0 42%, rgba(8,9,12,0.7) 43% 47%, transparent 48% 100%), linear-gradient(32deg, transparent 0 58%, rgba(8,9,12,0.55) 59% 62%, transparent 63% 100%)",
-      filter: "blur(0.2px)",
-    };
+  if (kind === "crack" || kind === "inscribed-floor") {
+    return { width: "100%", height: "100%", opacity: kind === "crack" ? 0.8 : 0.72 };
   }
   if (kind === "water") {
     return {
-      width: "86%",
-      height: "56%",
-      opacity: 0.5,
-      borderRadius: "45%",
+      width: "96%",
+      height: "86%",
+      opacity: 0.72,
+      borderRadius: "22%",
       background:
-        "radial-gradient(ellipse at 45% 45%, rgba(84,147,169,0.52), rgba(29,73,93,0.38) 58%, rgba(12,27,38,0) 72%)",
-      boxShadow: "inset 0 0 8px rgba(166,220,235,0.22)",
+        "radial-gradient(ellipse at 45% 45%, rgba(122,180,200,0.72), rgba(43,99,122,0.64) 55%, rgba(20,48,64,0.5) 80%)",
+      boxShadow: "inset 0 0 10px rgba(188,230,245,0.35), inset 0 0 20px rgba(18,40,55,0.45)",
     };
   }
   return null;
 }
 
+// ------------------------------------------------------------------
+// TOP-WALL SOIL OVERHANG — tile semantics
+// ------------------------------------------------------------------
+// Soil-1 / Soil-2            → pure dirt, NO wall seam. Never used at a
+//                              wall edge or over a wall cap.
+// Top-Soil-Corner-Wall        → soil with a wall corner baked in. Terminates
+//                              a soil run at its left/right end.
+// Top-Soil-Wall / -Start-2    → soil with a wall seam along the bottom edge.
+//                              This is what caps an actual wall tile.
+// Top-Soil-Start              → soil with a vertical wall down one side —
+//                              for perpendicular wall-into-soil transitions.
+//
+// Only the TOP wall gets the earthen soil cap — that side is the primary
+// presentation direction. Left / right / bottom stay plain so the
+// composition reads from one coherent viewing angle.
+
+/** MIDDLE of a soil strip — picks a wall-capped variant (has bottom seam). */
+function topSoilCapTile(seed: number, k: number): string {
+  return (seed + k) % 2 === 0 ? newAsset("Top-Soil-Wall") : newAsset("Top-Soil-Start-2");
+}
+
+/** END of a soil strip — corner variant, flipped for the left end. */
+function topSoilCornerTile(end: "left" | "right"): { src: string; transform?: string } {
+  return end === "left"
+    ? { src: newAsset("Top-Soil-Corner-Wall"), transform: "scaleX(-1)" }
+    : { src: newAsset("Top-Soil-Corner-Wall") };
+}
+
+// (topWallSoilPieces removed — the in-grid outer ring is now rendered with
+// Top-Soil-Wall composite tiles directly, so a separate overhang overlay
+// would double-up the soil on the top edge.)
+
+// Interior walls come from the generator as decor items with kind
+// "interior-wall". The renderer just paints them.
+
+// Pillar positions come from the generator (decor with kind "pillar"). The
+// renderer just reads them back and decides which get banners.
+
+// ------------------------------------------------------------------
+// DOOR OVERLAY STYLE
+// ------------------------------------------------------------------
+function doorSide(x: number, y: number, width: number, height: number) {
+  if (y === 0) return "top" as const;
+  if (y === height - 1) return "bottom" as const;
+  if (x === 0) return "left" as const;
+  if (x === width - 1) return "right" as const;
+  return "top" as const;
+}
+
+function doorOverlayStyle(x: number, y: number, width: number, height: number, tileW: number, tileH: number): CSSProperties {
+  const side = doorSide(x, y, width, height);
+  // Keep door tight to the tile so it reads as an opening IN the wall,
+  // not a cabinet sitting in front of it.
+  const w = tileW * 0.88;
+  const h = tileH * 1.05;
+  const base: CSSProperties = {
+    position: "absolute",
+    width: w,
+    height: h,
+    imageRendering: "pixelated",
+    filter: "drop-shadow(0 4px 4px rgba(0,0,0,0.8))",
+  };
+
+  if (side === "top") {
+    return {
+      ...base,
+      left: x * tileW + tileW / 2,
+      top: y * tileH + tileH * 0.05,
+      transform: "translateX(-50%)",
+    };
+  }
+  if (side === "bottom") {
+    return {
+      ...base,
+      left: x * tileW + tileW / 2,
+      top: y * tileH - tileH * 0.05,
+      transform: "translateX(-50%)",
+    };
+  }
+  if (side === "left") {
+    return {
+      ...base,
+      left: x * tileW + tileW * 0.06,
+      top: y * tileH + tileH / 2,
+      transform: "translateY(-50%)",
+    };
+  }
+  // right
+  return {
+    ...base,
+    left: x * tileW + tileW * 0.06,
+    top: y * tileH + tileH / 2,
+    transform: "translateY(-50%)",
+  };
+}
+
+function doorLabelStyle(x: number, y: number, width: number, height: number, tileW: number, tileH: number): CSSProperties {
+  const side = doorSide(x, y, width, height);
+  const base: CSSProperties = { opacity: 1, zIndex: 30 };
+  if (side === "left") return { ...base, left: x * tileW + tileW + 4, top: y * tileH + tileH / 2 - 8 };
+  if (side === "right") return { ...base, left: x * tileW - 4, top: y * tileH + tileH / 2 - 8 };
+  if (side === "bottom") return { ...base, left: x * tileW + tileW / 2, top: y * tileH + tileH + 2 };
+  return { ...base, left: x * tileW + tileW / 2, top: y * tileH - 12 };
+}
+
+function doorLabelTransform(x: number, y: number, width: number, height: number) {
+  const side = doorSide(x, y, width, height);
+  if (side === "left") return "translateY(-50%)";
+  if (side === "right") return "translate(-100%, -50%)";
+  if (side === "bottom") return "translateX(-50%)";
+  return "translateX(-50%)";
+}
+
+// ------------------------------------------------------------------
 export function GameWorld({ state, onDismissPopup, headerRight }: GameWorldProps) {
   const room = getRoom(state.rooms, state.cwd);
   const stageRef = useRef<HTMLDivElement>(null);
   const [tileW, setTileW] = useState(44);
   const [tileH, setTileH] = useState(44);
+  const roomSeed = useMemo(() => (room ? visualHash(room.path) : 0), [room]);
 
-  // Measure stage and fill the available dungeon panel.
   useEffect(() => {
     const el = stageRef.current;
     if (!el || !room) return;
     const compute = () => {
       const r = el.getBoundingClientRect();
-      const tile = Math.max(MIN_TILE, Math.min(MAX_TILE, Math.floor(Math.min(r.width / room.width, r.height / room.height))));
+      // Leave some vertical space at the top for soil-mound overhang.
+      const usableH = r.height - 32;
+      const tile = Math.max(
+        MIN_TILE,
+        Math.min(MAX_TILE, Math.floor(Math.min(r.width / room.width, usableH / room.height))),
+      );
       setTileW(tile);
       setTileH(tile);
     };
@@ -108,78 +325,97 @@ export function GameWorld({ state, onDismissPopup, headerRight }: GameWorldProps
     return () => ro.disconnect();
   }, [room]);
 
+  const torchSet = useMemo(() => {
+    if (!room) return new Set<string>();
+    return new Set(room.tiles.filter((t) => t.kind === "torch").map((t) => `${t.x},${t.y}`));
+  }, [room]);
+
+  const doorByPos = useMemo(() => {
+    const map = new Map<string, { x: number; y: number; target: string }>();
+    if (room) for (const d of room.doors) map.set(`${d.x},${d.y}`, { x: d.x, y: d.y, target: d.target });
+    return map;
+  }, [room]);
+
   const grid = useMemo(() => {
     if (!room) return null;
-    const cells = [];
+    const cells: JSX.Element[] = [];
     for (let y = 0; y < room.height; y++) {
       for (let x = 0; x < room.width; x++) {
         const isEdge = x === 0 || y === 0 || x === room.width - 1 || y === room.height - 1;
-        const door = room.doors.find((d) => d.x === x && d.y === y);
-        const torch = room.tiles.find((t) => t.x === x && t.y === y && t.kind === "torch");
+        const doorHere = doorByPos.get(`${x},${y}`);
+        const torchHere = torchSet.has(`${x},${y}`);
+
         cells.push(
           <div
             key={`${x}-${y}`}
-            className={cn("relative overflow-visible", y === 0 && !door ? "wall-cast-shadow" : "")}
+            className="relative overflow-visible"
             style={{ width: tileW, height: tileH }}
           >
-            {!isEdge && !door && (
-              <span className="absolute inset-0" style={{ background: floorTint(x, y) }} />
-            )}
-            {isEdge && !door && (
+            {/* Floor (interior tiles only) */}
+            {!isEdge && (
               <img
-                src="/assets/dungeon/tiles/wall.png"
+                src={floorSpriteFor(x, y, roomSeed)}
                 alt=""
                 draggable={false}
-                className="absolute inset-[-10%] h-[120%] w-[120%] object-cover opacity-95"
+                className="absolute inset-0 h-full w-full object-cover"
+                style={{ imageRendering: "pixelated" }}
+              />
+            )}
+
+            {/* Wall tile — doors replace the wall visually via an overlay. */}
+            {isEdge && !doorHere && !torchHere && (() => {
+              const pick = pickWallSprite(x, y, room.width, room.height, roomSeed);
+              return (
+                <img
+                  src={pick.src}
+                  alt=""
+                  draggable={false}
+                  className="absolute inset-0 h-full w-full object-cover"
+                  style={{
+                    imageRendering: "pixelated",
+                    transform: pick.transform,
+                  }}
+                />
+              );
+            })()}
+
+            {/* Torch alcove — Engraved-Torch-Wall replaces the wall tile here */}
+            {isEdge && torchHere && (
+              <img
+                src={newAsset("Engraved-Torch-Wall")}
+                alt=""
+                draggable={false}
+                className="absolute inset-0 h-full w-full object-cover torch-glow"
                 style={{
                   imageRendering: "pixelated",
-                  transform: wallTransform(x, y, room.width, room.height),
-                  filter: (x + y) % 9 === 0 ? "brightness(1.18)" : (x * 3 + y) % 11 === 0 ? "brightness(0.78)" : undefined,
+                  transform:
+                    y === room.height - 1
+                      ? "scaleY(-1)"
+                      : x === 0
+                        ? "rotate(90deg)"
+                        : x === room.width - 1
+                          ? "rotate(-90deg)"
+                          : undefined,
                 }}
               />
             )}
-            {door && (
-              <span
-                className="absolute inset-0"
-                style={{ background: "radial-gradient(circle at 50% 58%, rgba(0,0,0,0.48), transparent 62%)" }}
-              />
-            )}
-            {door && (
+
+            {/* Base wall under door — keeps continuity so door sits against wall */}
+            {isEdge && doorHere && (
               <>
                 <img
-                  src={archwayDoor}
-                  alt={door.target === ".." ? "exit archway" : `${door.target} archway`}
-                  className="absolute left-1/2 -translate-x-1/2 pointer-events-none"
-                  style={{
-                    bottom: 0,
-                    width: "85%",
-                    height: "85%",
-                    objectFit: "contain",
-                    imageRendering: "pixelated",
-                    transformOrigin: "center bottom",
-                    filter: door.locked ? "brightness(0.35) sepia(0.4)" : undefined,
-                  }}
-                />
-                {door.locked && (
-                  <span
-                    className="absolute left-1/2 -translate-x-1/2 pointer-events-none"
-                    style={{ bottom: "28%", fontSize: tileW * 0.38, lineHeight: 1, zIndex: 5 }}
-                    aria-label="locked"
-                  >
-                    🔒
-                  </span>
-                )}
-              </>
-            )}
-            {torch && (
-              <>
-                <span className="ground-shadow" aria-hidden />
-                <img
-                  src="/assets/dungeon/tiles/torch.png"
+                  src={elementAsset("Normal-Wall")}
                   alt=""
                   draggable={false}
-                  className="absolute inset-0 h-full w-full object-contain pointer-events-none torch-glow"
-                  style={{ imageRendering: "pixelated" }}
+                  className="absolute inset-0 h-full w-full object-cover"
+                  style={{ imageRendering: "pixelated", opacity: 0.9 }}
+                />
+                <span
+                  className="absolute inset-0"
+                  style={{
+                    background:
+                      "radial-gradient(circle at 50% 70%, rgba(0,0,0,0.85) 0%, rgba(0,0,0,0.4) 55%, transparent 80%)",
+                  }}
                 />
               </>
             )}
@@ -188,35 +424,56 @@ export function GameWorld({ state, onDismissPopup, headerRight }: GameWorldProps
       }
     }
     return cells;
-  }, [room, tileW, tileH]);
+  }, [room, roomSeed, doorByPos, torchSet, tileW, tileH]);
+
+  // Pillars come straight from room.decor so generator occupancy guarantees
+  // no prop shares a tile with them.
+  const pillars = useMemo(() => {
+    const list = (room?.decor ?? []).filter((d) => d.kind === "pillar");
+    return list.map((p, i) => ({ x: p.x, y: p.y, hasBanner: i % 2 === 0 }));
+  }, [room]);
+
+  const interiorWalls = useMemo(
+    () => (room?.decor ?? []).filter((d) => d.kind === "interior-wall"),
+    [room],
+  );
+  const interiorDoors = useMemo(
+    () => (room?.decor ?? []).filter((d) => d.kind === "interior-door"),
+    [room],
+  );
+  // Both interior-wall AND interior-door cells participate in a "run". We
+  // use this set to decide whether a given cap is at an end of its run
+  // (corner tile) or in the middle (wall-capped middle tile).
+  const interiorRunSet = useMemo(() => {
+    const set = new Set<string>();
+    for (const d of room?.decor ?? []) {
+      if (d.kind === "interior-wall" || d.kind === "interior-door") set.add(`${d.x},${d.y}`);
+    }
+    return set;
+  }, [room]);
+
+  const runPosition = (x: number, y: number): "left" | "right" | "middle" => {
+    const hasLeft = interiorRunSet.has(`${x - 1},${y}`);
+    const hasRight = interiorRunSet.has(`${x + 1},${y}`);
+    if (!hasLeft && hasRight) return "left";
+    if (hasLeft && !hasRight) return "right";
+    return "middle";
+  };
+
+  // topSoil overhang removed — outer ring now uses composite Top-Soil-Wall tiles.
 
   if (!room) {
     return <div className="flex h-full items-center justify-center text-muted-foreground">The void.</div>;
   }
 
-  // Sprite size scales with the smaller axis so the player remains square.
   const TILE = Math.min(tileW, tileH);
   const boardW = room.width * tileW;
   const boardH = room.height * tileH;
-  const playerLight = {
-    x: (state.player.x + 0.5) * tileW,
-    y: (state.player.y + 0.5) * tileH,
-    radius: TILE * 4.4,
-  };
-  const torchLights = room.tiles
-    .filter((t) => t.kind === "torch")
-    .map((t) => ({
-      x: (t.x + 0.5) * tileW,
-      y: (t.y + 0.5) * tileH,
-      radius: TILE * 3.2,
-    }));
 
-  // Mini-map flash on pwd
   const showMinimap = state.vfx.some((v) => v.kind === "pwd");
 
   return (
     <div className="relative flex h-full flex-col bg-background stone-tex">
-      {/* cd-teleport fade overlay */}
       <AnimatePresence>
         {state.transitioning && (
           <motion.div
@@ -230,7 +487,7 @@ export function GameWorld({ state, onDismissPopup, headerRight }: GameWorldProps
           />
         )}
       </AnimatePresence>
-      {/* Header — single dark-iron bar; difficulty toggles injected from parent via slot */}
+
       <div className="flex items-center justify-between gap-3 px-4 py-2 iron-header border-b-2 border-[hsl(var(--terminal-frame))] relative z-10">
         <div className="flex flex-col min-w-0">
           <span className="font-pixel carved-gold text-[13px] truncate">{room.name}</span>
@@ -239,33 +496,27 @@ export function GameWorld({ state, onDismissPopup, headerRight }: GameWorldProps
         {headerRight}
       </div>
 
-      {/* Stage — fills the right panel; dungeon stays a centered square */}
-      <div
-        ref={stageRef}
-        className="relative flex-1 overflow-hidden grid place-items-center"
-      >
+      <div ref={stageRef} className="relative flex-1 overflow-hidden grid place-items-center">
         <div
           key={room.path}
-          className="relative pixelate-in overflow-hidden"
+          className={cn(
+            "relative pixelate-in overflow-visible",
+            state.screenEffect?.kind === "error" && "command-error-shake",
+            state.screenEffect?.kind === "reveal" && "command-reveal-pulse",
+            state.screenEffect?.kind === "create" && "command-create-pulse",
+            state.screenEffect?.kind === "traverse" && "command-traverse-pulse",
+            state.screenEffect?.kind === "track" && "command-track-pulse",
+            state.screenEffect?.kind === "aware" && "command-aware-pulse",
+          )}
           style={{
             width: boardW,
             height: boardH,
             background:
-              "radial-gradient(circle at 48% 42%, rgba(106,113,124,0.66) 0%, rgba(53,59,68,0.58) 46%, rgba(15,17,23,0.94) 100%), linear-gradient(135deg, rgba(255,255,255,0.08), rgba(0,0,0,0.22))",
-            boxShadow:
-              "var(--shadow-pit), inset 0 0 60px 10px rgba(0,0,0,0.25)",
+              "radial-gradient(circle at 48% 42%, rgba(82,88,98,0.62) 0%, rgba(40,45,52,0.58) 50%, rgba(12,15,20,0.95) 100%)",
+            boxShadow: "var(--shadow-pit), inset 0 0 60px 10px rgba(0,0,0,0.35)",
           }}
         >
-          <div
-            className="pointer-events-none absolute inset-0"
-            style={{
-              background:
-                "radial-gradient(circle at 18% 24%, rgba(255,185,89,0.14), transparent 28%), radial-gradient(circle at 82% 28%, rgba(255,220,150,0.08), transparent 26%), linear-gradient(90deg, rgba(255,255,255,0.025) 1px, transparent 1px), linear-gradient(0deg, rgba(0,0,0,0.08) 1px, transparent 1px)",
-              backgroundSize: "auto, auto, 54px 54px, 54px 54px",
-              zIndex: 0,
-            }}
-          />
-          {/* Tile grid */}
+          {/* ------- Grid: floor + wall tiles ------- */}
           <div
             className="grid relative pointer-events-none"
             style={{
@@ -277,40 +528,229 @@ export function GameWorld({ state, onDismissPopup, headerRight }: GameWorldProps
             {grid}
           </div>
 
-          {/* Generated room props assembled from individual sprites. */}
-          {(room.decor ?? []).map((decor, index) => {
-            const featureStyle = floorFeatureStyle(decor.kind);
+          {/* (Top-wall soil overhang removed — outer ring tiles now use Top-Soil-Wall composites directly.) */}
+
+          {/* ------- Interior wall tiles (from generator decor: kind "interior-wall") ------- */}
+          {interiorWalls.map((w) => {
+            const pos = runPosition(w.x, w.y);
+            const cap =
+              pos === "middle"
+                ? { src: topSoilCapTile(roomSeed + 53, w.x), transform: undefined as string | undefined }
+                : topSoilCornerTile(pos);
             return (
               <div
-                key={`decor-${decor.kind}-${decor.x}-${decor.y}-${index}`}
-                className="pointer-events-none absolute flex items-center justify-center"
+                key={`iw-${w.x}-${w.y}`}
+                className="pointer-events-none absolute"
+                style={{
+                  left: w.x * tileW,
+                  top: w.y * tileH,
+                  width: tileW,
+                  height: tileH,
+                  zIndex: 6,
+                }}
+              >
+                <span
+                  aria-hidden
+                  className="absolute left-[4%] right-[4%] bottom-[-6%] h-[28%] rounded-sm"
+                  style={{ background: "rgba(0,0,0,0.55)", filter: "blur(6px)" }}
+                />
+                <img
+                  src={elementAsset("Normal-Wall")}
+                  alt=""
+                  draggable={false}
+                  className="absolute inset-0 h-full w-full object-cover"
+                  style={{ imageRendering: "pixelated" }}
+                />
+                {/* Soil cap — corner variant at run ends, wall-capped variant in the middle. */}
+                <img
+                  src={cap.src}
+                  alt=""
+                  draggable={false}
+                  className="absolute object-cover"
+                  style={{
+                    left: "0%",
+                    top: "-80%",
+                    width: "100%",
+                    height: "85%",
+                    transform: cap.transform,
+                    imageRendering: "pixelated",
+                    filter: "drop-shadow(0 4px 4px rgba(0,0,0,0.55))",
+                  }}
+                />
+              </div>
+            );
+          })}
+
+          {/* ------- Interior doors (archways cut through interior wall runs) ------- */}
+          {interiorDoors.map((d) => {
+            const pos = runPosition(d.x, d.y);
+            const cap =
+              pos === "middle"
+                ? { src: topSoilCapTile(roomSeed + 53, d.x), transform: undefined as string | undefined }
+                : topSoilCornerTile(pos);
+            return (
+            <div
+              key={`id-${d.x}-${d.y}`}
+              className="pointer-events-none absolute"
+              style={{
+                left: d.x * tileW,
+                top: d.y * tileH,
+                width: tileW,
+                height: tileH,
+                zIndex: 6,
+              }}
+            >
+              {/* darkened opening behind the door */}
+              <span
+                aria-hidden
+                className="absolute inset-0"
+                style={{
+                  background:
+                    "radial-gradient(circle at 50% 65%, rgba(0,0,0,0.85) 0%, rgba(0,0,0,0.45) 55%, transparent 80%)",
+                }}
+              />
+              {/* door sprite sits in the opening */}
+              <img
+                src={elementAsset("Door-Closed")}
+                alt=""
+                draggable={false}
+                className="absolute object-contain"
+                style={{
+                  left: "6%",
+                  top: "0%",
+                  width: "88%",
+                  height: "105%",
+                  imageRendering: "pixelated",
+                  filter: "drop-shadow(0 4px 4px rgba(0,0,0,0.75))",
+                }}
+              />
+              {/* Soil cap above the door — continues the run's corner/middle pattern. */}
+              <img
+                src={cap.src}
+                alt=""
+                draggable={false}
+                className="absolute object-cover"
+                style={{
+                  left: "0%",
+                  top: "-80%",
+                  width: "100%",
+                  height: "85%",
+                  transform: cap.transform,
+                  imageRendering: "pixelated",
+                  filter: "drop-shadow(0 4px 4px rgba(0,0,0,0.55))",
+                }}
+              />
+            </div>
+            );
+          })}
+
+          {/* ------- Pillars (from generator decor: kind "pillar", occupying top-row interior tiles) ------- */}
+          {pillars.map((p) => (
+            <img
+              key={`pillar-${p.x}-${p.y}`}
+              src={elementAsset("Pillar")}
+              alt=""
+              draggable={false}
+              className="pointer-events-none absolute object-contain"
+              style={{
+                left: (p.x - 0.2) * tileW,
+                top: (p.y - 1.15) * tileH,
+                width: tileW * 1.4,
+                height: tileH * 2.1,
+                imageRendering: "pixelated",
+                zIndex: 17,
+                filter: "drop-shadow(0 6px 6px rgba(0,0,0,0.8))",
+              }}
+            />
+          ))}
+
+          {/* Banners intentionally disabled — user requested they come off for now. */}
+
+          {/* ------- Doors: large archway overlay at door tiles ------- */}
+          {room.doors.map((d) => (
+            <img
+              key={`door-${d.x}-${d.y}`}
+              src={elementAsset("Door-Closed")}
+              alt={d.target === ".." ? "exit archway" : `${d.target} archway`}
+              draggable={false}
+              className={cn(
+                "pointer-events-none",
+                state.screenEffect?.kind === "traverse" && "door-open-pulse",
+                state.screenEffect?.kind === "create" && "door-create-pulse",
+              )}
+              style={{
+                ...doorOverlayStyle(d.x, d.y, room.width, room.height, tileW, tileH),
+                zIndex: 19,
+              }}
+            />
+          ))}
+
+          {/* ------- Floor-feature decor (water / cracks / inscribed floor) ------- */}
+          {(room.decor ?? [])
+            .filter((decor) => isFloorFeature(decor.kind))
+            .map((decor, index) => {
+              const style = floorFeatureStyle(decor.kind);
+              if (!style) return null;
+              return (
+                <div
+                  key={`ff-${decor.kind}-${decor.x}-${decor.y}-${index}`}
+                  className="pointer-events-none absolute flex items-center justify-center"
+                  style={{
+                    left: decor.x * tileW,
+                    top: decor.y * tileH,
+                    width: tileW,
+                    height: tileH,
+                    zIndex: 3,
+                  }}
+                >
+                  {decor.kind === "water" ? (
+                    <span aria-hidden style={style} />
+                  ) : (
+                    <img
+                      src={decorSpriteFor(decor.kind, decor.x, decor.y, roomSeed)}
+                      alt=""
+                      draggable={false}
+                      className="h-full w-full object-cover"
+                      style={{ ...style, imageRendering: "pixelated" }}
+                    />
+                  )}
+                </div>
+              );
+            })}
+
+          {/* ------- Standing decor (barrels / crates / chests / statues / etc.) ------- */}
+          {(room.decor ?? [])
+            .filter((decor) => !isFloorFeature(decor.kind) && !isWallOnlyDecor(decor.kind))
+            .map((decor, index) => (
+              <div
+                key={`d-${decor.kind}-${decor.x}-${decor.y}-${index}`}
+                className="pointer-events-none absolute flex items-end justify-center"
                 style={{
                   left: decor.x * tileW,
                   top: decor.y * tileH,
                   width: tileW,
                   height: tileH,
-                  zIndex: featureStyle ? 3 : 7,
+                  zIndex: 7,
                 }}
               >
-                {featureStyle ? (
-                  <span aria-hidden style={featureStyle} />
-                ) : (
-                  <img
-                    src={decorSpriteFor(decor.kind)}
-                    alt=""
-                    draggable={false}
-                    className={cn(
-                      "object-contain drop-shadow-[0_3px_3px_hsl(0_0%_0%/0.65)]",
-                      decor.kind === "ladder" ? "h-[150%] w-[80%]" : "h-[88%] w-[88%]",
-                    )}
-                    style={{ imageRendering: "pixelated" }}
-                  />
-                )}
+                <span className="ground-shadow" aria-hidden />
+                <img
+                  src={decorSpriteFor(decor.kind, decor.x, decor.y, roomSeed)}
+                  alt=""
+                  draggable={false}
+                  className={cn(
+                    "object-contain drop-shadow-[0_3px_3px_hsl(0_0%_0%/0.7)]",
+                    decorSizeClass(decor.kind),
+                  )}
+                  style={{
+                    imageRendering: "pixelated",
+                    transform: `translateY(-${tileH * 0.08}px)`,
+                  }}
+                />
               </div>
-            );
-          })}
+            ))}
 
-          {/* VFX overlay (per-cell) */}
+          {/* ------- VFX overlay (per-cell) ------- */}
           <div
             className="pointer-events-none absolute inset-0 grid"
             style={{
@@ -325,66 +765,50 @@ export function GameWorld({ state, onDismissPopup, headerRight }: GameWorldProps
               const y = Math.floor(i / room.width);
               const k = vfxKindFor(state.vfx, x, y);
               if (!k) return <div key={i} />;
-              if (k === "ls")
-                return (
-                  <div key={i} className="vfx-pulse" style={{ background: "hsl(var(--torch-glow) / 0.35)" }} />
-                );
-              if (k === "find")
-                return (
-                  <div key={i} className="vfx-trail flex items-center justify-center text-[16px]">
-                    <span style={{ color: "hsl(195 90% 65%)", textShadow: "0 0 8px hsl(195 90% 65%)" }}>
-                      ◉
-                    </span>
-                  </div>
-                );
-              if (k === "rm")
-                return (
-                  <div key={i} className="relative flex items-center justify-center">
-                    <div className="vfx-fire-glow absolute inset-0" aria-hidden />
-                    <span className="vfx-fire-flame text-2xl" aria-hidden>🔥</span>
-                    <span className="vfx-fire-smoke absolute text-xl" aria-hidden>💨</span>
-                  </div>
-                );
-              if (k === "manifest")
-                return (
-                  <div key={i} className="vfx-manifest" style={{ background: "hsl(var(--gold) / 0.25)" }} />
-                );
-              if (k === "inspect")
-                return (
-                  <div key={i} className="vfx-inspect flex items-center justify-center text-xl">
-                    <span style={{ color: "hsl(var(--gold))" }}>🔍</span>
-                  </div>
-                );
-              if (k === "pwd")
-                return (
-                  <div key={i} className="vfx-pulse" style={{ background: "hsl(var(--accent) / 0.45)" }} />
-                );
+              if (k === "ls") return <div key={i} className="vfx-pulse" style={{ background: "hsl(var(--torch-glow) / 0.35)" }} />;
+              if (k === "find") return (
+                <div key={i} className="vfx-trail flex items-center justify-center text-[16px]">
+                  <span style={{ color: "hsl(195 90% 65%)", textShadow: "0 0 8px hsl(195 90% 65%)" }}>◉</span>
+                </div>
+              );
+              if (k === "rm") return (
+                <div key={i} className="vfx-smoke flex items-center justify-center text-2xl">
+                  <span style={{ color: "hsl(280 60% 70%)", textShadow: "0 0 12px hsl(280 60% 70%)" }}>✦</span>
+                </div>
+              );
+              if (k === "manifest") return <div key={i} className="vfx-manifest" style={{ background: "hsl(var(--gold) / 0.25)" }} />;
+              if (k === "inspect") return (
+                <div key={i} className="vfx-inspect flex items-center justify-center text-xl">
+                  <span style={{ color: "hsl(var(--gold))" }}>🔍</span>
+                </div>
+              );
+              if (k === "pwd") return <div key={i} className="vfx-pulse" style={{ background: "hsl(var(--accent) / 0.45)" }} />;
               return <div key={i} />;
             })}
           </div>
 
-          {/* Door labels */}
+          {/* ------- Door labels ------- */}
           {room.doors.map((d) => (
             <div
               key={`label-${d.x}-${d.y}`}
               className="pointer-events-none absolute label-float"
-              style={{
-                left: d.x * tileW + tileW / 2,
-                top: d.y * tileH - 16,
-                opacity: 1,
-                zIndex: 30,
-              }}
+              style={doorLabelStyle(d.x, d.y, room.width, room.height, tileW, tileH)}
             >
-              <span className="label-chip breathe text-[10px] font-bold whitespace-nowrap" style={{ transform: "translateX(-50%)", display: "inline-block" }}>
-                {d.target === ".." ? "../" : d.locked ? `[locked] ${d.target}/` : `${d.target}/`}
+              <span
+                className="label-chip breathe text-[10px] font-bold whitespace-nowrap"
+                style={{
+                  transform: doorLabelTransform(d.x, d.y, room.width, room.height),
+                  display: "inline-block",
+                }}
+              >
+                {d.target === ".." ? "../" : `${d.target}/`}
               </span>
             </div>
           ))}
 
-          {/* Files (items) */}
+          {/* ------- Files (items on floor) ------- */}
           {room.files.map((f) => {
             const b = brightnessFor(edist(state.player.x, state.player.y, f.x, f.y));
-            const isKey = f.type === "key";
             return (
               <div
                 key={f.name}
@@ -400,33 +824,18 @@ export function GameWorld({ state, onDismissPopup, headerRight }: GameWorldProps
                 title={f.name}
               >
                 <span className="ground-shadow" aria-hidden />
-                {isKey ? (
-                  <span
-                    style={{
-                      fontSize: tileW * 0.5,
-                      lineHeight: 1,
-                      filter: "drop-shadow(0 0 6px hsl(45 100% 60%))",
-                      position: "relative",
-                      zIndex: 1,
-                    }}
-                    aria-label={f.name}
-                  >
-                    🗝
-                  </span>
-                ) : (
-                  <img
-                    src={scrollItem}
-                    alt={f.name}
-                    className="object-contain drop-shadow-[0_2px_2px_hsl(0_0%_0%/0.6)] drop-shadow-[0_0_6px_hsl(var(--gold)/0.55)]"
-                    style={{
-                      width: "60%",
-                      height: "60%",
-                      imageRendering: "pixelated",
-                      position: "relative",
-                      zIndex: 1,
-                    }}
-                  />
-                )}
+                <img
+                  src={scrollItem}
+                  alt={f.name}
+                  className="object-contain drop-shadow-[0_2px_2px_hsl(0_0%_0%/0.6)] drop-shadow-[0_0_6px_hsl(var(--gold)/0.55)]"
+                  style={{
+                    width: "60%",
+                    height: "60%",
+                    imageRendering: "pixelated",
+                    position: "relative",
+                    zIndex: 1,
+                  }}
+                />
                 <span className="absolute -bottom-1 left-1/2 -translate-x-1/2 label-chip breathe text-[7px]">
                   {f.name}
                 </span>
@@ -434,15 +843,15 @@ export function GameWorld({ state, onDismissPopup, headerRight }: GameWorldProps
             );
           })}
 
-          {/* Soft warm wash — torches add gentle amber light. No flicker, no darkness mask. */}
+          {/* ------- Warm torch glow wash ------- */}
           {(() => {
             const torches = room.tiles.filter((t) => t.kind === "torch");
             if (torches.length === 0) return null;
             const warmGlow = torches.map((t) => {
               const cx = (t.x + 0.5) * tileW;
               const cy = (t.y + 0.5) * tileH;
-              const r = TILE * 3.2;
-              return `radial-gradient(circle at ${cx}px ${cy}px, rgba(255,170,80,0.18) 0px, rgba(255,170,80,0.08) ${r * 0.5}px, rgba(255,170,80,0) ${r}px)`;
+              const r = TILE * 3.4;
+              return `radial-gradient(circle at ${cx}px ${cy}px, rgba(255,170,80,0.22) 0px, rgba(255,170,80,0.1) ${r * 0.5}px, rgba(255,170,80,0) ${r}px)`;
             });
             return (
               <div
@@ -453,32 +862,25 @@ export function GameWorld({ state, onDismissPopup, headerRight }: GameWorldProps
             );
           })()}
 
-          {/* Subtle edge vignette only — keeps the dungeon bright in the middle. */}
+          {/* ------- Vignette ------- */}
           <div
             className="pointer-events-none absolute inset-0"
             style={{
-              background:
-                "radial-gradient(ellipse at center, transparent 70%, rgba(0,0,0,0.35) 100%)",
+              background: "radial-gradient(ellipse at center, transparent 72%, rgba(0,0,0,0.38) 100%)",
               zIndex: 13,
             }}
             aria-hidden
           />
 
-          {/* Player sprite (framer-motion tile movement) */}
+          {/* ------- Player ------- */}
           <motion.div
             className="pointer-events-none absolute"
             initial={false}
             animate={{ left: state.player.x * tileW, top: state.player.y * tileH }}
             transition={{ type: "tween", ease: "linear", duration: 0.1 }}
-            style={{
-              width: tileW,
-              height: tileH,
-              zIndex: 20,
-            }}
+            style={{ width: tileW, height: tileH, zIndex: 20 }}
           >
-            {/* Soft ground shadow pinned to floor */}
             <span className="ground-shadow" aria-hidden />
-            {/* Knight anchored so feet sit at the bottom of the tile */}
             <div
               className="absolute left-1/2 -translate-x-1/2 flex items-end justify-center"
               style={{ bottom: 0, width: "100%", height: "100%" }}
@@ -486,12 +888,10 @@ export function GameWorld({ state, onDismissPopup, headerRight }: GameWorldProps
               <PlayerSprite anim={state.playerAnim} facing={state.playerFacing} size={Math.min(TILE, 48)} />
             </div>
           </motion.div>
-          {/* Mini-map (pwd flash) */}
+
+          {/* ------- Mini-map ------- */}
           {showMinimap && (
-            <div
-              className="pointer-events-none absolute right-2 top-2 animate-fade-in"
-              style={{ zIndex: 30 }}
-            >
+            <div className="pointer-events-none absolute right-2 top-2 animate-fade-in" style={{ zIndex: 30 }}>
               <div
                 className="grid gap-0.5 p-1 bg-stone-slab-edge/90 border border-stone-light/40"
                 style={{
@@ -525,13 +925,8 @@ export function GameWorld({ state, onDismissPopup, headerRight }: GameWorldProps
             </div>
           )}
 
-          {/* Parchment popup (cat) */}
           {state.popup && (
-            <ScrollPopup
-              title={state.popup.title}
-              body={state.popup.body}
-              onDismiss={onDismissPopup}
-            />
+            <ScrollPopup title={state.popup.title} body={state.popup.body} onDismiss={onDismissPopup} />
           )}
         </div>
       </div>
