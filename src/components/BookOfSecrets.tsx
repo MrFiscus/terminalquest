@@ -586,23 +586,30 @@ export function BookOfSecrets({ onClose }: BookOfSecretsProps) {
           ════════════════════════════════════════════════════ */}
           <div style={{
             flex: 1, display: "flex", flexDirection: "column",
-            background: C.leatherMid,
-            // The triple ring creates the ornate frame illusion
-            border: `2px solid ${C.gold}`,
-            boxShadow: `
-              0 0 0  2px ${C.gold},
-              0 0 0 16px ${C.leatherDeep},
-              0 0 0 17px ${C.gold},
-              0 0 70px rgba(0,0,0,0.97),
-              inset 0 0 40px rgba(0,0,0,0.5)
+            background: `
+              radial-gradient(ellipse at 25% 30%, ${C.bindHigh} 0%, transparent 18%),
+              radial-gradient(ellipse at 70% 60%, ${C.bindMid} 0%, transparent 22%),
+              radial-gradient(ellipse at 80% 20%, rgba(42,58,24,0.8) 0%, transparent 14%),
+              radial-gradient(ellipse at 18% 78%, rgba(42,58,24,0.7) 0%, transparent 16%),
+              repeating-linear-gradient(115deg, rgba(0,0,0,0.10) 0 1px, transparent 1px 7px),
+              repeating-linear-gradient(35deg, rgba(255,255,255,0.04) 0 1px, transparent 1px 9px),
+              linear-gradient(160deg, ${C.bind} 0%, ${C.bindMid} 55%, ${C.bindDeep} 100%)
             `,
-            borderRadius: 4,
+            border: `2px solid ${C.silverDark}`,
+            boxShadow: `
+              0 0 0  2px ${C.silverMid},
+              0 0 0 16px ${C.bindDeep},
+              0 0 0 17px ${C.silverDark},
+              0 0 70px rgba(0,0,0,0.97),
+              inset 0 0 60px rgba(0,0,0,0.55),
+              inset 0 0 18px rgba(138,168,80,0.15)
+            `,
+            borderRadius: 6,
             overflow: "hidden",
             position: "relative",
           }}>
 
-            {/* Ornate crosshatch strip rendered as an absolute overlay
-                It fills the full frame, but the content stack sits on top (z:2) */}
+            {/* Ornate crosshatch strip — mossy lichen weave */}
             <div style={{
               position: "absolute", inset: 4, zIndex: 0,
               ...ORNATE_STRIP,
@@ -611,15 +618,16 @@ export function BookOfSecrets({ onClose }: BookOfSecretsProps) {
             {/* Inner dark mask — reveals only the border band of the crosshatch */}
             <div style={{
               position: "absolute", inset: 15, zIndex: 1,
-              background: C.leatherDeep,
+              background: `linear-gradient(160deg, ${C.bindDeep} 0%, #1a2810 100%)`,
               borderRadius: 1,
             }} />
-            {/* Gold inner accent line on top of the mask */}
+            {/* Silver inner accent line on top of the mask */}
             <div style={{
               position: "absolute", inset: 14, zIndex: 1,
-              border: `1px solid ${C.goldDark}`,
+              border: `1px solid ${C.silverDark}`,
               borderRadius: 2,
               pointerEvents: "none",
+              boxShadow: `inset 0 0 1px ${C.silverHigh}`,
             }} />
 
             {/* ── TITLE BAR ── z:2 so it sits above the crosshatch */}
