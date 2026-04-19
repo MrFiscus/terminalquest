@@ -30,3 +30,8 @@ supabase/.temp/
 *.njsproj
 *.sln
 *.sw?
+
+# Local test run artifacts
+test_full_results.txt
+test_output.txt
+test_results.txt
