@@ -319,12 +319,11 @@ export function BookOfSecrets({ onClose }: BookOfSecretsProps) {
     };
   };
 
-  // The frame image's parchment area occupies roughly the inner ~78% width
-  // and ~82% height (centered) of the full image. We position the live
-  // content over that area.
-  const PAGE_INSET_X = "11%";  // left/right inset to land on parchment
-  const PAGE_INSET_TOP = "9%";
-  const PAGE_INSET_BOTTOM = "13%";
+  // The frame image's parchment area — tightened so text stays well inside
+  // the decorative gold border drawn on each page of the artwork.
+  const PAGE_INSET_X      = "15%";
+  const PAGE_INSET_TOP    = "11%";
+  const PAGE_INSET_BOTTOM = "16%";
 
   return (
     <>
@@ -337,41 +336,25 @@ export function BookOfSecrets({ onClose }: BookOfSecretsProps) {
           background: "rgba(0,0,0,0.88)",
           backdropFilter: "blur(4px)",
           display: "flex", alignItems: "center", justifyContent: "center",
-          padding: 12,
+          padding: 16,
         }}
       >
         <div
           onClick={(e) => e.stopPropagation()}
           style={{
-            width: "min(1280px, 98vw)",
-            aspectRatio: "1920 / 1080",
-            maxHeight: "96vh",
+            width: "min(1240px, 98vw)",
+            maxHeight: "98vh",
+            display: "flex", flexDirection: "column",
+            alignItems: "center",
+            gap: 14,
             position: "relative",
-            backgroundImage: `url(${bookFrame})`,
-            backgroundSize: "100% 100%",
-            backgroundRepeat: "no-repeat",
-            filter: "drop-shadow(0 30px 60px rgba(0,0,0,0.85))",
           }}
         >
-          {/* ── Title floating above the book ── */}
-          <div style={{
-            position: "absolute", top: "-2px", left: 0, right: 0,
-            textAlign: "center",
-            fontFamily: "'Pirata One', 'Cinzel', Georgia, serif",
-            fontSize: 28, color: "#f0d68a",
-            letterSpacing: "0.25em", textTransform: "uppercase",
-            textShadow: "0 2px 8px rgba(0,0,0,0.95), 0 0 30px rgba(200,145,58,0.5)",
-            pointerEvents: "none",
-            zIndex: 5,
-          }}>
-            ✦ The Book of Secrets ✦
-          </div>
-
-          {/* ── Close button (top-right, outside parchment) ── */}
+          {/* ── Close button (modal top-right) ── */}
           <button
             onClick={onClose}
             style={{
-              position: "absolute", top: 8, right: 8, zIndex: 40,
+              position: "absolute", top: 0, right: 0, zIndex: 40,
               fontFamily: "'Cinzel', Georgia, serif", fontSize: 10,
               letterSpacing: "0.1em", textTransform: "uppercase",
               padding: "4px 12px", borderRadius: 3, cursor: "pointer",
@@ -383,12 +366,21 @@ export function BookOfSecrets({ onClose }: BookOfSecretsProps) {
             ✕ Close
           </button>
 
-          {/* ── Filter bar (sits on top of the book's top binding strip) ── */}
+          {/* ── Title (above, detached from book) ── */}
           <div style={{
-            position: "absolute",
-            top: "3.5%", left: PAGE_INSET_X, right: PAGE_INSET_X,
-            zIndex: 10,
-            display: "flex", gap: 6, alignItems: "center", justifyContent: "center",
+            textAlign: "center",
+            fontFamily: "'Pirata One', 'Cinzel', Georgia, serif",
+            fontSize: 36, color: "#f0d68a",
+            letterSpacing: "0.25em", textTransform: "uppercase",
+            textShadow: "0 2px 8px rgba(0,0,0,0.95), 0 0 30px rgba(200,145,58,0.5)",
+            lineHeight: 1,
+          }}>
+            ✦ The Book of Secrets ✦
+          </div>
+
+          {/* ── Filter bar (under title, detached from book) ── */}
+          <div style={{
+            display: "flex", gap: 8, alignItems: "center", justifyContent: "center",
             flexWrap: "wrap",
           }}>
             {DIFF_OPTIONS.map((d) => {
@@ -408,14 +400,13 @@ export function BookOfSecrets({ onClose }: BookOfSecretsProps) {
                   key={d}
                   onClick={() => { setDiffFilter(d); setCurrentSpread(0); setFading(false); }}
                   style={{
-                    fontFamily: "'Cinzel', Georgia, serif", fontSize: 9,
+                    fontFamily: "'Cinzel', Georgia, serif", fontSize: 10,
                     letterSpacing: "0.1em", textTransform: "uppercase",
-                    padding: "3px 12px", borderRadius: 2, cursor: "pointer",
+                    padding: "4px 14px", borderRadius: 3, cursor: "pointer",
                     border: `1px solid ${cm.b}`,
-                    background: active ? cm.a : "rgba(20,8,4,0.6)",
+                    background: active ? cm.a : "rgba(20,8,4,0.75)",
                     color: active ? "#f0e0b0" : cm.a,
                     transition: "all 0.15s",
-                    backdropFilter: "blur(2px)",
                   }}
                 >
                   {labels[d]}
@@ -423,71 +414,77 @@ export function BookOfSecrets({ onClose }: BookOfSecretsProps) {
               );
             })}
             <span style={{
-              fontFamily: "'Cinzel', Georgia, serif", fontSize: 9,
-              color: C.goldBright, letterSpacing: "0.05em",
-              padding: "3px 10px", borderRadius: 2,
-              background: "rgba(20,8,4,0.6)",
+              fontFamily: "'Cinzel', Georgia, serif", fontSize: 10,
+              color: C.goldBright, letterSpacing: "0.06em",
+              padding: "4px 12px", borderRadius: 3,
+              background: "rgba(20,8,4,0.75)",
               border: `1px solid ${C.goldDark}`,
-              backdropFilter: "blur(2px)",
             }}>
               {spells.length} Spells
             </span>
           </div>
 
-          {/* ── Open pages overlay (positioned over the parchment area of the image) ── */}
+          {/* ── The Book ── */}
           <div style={{
-            position: "absolute",
-            top: PAGE_INSET_TOP,
-            bottom: PAGE_INSET_BOTTOM,
-            left: PAGE_INSET_X,
-            right: PAGE_INSET_X,
-            display: "flex",
+            width: "100%",
+            aspectRatio: "1920 / 1080",
+            maxHeight: "calc(98vh - 180px)",
+            position: "relative",
+            backgroundImage: `url(${bookFrame})`,
+            backgroundSize: "100% 100%",
+            backgroundRepeat: "no-repeat",
+            filter: "drop-shadow(0 30px 60px rgba(0,0,0,0.85))",
           }}>
-            {/* Pages fade together as a single content layer */}
-            <div
-              key={safeSpread}
-              style={{
-                flex: 1, display: "flex", minHeight: 0,
-                animation: fading
-                  ? `pageFadeOut ${FADE_MS}ms ease-in forwards`
-                  : `pageFadeIn ${FADE_MS}ms ease-out forwards`,
-              }}
-            >
-              {/* Left page */}
-              <div style={{ flex: 1, overflow: "hidden", position: "relative" }}>
-                <Page spells={leftSpells} startIndex={pageStart} side="left" />
-              </div>
+            {/* Open pages overlay (positioned over the parchment area) */}
+            <div style={{
+              position: "absolute",
+              top: PAGE_INSET_TOP,
+              bottom: PAGE_INSET_BOTTOM,
+              left: PAGE_INSET_X,
+              right: PAGE_INSET_X,
+              display: "flex",
+            }}>
+              <div
+                key={safeSpread}
+                style={{
+                  flex: 1, display: "flex", minHeight: 0,
+                  animation: fading
+                    ? `pageFadeOut ${FADE_MS}ms ease-in forwards`
+                    : `pageFadeIn ${FADE_MS}ms ease-out forwards`,
+                }}
+              >
+                {/* Left page */}
+                <div style={{ flex: 1, overflow: "hidden", position: "relative" }}>
+                  <Page spells={leftSpells} startIndex={pageStart} side="left" />
+                </div>
 
-              {/* Center gutter */}
-              <div style={{ width: 18, flexShrink: 0, position: "relative" }}>
-                <div style={{
-                  position: "absolute", inset: 0,
-                  background: "linear-gradient(to right, rgba(0,0,0,0.45) 0%, rgba(0,0,0,0.15) 50%, rgba(0,0,0,0.45) 100%)",
-                  pointerEvents: "none",
-                }} />
-              </div>
+                {/* Center gutter */}
+                <div style={{ width: 24, flexShrink: 0, position: "relative" }}>
+                  <div style={{
+                    position: "absolute", inset: 0,
+                    background: "linear-gradient(to right, rgba(0,0,0,0.35) 0%, rgba(0,0,0,0.10) 50%, rgba(0,0,0,0.35) 100%)",
+                    pointerEvents: "none",
+                  }} />
+                </div>
 
-              {/* Right page */}
-              <div style={{ flex: 1, overflow: "hidden", position: "relative" }}>
-                <Page spells={rightSpells} startIndex={pageStart + 2} side="right" />
+                {/* Right page */}
+                <div style={{ flex: 1, overflow: "hidden", position: "relative" }}>
+                  <Page spells={rightSpells} startIndex={pageStart + 2} side="right" />
+                </div>
               </div>
             </div>
           </div>
 
-          {/* ── Footer navigation (over the bottom binding) ── */}
+          {/* ── Footer navigation (under book, detached) ── */}
           <div style={{
-            position: "absolute",
-            bottom: "3%", left: 0, right: 0,
-            zIndex: 10,
             display: "flex", alignItems: "center", justifyContent: "center", gap: 18,
           }}>
             <button disabled={!canPrev || fading} onClick={() => navigate("prev")} style={navBtn("prev")}>
               ◄ Prev Page
             </button>
             <div style={{ display: "flex", alignItems: "center", gap: 12,
-              padding: "4px 14px", borderRadius: 3,
-              background: "rgba(20,8,4,0.7)", border: `1px solid ${C.goldDark}`,
-              backdropFilter: "blur(2px)",
+              padding: "5px 16px", borderRadius: 3,
+              background: "rgba(20,8,4,0.85)", border: `1px solid ${C.goldDark}`,
             }}>
               <span style={{
                 fontFamily: "'Cinzel', Georgia, serif", fontWeight: "600", fontSize: 14,
