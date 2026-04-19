@@ -113,6 +113,47 @@ export const DifficultyMenu = ({ onConfirm, busy }: DifficultyMenuProps) => {
         }}
       />
 
+      {/* Breathing tier-colored washes (matches landing page hero) */}
+      <div
+        className="lp-breathe absolute inset-0 pointer-events-none"
+        aria-hidden
+        style={{
+          background: `radial-gradient(ellipse 80% 60% at 50% 45%, hsl(33 60% 22% / 0.28) 0%, transparent 60%)`,
+          mixBlendMode: "screen",
+        }}
+      />
+      <div
+        className="lp-breathe absolute inset-0 pointer-events-none"
+        aria-hidden
+        style={{
+          background: `radial-gradient(circle at 50% 10%, hsl(${glowHue} / 0.18) 0%, transparent 44%)`,
+          animationDelay: "1.2s",
+        }}
+      />
+
+      {/* Ember particles drifting upward */}
+      {Array.from({ length: 10 }).map((_, i) => {
+        const left = 6 + (i * 11) % 90;
+        const dur = 6 + (i % 4) * 1.2;
+        const delay = (i * 0.9) % 7;
+        const drift = (i % 2 === 0 ? 1 : -1) * (6 + (i % 3) * 4);
+        const bottom = 8 + (i * 7) % 32;
+        return (
+          <span
+            key={i}
+            className="lp-ember"
+            aria-hidden
+            style={{
+              left: `${left}%`,
+              bottom: `${bottom}%`,
+              animationDuration: `${dur}s`,
+              animationDelay: `${delay}s`,
+              ["--ember-drift" as never]: `${drift}px`,
+            }}
+          />
+        );
+      })}
+
       {/* Content */}
       <div className="relative z-10 h-full flex flex-col items-center justify-center px-8 pt-16">
         <h1 className="engraved engraved-hover text-center" style={{ fontSize: 92, lineHeight: 1.05 }}>
