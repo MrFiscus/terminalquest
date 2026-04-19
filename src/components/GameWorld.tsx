@@ -327,10 +327,10 @@ export function GameWorld({ state, onDismissPopup, headerRight }: GameWorldProps
                 );
               if (k === "rm")
                 return (
-                  <div key={i} className="vfx-smoke flex items-center justify-center text-2xl">
-                    <span style={{ color: "hsl(280 60% 70%)", textShadow: "0 0 12px hsl(280 60% 70%)" }}>
-                      ✦
-                    </span>
+                  <div key={i} className="relative flex items-center justify-center">
+                    <div className="vfx-fire-glow absolute inset-0" aria-hidden />
+                    <span className="vfx-fire-flame text-2xl" aria-hidden>🔥</span>
+                    <span className="vfx-fire-smoke absolute text-xl" aria-hidden>💨</span>
                   </div>
                 );
               if (k === "manifest")
