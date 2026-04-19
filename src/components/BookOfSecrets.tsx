@@ -1,10 +1,10 @@
-import { useState, useMemo, useRef } from "react";
+import { useState, useMemo } from "react";
 import { commandLibrary, type CommandEntry, type DifficultyLevel } from "@/game/commandLibrary";
 import bookFrame from "@/assets/book-frame.png";
 
 // ── Constants ──────────────────────────────────────────────────────────────
 const PER_SPREAD = 4;
-const FLIP_MS    = 650;
+const FADE_MS    = 280;
 
 // ── Palette (oxblood/brown leather relic tome — matches the frame image) ──
 const C = {
@@ -45,18 +45,13 @@ const DIFF_OPTIONS: Array<DifficultyLevel | "all"> = ["all", "beginner", "interm
 const KEYFRAMES = `
 @import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=Pirata+One&display=swap');
 
-@keyframes bookFlipNext {
-  0%   { transform: rotateY(0deg);    }
-  100% { transform: rotateY(-180deg); }
+@keyframes pageFadeOut {
+  0%   { opacity: 1; transform: translateY(0) scale(1); }
+  100% { opacity: 0; transform: translateY(-6px) scale(0.99); }
 }
-@keyframes bookFlipPrev {
-  0%   { transform: rotateY(0deg);   }
-  100% { transform: rotateY(180deg); }
-}
-@keyframes pageShadowFadeIn {
-  0%   { opacity: 0; }
-  40%  { opacity: 1; }
-  100% { opacity: 0; }
+@keyframes pageFadeIn {
+  0%   { opacity: 0; transform: translateY(6px) scale(0.99); }
+  100% { opacity: 1; transform: translateY(0) scale(1); }
 }
 `;
 
@@ -277,96 +272,13 @@ function Page({
   );
 }
 
-// ── FlipPage ───────────────────────────────────────────────────────────────
-function FlipPage({
-  direction, frontSpells, frontStartIndex,
-}: {
-  direction: "next" | "prev";
-  frontSpells: CommandEntry[];
-  frontStartIndex: number;
-}) {
-  const isNext = direction === "next";
-
-  const wrapStyle: React.CSSProperties = {
-    position: "absolute", top: 0, bottom: 0,
-    [isNext ? "right" : "left"]: 0,
-    width: "50%",
-    transformOrigin: isNext ? "left center" : "right center",
-    transformStyle: "preserve-3d",
-    animation: `${isNext ? "bookFlipNext" : "bookFlipPrev"} ${FLIP_MS}ms cubic-bezier(0.4,0,0.2,1) forwards`,
-    zIndex: 20, pointerEvents: "none",
-    filter: "drop-shadow(0 10px 30px rgba(0,0,0,0.65))",
-  };
-
-  const faceBase: React.CSSProperties = {
-    position: "absolute", inset: 0,
-    backfaceVisibility: "hidden", overflow: "hidden",
-  };
-
-  const frontFold = isNext
-    ? "linear-gradient(to left,  transparent 50%, rgba(0,0,0,0.10) 80%, rgba(0,0,0,0.30) 100%)"
-    : "linear-gradient(to right, transparent 50%, rgba(0,0,0,0.10) 80%, rgba(0,0,0,0.30) 100%)";
-
-  const backFold = isNext
-    ? "linear-gradient(to right, rgba(0,0,0,0.30) 0%, rgba(0,0,0,0.10) 30%, transparent 60%)"
-    : "linear-gradient(to left,  rgba(0,0,0,0.30) 0%, rgba(0,0,0,0.10) 30%, transparent 60%)";
-
-  return (
-    <div style={wrapStyle}>
-      <div style={{
-        ...faceBase,
-        background: `${frontFold}, #efe0bc`,
-        display: "flex", flexDirection: "column",
-      }}>
-        {frontSpells[0] && <SpellEntry entry={frontSpells[0]} index={frontStartIndex} />}
-        {frontSpells[1] && (
-          <>
-            <div style={{
-              height: 2, flexShrink: 0, margin: "0 14px",
-              background: `linear-gradient(to right, transparent, ${C.sepMid} 20%, ${C.gold} 50%, ${C.sepMid} 80%, transparent)`,
-              opacity: 0.55,
-            }} />
-            <SpellEntry entry={frontSpells[1]} index={frontStartIndex + 1} />
-          </>
-        )}
-      </div>
-
-      <div style={{
-        ...faceBase,
-        transform: "rotateY(180deg)",
-        background: `${backFold}, linear-gradient(175deg, #d8c090 0%, #c8a878 100%)`,
-      }} />
-    </div>
-  );
-}
-
-// ── LandingShadow ──────────────────────────────────────────────────────────
-function LandingShadow({ direction }: { direction: "next" | "prev" }) {
-  const isNext = direction === "next";
-  return (
-    <div style={{
-      position: "absolute", top: 0, bottom: 0,
-      [isNext ? "left" : "right"]: 0,
-      width: "50%",
-      background: isNext
-        ? "linear-gradient(to right, rgba(0,0,0,0.28) 0%, rgba(0,0,0,0.10) 45%, transparent 80%)"
-        : "linear-gradient(to left,  rgba(0,0,0,0.28) 0%, rgba(0,0,0,0.10) 45%, transparent 80%)",
-      animation: `pageShadowFadeIn ${FLIP_MS}ms ease-in-out forwards`,
-      pointerEvents: "none", zIndex: 15,
-    }} />
-  );
-}
-
 // ── Main Component ─────────────────────────────────────────────────────────
 interface BookOfSecretsProps { onClose: () => void; }
 
 export function BookOfSecrets({ onClose }: BookOfSecretsProps) {
   const [currentSpread, setCurrentSpread] = useState(0);
-  const [flipping, setFlipping]           = useState<"next" | "prev" | null>(null);
+  const [fading, setFading]               = useState(false);
   const [diffFilter, setDiffFilter]       = useState<DifficultyLevel | "all">("all");
-
-  const flipFrontRef    = useRef<CommandEntry[]>([]);
-  const flipFrontIdxRef = useRef(0);
 
   const spells = useMemo(
     () => diffFilter === "all" ? commandLibrary : commandLibrary.filter((c) => c.difficulty === diffFilter),
@@ -382,27 +294,19 @@ export function BookOfSecrets({ onClose }: BookOfSecretsProps) {
   const canNext      = safeSpread < totalSpreads - 1;
 
   function navigate(dir: "next" | "prev") {
-    if (flipping) return;
+    if (fading) return;
     const next = dir === "next"
       ? Math.min(totalSpreads - 1, safeSpread + 1)
       : Math.max(0, safeSpread - 1);
     if (next === safeSpread) return;
 
-    if (dir === "next") {
-      flipFrontRef.current    = rightSpells;
-      flipFrontIdxRef.current = pageStart + 2;
-    } else {
-      flipFrontRef.current    = leftSpells;
-      flipFrontIdxRef.current = pageStart;
-    }
-
-    setFlipping(dir);
-    setTimeout(() => setCurrentSpread(next), FLIP_MS * 0.48);
-    setTimeout(() => setFlipping(null), FLIP_MS + 40);
+    setFading(true);
+    setTimeout(() => setCurrentSpread(next), FADE_MS);
+    setTimeout(() => setFading(false), FADE_MS + 20);
   }
 
   const navBtn = (dir: "prev" | "next") => {
-    const enabled = dir === "prev" ? (canPrev && !flipping) : (canNext && !flipping);
+    const enabled = dir === "prev" ? (canPrev && !fading) : (canNext && !fading);
     return {
       fontFamily: "'Cinzel', Georgia, serif", fontSize: 11,
       letterSpacing: "0.08em", textTransform: "uppercase" as const,
@@ -502,7 +406,7 @@ export function BookOfSecrets({ onClose }: BookOfSecretsProps) {
               return (
                 <button
                   key={d}
-                  onClick={() => { setDiffFilter(d); setCurrentSpread(0); setFlipping(null); }}
+                  onClick={() => { setDiffFilter(d); setCurrentSpread(0); setFading(false); }}
                   style={{
                     fontFamily: "'Cinzel', Georgia, serif", fontSize: 9,
                     letterSpacing: "0.1em", textTransform: "uppercase",
@@ -538,39 +442,36 @@ export function BookOfSecrets({ onClose }: BookOfSecretsProps) {
             left: PAGE_INSET_X,
             right: PAGE_INSET_X,
             display: "flex",
-            perspective: "1400px",
-            perspectiveOrigin: "50% 50%",
           }}>
-            {/* Left page */}
-            <div style={{ flex: 1, overflow: "hidden", zIndex: 1, position: "relative" }}>
-              <Page spells={leftSpells} startIndex={pageStart} side="left" />
-            </div>
+            {/* Pages fade together as a single content layer */}
+            <div
+              key={safeSpread}
+              style={{
+                flex: 1, display: "flex", minHeight: 0,
+                animation: fading
+                  ? `pageFadeOut ${FADE_MS}ms ease-in forwards`
+                  : `pageFadeIn ${FADE_MS}ms ease-out forwards`,
+              }}
+            >
+              {/* Left page */}
+              <div style={{ flex: 1, overflow: "hidden", position: "relative" }}>
+                <Page spells={leftSpells} startIndex={pageStart} side="left" />
+              </div>
 
-            {/* Center gutter (transparent — shows the book's spine shadow through) */}
-            <div style={{ width: 18, flexShrink: 0, zIndex: 5, position: "relative" }}>
-              <div style={{
-                position: "absolute", inset: 0,
-                background: "linear-gradient(to right, rgba(0,0,0,0.45) 0%, rgba(0,0,0,0.15) 50%, rgba(0,0,0,0.45) 100%)",
-                pointerEvents: "none",
-              }} />
-            </div>
+              {/* Center gutter */}
+              <div style={{ width: 18, flexShrink: 0, position: "relative" }}>
+                <div style={{
+                  position: "absolute", inset: 0,
+                  background: "linear-gradient(to right, rgba(0,0,0,0.45) 0%, rgba(0,0,0,0.15) 50%, rgba(0,0,0,0.45) 100%)",
+                  pointerEvents: "none",
+                }} />
+              </div>
 
-            {/* Right page */}
-            <div style={{ flex: 1, overflow: "hidden", zIndex: 1, position: "relative" }}>
-              <Page spells={rightSpells} startIndex={pageStart + 2} side="right" />
+              {/* Right page */}
+              <div style={{ flex: 1, overflow: "hidden", position: "relative" }}>
+                <Page spells={rightSpells} startIndex={pageStart + 2} side="right" />
+              </div>
             </div>
-
-            {/* Animated flip overlay */}
-            {flipping && (
-              <>
-                <LandingShadow direction={flipping} />
-                <FlipPage
-                  direction={flipping}
-                  frontSpells={flipFrontRef.current}
-                  frontStartIndex={flipFrontIdxRef.current}
-                />
-              </>
-            )}
           </div>
 
           {/* ── Footer navigation (over the bottom binding) ── */}
@@ -580,7 +481,7 @@ export function BookOfSecrets({ onClose }: BookOfSecretsProps) {
             zIndex: 10,
             display: "flex", alignItems: "center", justifyContent: "center", gap: 18,
           }}>
-            <button disabled={!canPrev || !!flipping} onClick={() => navigate("prev")} style={navBtn("prev")}>
+            <button disabled={!canPrev || fading} onClick={() => navigate("prev")} style={navBtn("prev")}>
               ◄ Prev Page
             </button>
             <div style={{ display: "flex", alignItems: "center", gap: 12,
@@ -595,7 +496,7 @@ export function BookOfSecrets({ onClose }: BookOfSecretsProps) {
                 {safeSpread + 1} / {totalSpreads}
               </span>
             </div>
-            <button disabled={!canNext || !!flipping} onClick={() => navigate("next")} style={navBtn("next")}>
+            <button disabled={!canNext || fading} onClick={() => navigate("next")} style={navBtn("next")}>
               Next Page ►
             </button>
           </div>
