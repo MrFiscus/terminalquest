@@ -84,23 +84,6 @@ const KEYFRAMES = `
 }
 `;
 
-// ── Parchment background (reused in Page + FlipPage) ──────────────────────
-const PARCH_BG = `
-  radial-gradient(ellipse at 18% 14%, rgba(255,245,160,0.55) 0%, transparent 52%),
-  radial-gradient(ellipse at 82% 88%, rgba(140,88,10,0.38)  0%, transparent 52%),
-  linear-gradient(175deg, #eecb5c 0%, #d4a03a 38%, #bf8e28 72%, #aa7a18 100%)
-`;
-
-// ── Ornate crosshatch strip (the border pattern between the gold lines) ────
-const ORNATE_STRIP: React.CSSProperties = {
-  backgroundImage: `
-    repeating-linear-gradient( 45deg, rgba(200,145,58,0.60) 0, rgba(200,145,58,0.60) 1.5px, transparent 0, transparent 50%),
-    repeating-linear-gradient(-45deg, rgba(200,145,58,0.60) 0, rgba(200,145,58,0.60) 1.5px, transparent 0, transparent 50%)
-  `,
-  backgroundSize:  "6px 6px",
-  backgroundColor: "#16040200",
-};
-
 // ── Parchment background — cream with scattered stone pebbles ─────────────
 const PARCH_BG = `
   radial-gradient(ellipse at 12% 18%, rgba(184,150,104,0.35) 0%, transparent 6%),
