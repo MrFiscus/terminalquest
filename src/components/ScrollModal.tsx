@@ -1,7 +1,7 @@
 import { motion, AnimatePresence } from "framer-motion";
 import { X } from "lucide-react";
 import { useEffect } from "react";
-import scrollImage from "@/assets/scroll.png";
+import scrollImage from "@/assets/Scroll.png";
 
 interface ScrollModalProps {
   name: string;

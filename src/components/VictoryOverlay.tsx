@@ -1,6 +1,6 @@
 import { Button } from "@/components/ui/button";
 import type { VictoryReport } from "@/game/types";
-import scrollImage from "@/assets/scroll.png";
+import scrollImage from "@/assets/Scroll.png";
 
 interface VictoryOverlayProps {
   onReset: () => void;

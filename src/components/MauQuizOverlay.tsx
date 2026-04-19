@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import type { MauQuiz } from "@/game/types";
-import scrollImage from "@/assets/scroll.png";
+import scrollImage from "@/assets/Scroll.png";
 
 interface MauQuizOverlayProps {
   quiz: MauQuiz;

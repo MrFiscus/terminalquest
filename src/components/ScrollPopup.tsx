@@ -1,5 +1,5 @@
 import { useEffect } from "react";
-import scrollImage from "@/assets/scroll.png";
+import scrollImage from "@/assets/Scroll.png";
 
 interface ScrollPopupProps {
   title: string;
