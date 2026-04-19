@@ -206,29 +206,6 @@ export const fileCommands: CommandDefinition[] = [
     },
   },
   {
-    name: "grep",
-    description: "Search for plain text inside files.",
-    usage: "grep <text> [file]",
-    run: (args, { state, room }) => {
-      const needle = args[0];
-      const fileName = args[1];
-      if (!needle) return { lines: [err("grep: missing search text")] };
-      const files = fileName ? [currentFile(state, room, fileName)].filter(Boolean) : room.files;
-      if (fileName && !files.length) return { lines: [err(`grep: ${fileName}: no such file`)] };
-      const matches: string[] = [];
-      for (const file of files) {
-        const body = file?.contents ?? "";
-        const lines = body.split("\n");
-        lines.forEach((line, index) => {
-          if (line.toLowerCase().includes(needle.toLowerCase())) {
-            matches.push(`${file.name}:${index + 1}: ${line}`);
-          }
-        });
-      }
-      return { lines: matches.length ? matches.map(out) : [out("(no matches)")] };
-    },
-  },
-  {
     name: "rm",
     description: "Remove a file from the current directory.",
     usage: "rm <file>",

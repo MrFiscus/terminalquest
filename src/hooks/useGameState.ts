@@ -607,6 +607,21 @@ export function useGameState(options: UseGameStateOptions = {}) {
       const currentRoom = getRoom(s.rooms, s.cwd);
       const isDemoMode = isDemoState(s);
       const demoScript = isDemoMode ? DEMO_CONTEXT : undefined;
+      const sharedAiContext = {
+        goal: s.goal,
+        requiredCommands: s.requiredCommands,
+        winCondition: s.winCondition,
+        currentRoom: currentRoom?.name ?? s.cwd.split("/").filter(Boolean).pop() ?? "home",
+        currentPath: s.cwd,
+        inventory: s.inventory.map((file) => file.name),
+        roomFiles: currentRoom?.files.map((file) => file.name) ?? [],
+        roomDoors: currentRoom?.doors.map((door) =>
+          door.locked ? `${door.target}(locked)` : door.target,
+        ) ?? [],
+        commandsUsed: Object.keys(s.commandStats ?? {}),
+        mistakeCount: s.recentMistakes?.length ?? 0,
+        demoScript,
+      };
       const brokenDoorFailure =
         failed &&
         commandName === "cd" &&
@@ -649,11 +664,7 @@ export function useGameState(options: UseGameStateOptions = {}) {
       if (result.unknown) {
         if (commandEffect.screen) triggerScreenEffect(commandEffect.screen, 450);
         const message = await askDungeonMaster(result.unknown, {
-          goal: s.goal,
-          requiredCommands: s.requiredCommands,
-          winCondition: s.winCondition,
-          currentRoom: currentRoom?.name ?? s.cwd.split("/").filter(Boolean).pop() ?? "home",
-          demoScript,
+          ...sharedAiContext,
         });
         appendLines([{ kind: "dm", text: `Dungeon Master: ${message}` }]);
         if (reaction.line) appendLines([reaction.line]);
@@ -699,11 +710,7 @@ export function useGameState(options: UseGameStateOptions = {}) {
       }
 
       const aiContext = {
-        goal: s.goal,
-        requiredCommands: s.requiredCommands,
-        winCondition: s.winCondition,
-        currentRoom: currentRoom?.name ?? s.cwd.split("/").filter(Boolean).pop() ?? "home",
-        demoScript,
+        ...sharedAiContext,
         command: commandName,
         recentCommands: runTrackerRef.current.commands.slice(-8),
         mistakes: runTrackerRef.current.mistakes.slice(-8),

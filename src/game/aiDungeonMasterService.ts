@@ -16,6 +16,12 @@ export interface DungeonMasterContext {
   requiredCommands?: string[];
   winCondition?: string;
   currentRoom?: string;
+  currentPath?: string;
+  inventory?: string[];
+  roomFiles?: string[];
+  roomDoors?: string[];
+  commandsUsed?: string[];
+  mistakeCount?: number;
   brokenDoorName?: string;
   repairCommand?: string;
   roomHintFiles?: string[];
@@ -49,9 +55,14 @@ export interface DungeonMasterContext {
 }
 
 const fallbackReplies: Record<string, string> = {
-  sudo: "You are not yet King of this realm. Try ls, cd, mkdir, rm, or mv.",
-  grep: "Grep is an advanced scrying spell you have not learned. Try ls or cd for now.",
-  find: "Find is an advanced scrying spell you have not learned. Try ls, cd, mkdir, rm, or mv.",
+  sudo: "Thou art not the root of this realm. Try ls to see what power you do have.",
+  grep: "grep is a master scrying spell, not yet in thy grimoire. Use find <name> to search instead.",
+  find: "The find spell reveals all. Try: find relic.txt to locate thy quarry.",
+  python: "This realm speaks only the shell tongue. Thy scripting arts have no power here.",
+  python3: "This realm speaks only the shell tongue. Thy scripting arts have no power here.",
+  node: "This realm speaks only the shell tongue. Thy scripting arts have no power here.",
+  npm: "This realm speaks only the shell tongue. Thy scripting arts have no power here.",
+  git: "No version control exists in this dungeon, adventurer. Try ls to see what truly lies before you.",
 };
 
 const replyCache = new Map<string, string>();
@@ -59,6 +70,13 @@ const replyCache = new Map<string, string>();
 const shortCommand = (input: string) => input.trim().split(/\s+/)[0]?.toLowerCase() ?? "";
 
 const normalizeInput = (input: string) => input.trim().toLowerCase().replace(/\s+/g, " ");
+
+const normalizeCacheInput = (input: string) =>
+  input
+    .toLowerCase()
+    .replace(/[^\p{L}\p{N}\s]/gu, "")
+    .trim()
+    .replace(/\s+/g, " ");
 
 const targetFromWinCondition = (winCondition?: string) => {
   const match = winCondition?.match(/^mv\s+(.+?)\s+~\/inventory$/i);
@@ -185,7 +203,7 @@ async function askDungeonMasterMode(
   const cleanInput = input.trim();
   const cacheKey = JSON.stringify({
     mode,
-    input: normalizeInput(cleanInput),
+    input: normalizeCacheInput(cleanInput),
     context,
   });
   if (replyCache.has(cacheKey)) return replyCache.get(cacheKey)!;
@@ -225,7 +243,7 @@ export async function askDungeonMaster(input: string, context: DungeonMasterCont
     return fallbackReplies[base];
   }
 
-  return askDungeonMasterMode(cleanInput, mode, mode === "help-tutor" ? context : {});
+  return askDungeonMasterMode(cleanInput, mode, context);
 }
 
 export function stripDungeonMasterPrefix(text: string) {
@@ -233,10 +251,12 @@ export function stripDungeonMasterPrefix(text: string) {
 }
 
 export function sanitizeDungeonMasterReply(text: string): string {
-  return stripDungeonMasterPrefix(text).replace(
-    /`?find\s+~\s+-name\s+["']?([A-Za-z0-9._-]+)["']?`?/gi,
-    (_match, target: string) => `find ${target}`,
-  );
+  return stripDungeonMasterPrefix(text)
+    .replace(/\*\*([^*]+)\*\*/g, "$1")
+    .replace(
+      /`?find\s+~\s+-name\s+["']?([A-Za-z0-9._-]+)["']?`?/gi,
+      (_match, target: string) => `find ${target}`,
+    );
 }
 
 export async function askCommandFlavor(

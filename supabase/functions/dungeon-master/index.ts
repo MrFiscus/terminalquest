@@ -19,6 +19,12 @@ type DungeonMasterContext = {
   requiredCommands?: unknown;
   winCondition?: unknown;
   currentRoom?: unknown;
+  currentPath?: unknown;
+  inventory?: unknown;
+  roomFiles?: unknown;
+  roomDoors?: unknown;
+  commandsUsed?: unknown;
+  mistakeCount?: unknown;
   command?: unknown;
   resultSummary?: unknown;
   recentCommands?: unknown;
@@ -31,12 +37,6 @@ type DungeonMasterContext = {
   reportFacts?: unknown;
   profileFacts?: unknown;
 };
-
-const unknownCommandSystemPrompt =
-  "You are the Dungeon Master of a 16-bit fantasy realm. The player interacts with this world via a Linux Terminal. When the player types something that looks like a command but it is not available, stay in character while being technically helpful. Briefly explain the real Linux meaning if relevant. If they use 'sudo', remind them they are not the King of this realm yet. If they use 'grep' or 'find', describe them as advanced scrying spells not yet learned. Always steer them back to: ls, cd, mkdir, rm, or mv. Tone: grounded, helpful, medieval, concise.";
-
-const helpTutorSystemPrompt =
-  "You are the Dungeon Master of a 16-bit fantasy realm and also a Linux tutor. The player may ask for help in plain English. First answer the player's actual question, then guide them toward the next useful action in the game. Teach beginner Linux concepts simply. Be concise, actionable, and helpful. Use the current goal and required commands if provided. Keep the medieval tone light and grounded. Prioritize clarity over roleplay.";
 
 const liveReactionSystemPrompt =
   "You are the Dungeon Master reacting live to a player's Linux command behavior in a 16-bit dungeon. Be specific to the event, teach one useful thing, and keep it to one short sentence. Sound like a clever mentor, not a generic tutorial. Do not invent game state. Only suggest commands available in this game: ls, cd, mkdir, pwd, cat, mv, rm, find, file, hint.";
@@ -69,6 +69,57 @@ const safeCommands = (value: unknown) =>
   Array.isArray(value)
     ? value.filter((cmd): cmd is string => typeof cmd === "string").slice(0, 8).join(", ")
     : "";
+
+const safeList = (value: unknown) =>
+  Array.isArray(value)
+    ? value.filter((item): item is string => typeof item === "string").slice(0, 16).join(", ")
+    : "";
+
+const safeCount = (value: unknown) =>
+  typeof value === "number" && Number.isFinite(value) ? String(value) : "0";
+
+const unknownCommandSystemPrompt = (context: DungeonMasterContext) => `You are the Dungeon Master of Terminal Quest, a 16-bit fantasy dungeon where Linux commands control the world.
+The player interacts by typing Linux commands in a terminal.
+
+CURRENT GAME STATE:
+- Current room: ${safeText(context.currentRoom, "unknown")}
+- Current path: ${safeText(context.currentPath, "unknown")}
+- Items in room: ${safeList(context.roomFiles) || "none"}
+- Exits in room: ${safeList(context.roomDoors) || "none"}
+- Player inventory: ${safeList(context.inventory) || "empty"}
+- Commands used so far: ${safeList(context.commandsUsed) || "none"}
+- Mistakes made: ${safeCount(context.mistakeCount)}
+
+YOUR ROLE:
+- If player types an unknown command, explain what it does in real Linux briefly, then redirect to available commands
+- If player seems lost, look at their current room and inventory and give a specific actionable hint
+- Never give away the full solution, just the next step
+- Always stay in medieval dungeon character
+- Be concise, max 2 sentences
+- Reference actual items and rooms by name when possible
+
+AVAILABLE COMMANDS: ls, cd, mv, cat, find, mkdir, rm, pwd, file
+TONE: Helpful medieval wizard, grounded, never condescending`;
+
+const helpTutorSystemPrompt = (context: DungeonMasterContext) => `You are the Dungeon Master and Linux tutor of Terminal Quest.
+The player asked for help in plain English.
+
+CURRENT GAME STATE:
+- Current room: ${safeText(context.currentRoom, "unknown")}
+- Items here: ${safeList(context.roomFiles) || "none"}
+- Exits here: ${safeList(context.roomDoors) || "none"}
+- Inventory: ${safeList(context.inventory) || "empty"}
+- Goal: ${safeText(context.goal, "Find the goal item and move it into your inventory.")}
+- Win condition: ${safeText(context.winCondition, "mv <file> ~/inventory")}
+
+YOUR ROLE:
+- Answer their actual question first and directly
+- Then give ONE specific actionable next step
+- Teach the Linux concept simply if relevant
+- Reference the actual room items and doors by name
+- Never give the full walkthrough, just next step
+- Be concise, max 3 sentences
+- Light medieval tone but prioritize clarity`;
 
 const safeRecent = (value: unknown) =>
   Array.isArray(value)
@@ -108,9 +159,11 @@ const shortCommand = (input: string) => input.trim().split(/\s+/)[0]?.toLowerCas
 const fallbackReply = (input: string, mode: DungeonMasterMode, context: DungeonMasterContext = {}) => {
   const base = shortCommand(input);
   if (mode === "unknown-command") {
-    if (base === "sudo") return "You are not yet King of this realm. Try ls, cd, mkdir, rm, or mv.";
-    if (base === "grep") return "Grep is an advanced scrying spell you have not learned. Try ls or cd for now.";
-    if (base === "find") return "Find is an advanced scrying spell you have not learned. Try ls, cd, mkdir, rm, or mv.";
+    if (base === "sudo") return "Thou art not the root of this realm. Try ls to see what power you do have.";
+    if (base === "grep") return "grep is a master scrying spell, not yet in thy grimoire. Use find <name> to search instead.";
+    if (base === "find") return "The find spell reveals all. Try: find relic.txt to locate thy quarry.";
+    if (["python", "python3", "node", "npm"].includes(base)) return "This realm speaks only the shell tongue. Thy scripting arts have no power here.";
+    if (base === "git") return "No version control exists in this dungeon, adventurer. Try ls to see what truly lies before you.";
     return `The rune '${base || input}' is unknown here. Try ls, cd, mkdir, rm, or mv.`;
   }
   if (
@@ -248,7 +301,7 @@ async function askClaude(input: string, mode: DungeonMasterMode, context: Dungeo
   if (!ANTHROPIC_API_KEY) return fallbackReply(input, mode, context);
 
   const systemPrompt =
-    mode === "help-tutor" ? helpTutorSystemPrompt :
+    mode === "help-tutor" ? helpTutorSystemPrompt(context) :
     mode === "live-reaction" ? liveReactionSystemPrompt :
     mode === "command-flavor" ? commandFlavorSystemPrompt :
     mode === "run-report" ? runReportSystemPrompt :
@@ -256,7 +309,7 @@ async function askClaude(input: string, mode: DungeonMasterMode, context: Dungeo
     mode === "hint-ladder" ? hintLadderSystemPrompt :
     mode === "level-intro" ? levelIntroSystemPrompt :
     mode === "profile-summary" ? profileSummarySystemPrompt :
-    unknownCommandSystemPrompt;
+    unknownCommandSystemPrompt(context);
   const demoScript = safeLongText(context.demoScript);
   const systemWithDemoContext = demoScript
     ? `GAME CONTEXT: ${demoScript}
