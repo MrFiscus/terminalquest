@@ -415,7 +415,13 @@ export function useGameState(options: UseGameStateOptions = {}) {
         commandHistory: [...cur.commandHistory, raw],
       }));
 
-      const result = await runCommand(raw, s, { startMauQuiz, submitMauQuiz, closeMauQuiz });
+      const result = await runCommand(raw, s, { 
+        startMauQuiz, 
+        submitMauQuiz, 
+        closeMauQuiz,
+        openScroll,
+        closeScroll
+      });
       const failed = Boolean(result.unknown || result.lines.some((line) => line.kind === "error"));
       const commandName = baseCommand(raw);
       if (commandName) {
@@ -605,6 +611,14 @@ export function useGameState(options: UseGameStateOptions = {}) {
     setState((s) => ({ ...s, activeMauQuiz: undefined }));
   }, []);
 
+  const openScroll = useCallback((name: string, contents: string) => {
+    setState((s) => ({ ...s, activeScroll: { name, contents } }));
+  }, []);
+
+  const closeScroll = useCallback(() => {
+    setState((s) => ({ ...s, activeScroll: undefined }));
+  }, []);
+
   const submitMauQuiz = useCallback((answer: string) => {
     const s = stateRef.current;
     if (!s.activeMauQuiz) return;
@@ -663,6 +677,8 @@ export function useGameState(options: UseGameStateOptions = {}) {
     dismissTeaching, 
     roomSubtitle,
     submitMauQuiz,
-    closeMauQuiz
+    closeMauQuiz,
+    openScroll,
+    closeScroll
   };
 }

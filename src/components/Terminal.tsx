@@ -8,29 +8,31 @@ interface TerminalProps {
   onSubmit: (raw: string) => void;
 }
 
-// Linux-style coloring: directories bold blue, regular files off-white,
-// executables bold green/cyan. DM/system flavor is italic muted grey.
+// Dungeon palette — rune colors on dark stone:
+//   input (user commands) = warm gold like torchlit inscriptions
+//   output = parchment cream
+//   errors = blood-red glow
+//   DM / system = faded grey like weathered stone etchings
+//   victory = bright emerald gleam
+//   npc = mystic purple
 const lineClass: Record<TerminalLine["kind"], string> = {
-  input: "text-[hsl(var(--terminal-prompt))] ember-bloom",
-  output: "text-[#f3f4f6]",
-  error: "text-[#f87171]",
-  dm: "text-[#9ca3af] italic",
-  system: "text-[#9ca3af] italic",
-  victory: "text-[#4ade80] font-semibold",
+  input: "term-line-input",
+  output: "term-line-output",
+  error: "term-line-error",
+  dm: "term-line-dm",
+  system: "term-line-system",
+  victory: "term-line-victory",
+  npc: "term-line-npc",
 };
 
-// Detect ls-style entries and assign Linux color conventions.
+// Detect ls-style entries and assign themed color conventions.
 function lsTokenClass(text: string): string | null {
   const t = text.trim();
   if (!t || t === "(empty)") return null;
-  // Directory: ends with "/"
-  if (/\/$/.test(t)) return "text-[#60a5fa] font-bold";
-  // Executable / special: shebang-y or .sh
-  if (/\.(sh|bin|exe|run)$/i.test(t)) return "text-[#4ade80] font-bold";
-  // Symlink-ish (.lnk) — cyan
-  if (/\.(lnk|link)$/i.test(t)) return "text-[#22d3ee] font-bold";
-  // Regular file
-  if (/^[A-Za-z0-9._-]+\.[A-Za-z0-9]+$/.test(t)) return "text-[#f3f4f6]";
+  if (/\/$/.test(t)) return "term-ls-dir";
+  if (/\.(sh|bin|exe|run)$/i.test(t)) return "term-ls-exec";
+  if (/\.(lnk|link)$/i.test(t)) return "term-ls-link";
+  if (/^[A-Za-z0-9._-]+\.[A-Za-z0-9]+$/.test(t)) return "term-ls-file";
   return null;
 }
 
@@ -50,7 +52,6 @@ function getTabCompletion(input: string, state: GameState): string | null {
   const endsWithSpace = input.endsWith(" ");
   const tokens = input.trim().split(/\s+/).filter(Boolean);
 
-  // Complete command name when it's the only token and no trailing space
   if (tokens.length <= 1 && !endsWithSpace) {
     const partial = tokens[0] ?? "";
     const matches = commandNames.filter((n) => n.startsWith(partial));
@@ -59,7 +60,6 @@ function getTabCompletion(input: string, state: GameState): string | null {
     return completed.length > partial.length ? completed : null;
   }
 
-  // Complete file/directory argument
   const partial = endsWithSpace ? "" : (tokens[tokens.length - 1] ?? "");
   const prefix = endsWithSpace ? input : input.slice(0, input.lastIndexOf(partial));
 
@@ -68,7 +68,6 @@ function getTabCompletion(input: string, state: GameState): string | null {
   const candidates: string[] = [];
 
   if (room) {
-    // cd only completes directories; other commands also include files
     if (cmd !== "cd") candidates.push(...room.files.map((f) => f.name));
     candidates.push(...room.doors.map((d) => d.target + "/"));
   }
@@ -78,6 +77,31 @@ function getTabCompletion(input: string, state: GameState): string | null {
   if (matches.length === 1) return prefix + matches[0];
   const completed = commonPrefix(matches);
   return completed.length > partial.length ? prefix + completed : null;
+}
+
+// ---------------------------------------------------------------------------
+// PATH TRUNCATION & DISPLAY
+// ---------------------------------------------------------------------------
+
+function tildefy(cwd: string): string {
+  if (cwd === "/home/user") return "~";
+  if (cwd.startsWith("/home/user/")) return "~/" + cwd.slice("/home/user/".length);
+  return cwd;
+}
+
+function truncatePath(display: string): string {
+  const parts = display.split("/");
+  if (parts.length <= 3) return display;
+  const head = parts[0];
+  const tail = parts.slice(-2);
+  return `${head}/.../${tail.join("/")}`;
+}
+
+function isDeepOrRestricted(cwd: string): boolean {
+  const depth = cwd.replace(/^\/home\/user\/?/, "").split("/").filter(Boolean).length;
+  if (depth >= 3) return true;
+  const restricted = /\b(vault|secret|prison|restricted|forbidden|tomb|crypt|oubliette|trap)\b/i;
+  return restricted.test(cwd);
 }
 
 export function Terminal({ state, onSubmit }: TerminalProps) {
@@ -99,7 +123,6 @@ export function Terminal({ state, onSubmit }: TerminalProps) {
     const onKey = (e: globalThis.KeyboardEvent) => {
       if (state.animating || state.won || state.activeMauQuiz) return;
       
-      // Don't steal focus from active form controls or buttons.
       const target = document.activeElement;
       if (
         target?.tagName === "INPUT" ||
@@ -165,21 +188,41 @@ export function Terminal({ state, onSubmit }: TerminalProps) {
     }
   };
 
+  // Compute display path
+  const tildePath = tildefy(state.cwd);
+  const displayPath = truncatePath(tildePath);
+  const deep = isDeepOrRestricted(state.cwd);
+
+  const finalPath =
+    displayPath.length > 20
+      ? "…" + displayPath.slice(displayPath.length - 19)
+      : displayPath;
+
+  const twoLinePrompt = finalPath.length > 14;
+
   return (
     <div
-      className="relative flex h-full flex-col scriptorium-bg scriptorium-frame iron-rivets font-mono-clean"
+      className="dungeon-terminal relative flex h-full flex-col"
       onClick={() => inputRef.current?.focus()}
     >
-      {/* Title bar */}
-      <div className="flex items-center justify-between px-3 py-1.5 border-b border-[hsl(var(--terminal-frame))] bg-[hsl(0_0%_6%)]">
-        <span className="text-[11px] text-[hsl(var(--terminal-text)/0.7)]">user@dungeon — bash</span>
-        <span className="text-[11px] text-[hsl(0_0%_45%)]">tty1</span>
+      {/* Stone-texture scanline overlay */}
+      <div className="dungeon-terminal-scanlines" aria-hidden />
+
+      {/* Torchlight vignette */}
+      <div className="dungeon-terminal-vignette" aria-hidden />
+
+      {/* Title bar — iron plate with rune text */}
+      <div className="dungeon-terminal-header">
+        <span className="dungeon-terminal-header-text">
+          ⚔ <span style={{ letterSpacing: '0.12em' }}>DUNGEON CHRONICLE</span> ⚔
+        </span>
+        <span className="dungeon-terminal-header-sub">rune·shell</span>
       </div>
 
-      {/* History */}
+      {/* History & Active Prompt — scrolling rune inscriptions */}
       <div
         ref={scrollRef}
-        className="scriptorium-scroll relative flex-1 overflow-y-auto px-4 py-3"
+        className="dungeon-terminal-scroll relative flex-1 overflow-y-auto px-5 py-4 flex flex-col gap-1"
       >
         {state.history.map((line, idx) => {
           const isLast = idx === state.history.length - 1;
@@ -188,47 +231,89 @@ export function Terminal({ state, onSubmit }: TerminalProps) {
             <div
               key={line.id}
               className={cn(
-                "whitespace-pre-wrap text-left transition-opacity",
+                "whitespace-pre-wrap text-left transition-opacity duration-300",
                 tokenColor ?? lineClass[line.kind],
-                isLast ? "opacity-100" : "opacity-60",
+                isLast ? "opacity-100" : "opacity-70",
               )}
             >
               {line.text}
             </div>
           );
         })}
-      </div>
 
-      {/* Input row — Ubuntu-style colored prompt */}
-      <div className="ember-glow flex items-center gap-2 border-t-2 scriptorium-divider bg-[hsl(0_0%_5%)] px-4 py-2">
-        <span className="font-mono">
-          <span className="text-[#4ade80] font-bold">user@dungeon</span>
-          <span className="text-[#f3f4f6]">:</span>
-          <span className="text-[#60a5fa] font-bold">{state.cwd}</span>
-          <span className="text-[#f3f4f6]">$</span>
-        </span>
-        <div className="relative flex-1">
-          <input
-            ref={inputRef}
-            value={input}
-            onChange={(e) => {
-              setInput(e.target.value);
-              setCursorPos(e.target.selectionStart ?? e.target.value.length);
-            }}
-            onSelect={(e) => setCursorPos(e.currentTarget.selectionStart ?? input.length)}
-            onKeyDown={handleKey}
-            disabled={state.animating || state.won}
-            autoFocus
-            spellCheck={false}
-            autoComplete="off"
-            className="w-full bg-transparent text-[hsl(var(--terminal-prompt))] outline-none caret-transparent disabled:opacity-60 ember-bloom"
-            aria-label="Terminal input"
-          />
-          <span
-            className="cursor-block ember-cursor pointer-events-none absolute top-1/2 -translate-y-1/2"
-            style={{ left: `${cursorPos}ch` }}
-            aria-hidden
-          />
+        {/* Active Input Prompt */}
+        <div className="mt-2">
+          {twoLinePrompt ? (
+            <>
+              <div className="dungeon-prompt-line">
+                <span className="dungeon-prompt-user">adventurer</span>
+                <span className="dungeon-prompt-sep">⟩</span>
+                <span className={cn("dungeon-prompt-path", deep && "dungeon-prompt-path-deep")}>
+                  {finalPath}
+                </span>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="dungeon-prompt-sigil">❯</span>
+                <div className="relative flex-1">
+                  <input
+                    ref={inputRef}
+                    value={input}
+                    onChange={(e) => {
+                      setInput(e.target.value);
+                      setCursorPos(e.target.selectionStart ?? e.target.value.length);
+                    }}
+                    onSelect={(e) => setCursorPos(e.currentTarget.selectionStart ?? input.length)}
+                    onKeyDown={handleKey}
+                    disabled={state.animating || state.won}
+                    autoFocus
+                    spellCheck={false}
+                    autoComplete="off"
+                    className="dungeon-terminal-input"
+                    aria-label="Terminal input"
+                  />
+                  <span
+                    className="dungeon-cursor pointer-events-none absolute top-1/2 -translate-y-1/2"
+                    style={{ left: `${cursorPos}ch` }}
+                    aria-hidden
+                  />
+                </div>
+              </div>
+            </>
+          ) : (
+            <div className="flex items-center gap-2">
+              <span className="dungeon-prompt-line flex-shrink-0">
+                <span className="dungeon-prompt-user">adventurer</span>
+                <span className="dungeon-prompt-sep">⟩</span>
+                <span className={cn("dungeon-prompt-path", deep && "dungeon-prompt-path-deep")}>
+                  {finalPath}
+                </span>
+                <span className="dungeon-prompt-sigil ml-1">❯</span>
+              </span>
+              <div className="relative flex-1">
+                <input
+                  ref={inputRef}
+                  value={input}
+                  onChange={(e) => {
+                    setInput(e.target.value);
+                    setCursorPos(e.target.selectionStart ?? e.target.value.length);
+                  }}
+                  onSelect={(e) => setCursorPos(e.currentTarget.selectionStart ?? input.length)}
+                  onKeyDown={handleKey}
+                  disabled={state.animating || state.won}
+                  autoFocus
+                  spellCheck={false}
+                  autoComplete="off"
+                  className="dungeon-terminal-input"
+                  aria-label="Terminal input"
+                />
+                <span
+                  className="dungeon-cursor pointer-events-none absolute top-1/2 -translate-y-1/2"
+                  style={{ left: `${cursorPos}ch` }}
+                  aria-hidden
+                />
+              </div>
+            </div>
+          )}
         </div>
       </div>
     </div>

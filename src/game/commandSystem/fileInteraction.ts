@@ -49,7 +49,8 @@ export const fileCommands: CommandDefinition[] = [
     name: "cat",
     description: "Display the contents of a file.",
     usage: "cat <file>",
-    run: (args, { state, room }) => {
+    run: (args, context) => {
+      const { state, room, openScroll } = context;
       const name = args[0];
       if (!name) return { lines: [err("cat: missing file")] };
 
@@ -73,6 +74,11 @@ export const fileCommands: CommandDefinition[] = [
       const file = currentFile(state, room, name);
       if (!file) return { lines: [err(`cat: ${name}: no such file`)] };
       
+      // Visual Scroll implementation
+      if (file.name.toLowerCase().includes("scroll") && file.contents) {
+        openScroll(file.name, file.contents);
+      }
+
       // Special win condition for Mau's Secret Vault
       if (file.name === "relic.txt" && room.name === "Mau's Secret Vault") {
         return {

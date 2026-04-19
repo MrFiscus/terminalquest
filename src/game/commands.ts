@@ -7,6 +7,8 @@ export interface RunCommandContext {
   startMauQuiz: (quiz: MauQuiz) => void;
   submitMauQuiz: (answer: string) => void;
   closeMauQuiz: () => void;
+  openScroll: (name: string, contents: string) => void;
+  closeScroll: () => void;
 }
 
 export async function runCommand(

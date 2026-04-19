@@ -161,6 +161,7 @@ export interface GameState {
   winCondition: string;
   completionMessage: string | null;
   activeMauQuiz?: MauQuiz;
+  activeScroll?: { name: string; contents: string };
 }
 
 export interface CommandResult {
