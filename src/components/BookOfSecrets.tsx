@@ -4,7 +4,7 @@ import bookFrame from "@/assets/book-frame.png";
 
 // ── Constants ──────────────────────────────────────────────────────────────
 const PER_SPREAD = 4;
-const FADE_MS    = 280;
+const FADE_MS    = 800;
 
 // ── Palette (oxblood/brown leather relic tome — matches the frame image) ──
 const C = {
@@ -46,12 +46,12 @@ const KEYFRAMES = `
 @import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=Pirata+One&display=swap');
 
 @keyframes pageFadeOut {
-  0%   { opacity: 1; transform: translateY(0) scale(1); }
-  100% { opacity: 0; transform: translateY(-6px) scale(0.99); }
+  0%   { opacity: 1; }
+  100% { opacity: 0; }
 }
 @keyframes pageFadeIn {
-  0%   { opacity: 0; transform: translateY(6px) scale(0.99); }
-  100% { opacity: 1; transform: translateY(0) scale(1); }
+  0%   { opacity: 0; }
+  100% { opacity: 1; }
 }
 `;
 
@@ -449,8 +449,8 @@ export function BookOfSecrets({ onClose }: BookOfSecretsProps) {
                 style={{
                   flex: 1, display: "flex", minHeight: 0,
                   animation: fading
-                    ? `pageFadeOut ${FADE_MS}ms ease-in forwards`
-                    : `pageFadeIn ${FADE_MS}ms ease-out forwards`,
+                    ? `pageFadeOut ${FADE_MS}ms ease-in-out forwards`
+                    : `pageFadeIn ${FADE_MS}ms ease-in-out forwards`,
                 }}
               >
                 {/* Left page */}
