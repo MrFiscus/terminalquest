@@ -113,6 +113,14 @@ const Index = () => {
       <WizardPopup tip={teachingTip} onDismiss={dismissTeaching} />
 
       {bookOpen && <BookOfSecrets onClose={() => setBookOpen(false)} />}
+
+      {state.popup && (
+        <LoreBookOverlay
+          title={state.popup.title}
+          body={state.popup.body}
+          onClose={dismissPopup}
+        />
+      )}
     </main>
   );
 };
