@@ -157,6 +157,7 @@ export interface MauQuiz {
   type: "choice" | "input";
   options?: string[];
   answer: string;
+  hint?: string;
   rewardCommand?: LinuxCommand;
   completedMessage?: string;
   successMessage?: string;

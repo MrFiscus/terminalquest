@@ -1,21 +1,158 @@
 import { supabase } from "@/integrations/supabase/client";
-import type { MauQuiz } from "./types";
+import { mauQuizForMechanic } from "./difficultyMechanics";
+import type { DifficultyMechanic, MauQuiz } from "./types";
+
+const askedQuestions: string[] = [];
+const askedAnswersByMechanic: Partial<Record<DifficultyMechanic, string[]>> = {};
+
+const normalizeQuestion = (question: string) => question.trim().toLowerCase().replace(/\s+/g, " ");
+const normalizeAnswer = (answer: string) => answer.trim().toLowerCase().replace(/\s+/g, " ");
+
+function rememberQuiz(quiz: Pick<MauQuiz, "question" | "answer">, mechanic?: DifficultyMechanic) {
+  const { question, answer } = quiz;
+  const clean = question.trim();
+  if (clean) {
+    askedQuestions.push(clean);
+    if (askedQuestions.length > 20) askedQuestions.shift();
+  }
+  if (mechanic) {
+    const answers = askedAnswersByMechanic[mechanic] ?? [];
+    askedAnswersByMechanic[mechanic] = [...answers, normalizeAnswer(answer)].slice(-8);
+  }
+}
+
+function isValidAiQuiz(value: unknown): value is { question: string; answer: string; hint?: string } {
+  if (!value || typeof value !== "object") return false;
+  const quiz = value as Record<string, unknown>;
+  return typeof quiz.question === "string" && quiz.question.trim().length > 0 &&
+    typeof quiz.answer === "string" && quiz.answer.trim().length > 0;
+}
+
+function withQuestionMemory(quiz: MauQuiz, mechanic?: DifficultyMechanic): MauQuiz {
+  rememberQuiz(quiz, mechanic);
+  return quiz;
+}
+
+function pickFresh<T extends { question: string }>(pool: T[]): T {
+  const previous = new Set(askedQuestions.map(normalizeQuestion));
+  const fresh = pool.filter((quiz) => !previous.has(normalizeQuestion(quiz.question)));
+  const options = fresh.length ? fresh : pool;
+  return options[Math.floor(Math.random() * options.length)];
+}
+
+function hasRepeatedMechanicAnswer(mechanic: DifficultyMechanic, answer: string) {
+  return (askedAnswersByMechanic[mechanic] ?? []).includes(normalizeAnswer(answer));
+}
+
+function fallbackMechanicQuiz(mechanic: DifficultyMechanic): MauQuiz {
+  const pools: Partial<Record<DifficultyMechanic, MauQuiz[]>> = {
+    rm: [
+      {
+        question: "What command removes a file or obstacle?",
+        type: "input",
+        answer: "rm",
+        rewardCommand: "rm",
+        hint: "It is two letters.",
+      },
+      {
+        question: "In plain words, what does rm do to unwanted files?",
+        type: "input",
+        answer: "remove",
+        rewardCommand: "rm",
+        hint: "It does not create. It takes away.",
+      },
+      {
+        question: "A cursed file must vanish. What action does rm perform?",
+        type: "input",
+        answer: "delete",
+        rewardCommand: "rm",
+        hint: "Another word for remove.",
+      },
+      {
+        question: "What flag lets rm remove a directory and what lies within it?",
+        type: "input",
+        answer: "-r",
+        rewardCommand: "rm",
+        hint: "Short for recursive.",
+      },
+    ],
+    mkdir: [
+      {
+        question: "What command creates a new directory?",
+        type: "input",
+        answer: "mkdir",
+        rewardCommand: "mkdir",
+        hint: "It means make directory.",
+      },
+      {
+        question: "In plain words, what kind of place does mkdir create?",
+        type: "input",
+        answer: "directory",
+        rewardCommand: "mkdir",
+        hint: "Another word for a folder.",
+      },
+      {
+        question: "A new chamber must be made. What common name describes what mkdir creates?",
+        type: "input",
+        answer: "folder",
+        rewardCommand: "mkdir",
+        hint: "A directory is also called this.",
+      },
+      {
+        question: "What mkdir flag creates missing parent directories along the path?",
+        type: "input",
+        answer: "-p",
+        rewardCommand: "mkdir",
+        hint: "Think parents.",
+      },
+    ],
+  };
+  const pool = pools[mechanic] ?? [mauQuizForMechanic(mechanic)];
+  const used = new Set(askedAnswersByMechanic[mechanic] ?? []);
+  const fresh = pool.filter((quiz) => !used.has(normalizeAnswer(quiz.answer)));
+  return pickFresh(fresh.length ? fresh : pool);
+}
 
 /**
  * Generates a Linux quiz question based on the provided difficulty (0-100).
  * Scales from 2-option multiple choice (low difficulty) to typed string answers (high difficulty).
  */
-export async function generateMauQuiz(difficulty: number): Promise<MauQuiz> {
+export async function generateMauQuiz(
+  difficulty: number,
+  mechanic?: DifficultyMechanic,
+): Promise<MauQuiz> {
   try {
     const { data, error } = await supabase.functions.invoke("generate-quiz", {
-      body: { difficulty },
+      body: {
+        difficulty,
+        mechanic,
+        previousQuestions: askedQuestions,
+        previousAnswers: mechanic ? askedAnswersByMechanic[mechanic] ?? [] : [],
+      },
     });
 
     if (error) throw error;
-    return data as MauQuiz;
+    if (!isValidAiQuiz(data)) throw new Error("Invalid Mau quiz response");
+    if (mechanic && hasRepeatedMechanicAnswer(mechanic, data.answer)) {
+      return withQuestionMemory(fallbackMechanicQuiz(mechanic), mechanic);
+    }
+    return withQuestionMemory({
+      question: data.question.trim(),
+      answer: data.answer.trim(),
+      hint: typeof data.hint === "string" ? data.hint.trim() : undefined,
+      type: "input",
+      rewardCommand: mechanic,
+    }, mechanic);
   } catch (err) {
     console.error("[mauQuizService] AI generation failed, using fallback:", err);
-    return fallbackMauQuiz(difficulty);
+    if (!mechanic) return withQuestionMemory(fallbackMauQuiz(difficulty));
+    for (let i = 0; i < 8; i++) {
+      const quiz = fallbackMechanicQuiz(mechanic);
+      if (!askedQuestions.map(normalizeQuestion).includes(normalizeQuestion(quiz.question))) {
+        return withQuestionMemory(quiz, mechanic);
+      }
+    }
+    return withQuestionMemory(fallbackMechanicQuiz(mechanic), mechanic);
   }
 }
 
@@ -39,7 +176,7 @@ function fallbackMauQuiz(difficulty: number): MauQuiz {
         answer: "cd",
       },
     ];
-    const pick = lowQuizzes[Math.floor(Math.random() * lowQuizzes.length)];
+    const pick = pickFresh(lowQuizzes);
     return { ...pick, type: "choice" };
   } else {
     // High Difficulty: Typed Answer
@@ -61,7 +198,7 @@ function fallbackMauQuiz(difficulty: number): MauQuiz {
         answer: "mv",
       },
     ];
-    const pick = highQuizzes[Math.floor(Math.random() * highQuizzes.length)];
+    const pick = pickFresh(highQuizzes);
     return { ...pick, type: "input" };
   }
 }

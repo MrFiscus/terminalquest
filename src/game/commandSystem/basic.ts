@@ -1,7 +1,6 @@
 import { generateSmartHint, smartHintCells } from "../smartHints";
 import { dm, out } from "./helpers";
 import { generateMauQuiz } from "../mauQuizService";
-import { mauQuizForMechanic } from "../difficultyMechanics";
 import type { CommandDefinition } from "./types";
 
 export const basicCommands: CommandDefinition[] = [
@@ -73,9 +72,9 @@ export const basicCommands: CommandDefinition[] = [
 
       // Calculate difficulty based on path depth (0-100 scale)
       const depth = state.cwd.split("/").filter(Boolean).length;
-      const dungeonDifficulty = Math.min(100, Math.max(0, depth * 20));
+      const dungeonDifficulty = state.difficultyValue ?? Math.min(100, Math.max(0, depth * 20));
 
-      const quiz = state.mechanic ? mauQuizForMechanic(state.mechanic) : await generateMauQuiz(dungeonDifficulty);
+      const quiz = await generateMauQuiz(dungeonDifficulty, state.mechanic);
 
       // We use the startMauQuiz callback to trigger the UI overlay
       startMauQuiz(quiz);

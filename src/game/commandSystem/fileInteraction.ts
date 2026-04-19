@@ -1,6 +1,7 @@
 import { INVENTORY_PATH, findFile, resolvePath } from "../dungeon";
 import { addDoorToRoom } from "../generator";
-import { mauKeyQuizForDoor, mauQuizForMechanic } from "../difficultyMechanics";
+import { mauKeyQuizForDoor } from "../difficultyMechanics";
+import { generateMauQuiz } from "../mauQuizService";
 import type { Room } from "../types";
 import {
   baseName,
@@ -52,7 +53,7 @@ export const fileCommands: CommandDefinition[] = [
     name: "cat",
     description: "Display the contents of a file.",
     usage: "cat <file>",
-    run: (args, context) => {
+    run: async (args, context) => {
       const { state, room, startMauQuiz, openScroll } = context;
       const name = args[0];
       if (!name) return { lines: [err("cat: missing file")] };
@@ -64,7 +65,9 @@ export const fileCommands: CommandDefinition[] = [
           if (state.mechanic === "chmod" && mau.blocksDoorTarget && state.mauSecretKnown) {
             startMauQuiz(mauKeyQuizForDoor(mau.blocksDoorTarget));
           } else if (state.mechanic) {
-            startMauQuiz(mauQuizForMechanic(state.mechanic));
+            const depth = state.cwd.split("/").filter(Boolean).length;
+            const dungeonDifficulty = state.difficultyValue ?? Math.min(100, Math.max(0, depth * 20));
+            startMauQuiz(await generateMauQuiz(dungeonDifficulty, state.mechanic));
           }
           return {
             lines: [

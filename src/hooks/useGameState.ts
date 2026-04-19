@@ -45,7 +45,7 @@ import {
   type RunRecord,
 } from "@/game/progressStats";
 import { generateMauQuiz } from "@/game/mauQuizService";
-import { mauKeyQuizForDoor, mauQuizForMechanic } from "@/game/difficultyMechanics";
+import { mauKeyQuizForDoor } from "@/game/difficultyMechanics";
 import {
   createPerformanceSummary,
   personalityReaction,
@@ -571,8 +571,8 @@ export function useGameState(options: UseGameStateOptions = {}) {
             }
           }
           const depth = s.cwd.split("/").filter(Boolean).length;
-          const dungeonDifficulty = Math.min(100, Math.max(0, depth * 20));
-          const quiz = s.mechanic ? mauQuizForMechanic(s.mechanic) : await generateMauQuiz(dungeonDifficulty);
+          const dungeonDifficulty = s.difficultyValue ?? Math.min(100, Math.max(0, depth * 20));
+          const quiz = await generateMauQuiz(dungeonDifficulty, s.mechanic);
           startMauQuiz(quiz);
           appendLines([
             { kind: "npc", text: "Mau's eyes glow with ancient knowledge." },

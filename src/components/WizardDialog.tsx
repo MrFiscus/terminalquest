@@ -13,6 +13,7 @@ export function WizardDialog({ context, externalMessage }: WizardDialogProps) {
   const [isOpen, setIsOpen] = useState(true);
   const [isChatting, setIsChatting] = useState(false);
   const [message, setMessage] = useState("Greetings, traveler. Click my thoughts if you seek guidance.");
+  const [displayedMessage, setDisplayedMessage] = useState(message);
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -47,6 +48,18 @@ export function WizardDialog({ context, externalMessage }: WizardDialogProps) {
     setIsOpen(true);
     setIsChatting(false);
   }, [externalMessage]);
+
+  useEffect(() => {
+    if (isLoading) return;
+    setDisplayedMessage("");
+    let index = 0;
+    const timer = setInterval(() => {
+      index += 2;
+      setDisplayedMessage(message.slice(0, index));
+      if (index >= message.length) clearInterval(timer);
+    }, 18);
+    return () => clearInterval(timer);
+  }, [isLoading, message]);
 
   // Auto-close welcome dialog after 5 seconds if not chatting
   useEffect(() => {
@@ -103,13 +116,14 @@ export function WizardDialog({ context, externalMessage }: WizardDialogProps) {
                     exit={{ opacity: 0 }}
                     className="max-h-28 overflow-y-auto font-sans text-base text-[#3e2723] leading-relaxed font-semibold drop-shadow-sm"
                   >
-                    {isLoading ? (
-                      <div className="flex gap-1 py-2">
+                    <span>{displayedMessage}</span>
+                    {isLoading && (
+                      <span className="ml-2 inline-flex translate-y-0.5 gap-1">
                         <span className="w-1.5 h-1.5 bg-[#5d4037] rounded-full animate-bounce" />
                         <span className="w-1.5 h-1.5 bg-[#5d4037] rounded-full animate-bounce [animation-delay:0.2s]" />
                         <span className="w-1.5 h-1.5 bg-[#5d4037] rounded-full animate-bounce [animation-delay:0.4s]" />
-                      </div>
-                    ) : message}
+                      </span>
+                    )}
                     <div className="mt-3 text-[11px] text-[#5d4037]/70 italic uppercase tracking-wider font-pixel border-t border-[#5d4037]/10 pt-1">
                       Click to Ask the Keeper
                     </div>
