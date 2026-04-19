@@ -1,34 +1,47 @@
 
-## Replace `rm` star VFX with fire/poof effect
 
-The `rm` command currently shows a purple ✦ star (`vfx-smoke` class) on the removed file's tile. I'll swap it for a flame burst that fades into smoke.
+## Match `/play` aesthetic to the Landing page
 
-### Change in `src/components/GameWorld.tsx` (rm branch, ~line 328)
+The Play page already uses some shared chrome (`scriptorium-bg`, `scriptorium-frame`, `iron-rivets`, `pillar-divider`, `stone-toggle`). I'll layer on the Landing page's atmospheric polish so they feel like the same world.
 
-Replace the single ✦ span with a multi-layer flame:
-- Animated 🔥 emoji (scales up then fades) for the burning artifact
-- Soft orange/red radial glow behind it for the fire halo
-- Lingering smoke wisp (💨 or gradient puff) that drifts upward as it dissipates
+### Visual goals
+- Same warm/cool dungeon palette: deep slate background with a subtle radial vignette + slate texture.
+- Ambient embers floating up around the dungeon viewport (same `lp-ember` particles).
+- Breathing torch-glow halos behind key panels (`lp-breathe`).
+- Cinzel/Pirata One serif for headers (Book of Secrets title, Victory overlay), matching landing typography.
+- Buttons reskinned to `lp-stone-btn` + `lp-eng-glow` style (engraved gold on dark stone, sweep on hover).
+- Smooth `lp-fade-up` entrance for major panels (terminal, dungeon, inventory) on first mount.
+- Wizard popup + Room subtitle get a soft breathing glow + Cinzel italic flourish.
+- Difficulty toggles keep their stone look but pick up the warm ember hover glow already used on landing CTAs.
 
-```tsx
-if (k === "rm")
-  return (
-    <div key={i} className="vfx-fire relative flex items-center justify-center">
-      <div className="vfx-fire-glow absolute inset-0" />
-      <span className="vfx-fire-flame text-2xl">🔥</span>
-      <span className="vfx-fire-smoke absolute text-xl">💨</span>
-    </div>
-  );
-```
+### Files to edit
 
-### New keyframes in `src/index.css`
+1. **`src/pages/Index.tsx`**
+   - Wrap `<main>` in the same fixed slate-texture + radial vignette background used on Landing (extracted as a shared utility class).
+   - Add a layer of `lp-ember` particles (4–6) behind the dungeon `<section>`.
+   - Add `lp-breathe` halos behind terminal and dungeon panels.
+   - Add `lp-hero-in` (fade-up) to the terminal section, dungeon section, and inventory bar for entrance polish.
+   - Replace the "📖 BOOK OF SECRETS" `stone-tablet-btn` with a small `lp-stone-btn` + `lp-eng-glow` styled button to match the landing CTA.
 
-- `vfx-fire-flame`: scale 0.4 → 1.3 → 0.6, opacity 0 → 1 → 0 (flicker via slight rotate)
-- `vfx-fire-glow`: radial-gradient orange→transparent, pulsing opacity
-- `vfx-fire-smoke`: translateY(0 → -16px), opacity 0 → 0.7 → 0, delayed start (~500ms)
+2. **`src/components/VictoryOverlay.tsx`**
+   - Swap `font-pixel` headings for `lp-silver-cast` title ("YOU ESCAPED") and `lp-eng-glow` for "DESCEND AGAIN" button (use `lp-stone-btn lp-stone-btn-sweep` instead of the default `Button`).
+   - Add `lp-breathe` ember glow + a few `lp-ember` particles inside the overlay card.
 
-Total duration matches the existing 1100ms `durationMs` set in `fileInteraction.ts` `rm` command — no logic changes needed there.
+3. **`src/components/WizardPopup.tsx`**
+   - Border + bg already close — add `lp-breathe` halo behind the bubble and switch the message font to Cinzel italic for cohesion. Add `lp-hero-in` entrance.
 
-### Files touched
-- `src/components/GameWorld.tsx` — swap the `rm` VFX JSX
-- `src/index.css` — add 3 keyframe animations + utility classes
+4. **`src/components/RoomFlavorSubtitle.tsx`**
+   - Switch text to Cinzel italic (matches landing's flavor text style) and add the same subtle breathing glow.
+
+5. **`src/components/DifficultyMenu.tsx`** (read first to confirm)
+   - Apply the landing background (slate texture + vignette + embers), `lp-silver-cast` for the title, `lp-stone-btn lp-stone-btn-sweep` + `lp-eng-glow` for the confirm button, and `lp-fade-up` on the panel.
+
+6. **`src/index.css`**
+   - Add a small reusable utility `.dungeon-page-bg` that bundles the Landing's fixed slate-texture + radial vignette + grain overlay so multiple pages can apply it without duplication.
+   - No new keyframes needed — reuse `lp-fade-up`, `lp-breathe`, `ember-rise`, `lp-glow-sweep`, `lp-silver-shimmer`.
+
+### Out of scope
+- No layout/grid changes to the play screen (40/60 split stays).
+- No changes to gameplay logic, terminal behavior, or game world rendering.
+- Inventory tile chrome (`chest-slot`) stays as-is — already on-theme.
+
