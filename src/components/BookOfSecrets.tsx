@@ -372,7 +372,7 @@ export function BookOfSecrets({ onClose }: BookOfSecretsProps) {
             textShadow: "0 2px 8px rgba(0,0,0,0.95), 0 0 30px rgba(200,145,58,0.5)",
             lineHeight: 1,
           }}>
-            ✦ The Book of Secrets ✦
+            The Book of Secrets
           </div>
 
           {/* ── Filter bar (under title, detached from book) ── */}
