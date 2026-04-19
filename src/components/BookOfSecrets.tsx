@@ -44,15 +44,6 @@ const DIFF_OPTIONS: Array<DifficultyLevel | "all"> = ["all", "beginner", "interm
 // ── CSS keyframes + Google Font ────────────────────────────────────────────
 const KEYFRAMES = `
 @import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=Pirata+One&display=swap');
-
-@keyframes pageFadeOut {
-  0%   { opacity: 1; }
-  100% { opacity: 0; }
-}
-@keyframes pageFadeIn {
-  0%   { opacity: 0; }
-  100% { opacity: 1; }
-}
 `;
 
 // ── Parchment background — transparent so the book frame shows through, but
@@ -299,9 +290,16 @@ export function BookOfSecrets({ onClose }: BookOfSecretsProps) {
       : Math.max(0, safeSpread - 1);
     if (next === safeSpread) return;
 
+    // Phase 1: fade out current
     setFading(true);
-    setTimeout(() => setCurrentSpread(next), FADE_MS);
-    setTimeout(() => setFading(false), FADE_MS + 20);
+    // Phase 2: after fade-out completes, swap content (still invisible)
+    setTimeout(() => {
+      setCurrentSpread(next);
+      // Phase 3: next frame, fade back in
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => setFading(false));
+      });
+    }, FADE_MS);
   }
 
   const navBtn = (dir: "prev" | "next") => {
@@ -444,12 +442,10 @@ export function BookOfSecrets({ onClose }: BookOfSecretsProps) {
               display: "flex",
             }}>
               <div
-                key={safeSpread}
                 style={{
                   flex: 1, display: "flex", minHeight: 0,
-                  animation: fading
-                    ? `pageFadeOut ${FADE_MS}ms ease-in-out forwards`
-                    : `pageFadeIn ${FADE_MS}ms ease-in-out forwards`,
+                  opacity: fading ? 0 : 1,
+                  transition: `opacity ${FADE_MS}ms ease-in-out`,
                 }}
               >
                 {/* Left page */}
