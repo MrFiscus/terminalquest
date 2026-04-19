@@ -86,7 +86,7 @@ function SpellEntry({ entry, index }: { entry: CommandEntry; index: number }) {
   const rc = RANK_C[entry.difficulty];
 
   return (
-    <div style={{
+    <div className="mx-[17px] px-[9px]" style={{
       flex: 1, display: "flex", flexDirection: "column",
       padding: "12px 26px 10px",
       overflow: "hidden", minHeight: 0,
@@ -237,7 +237,7 @@ function Page({
   style?: React.CSSProperties;
 }) {
   return (
-    <div style={{
+    <div className="pl-[15px]" style={{
       flex: 1,
       background: PARCH_BG,
       display: "flex", flexDirection: "column",
@@ -470,7 +470,7 @@ export function BookOfSecrets({ onClose }: BookOfSecretsProps) {
                 </div>
 
                 {/* Center gutter */}
-                <div style={{ width: 24, flexShrink: 0, position: "relative" }}>
+                <div className="text-center mx-0 pr-0 pl-0 mr-px ml-[47px]" style={{ width: 24, flexShrink: 0, position: "relative" }}>
                   <div style={{
                     position: "absolute", inset: 0,
                     background: "linear-gradient(to right, rgba(0,0,0,0.35) 0%, rgba(0,0,0,0.10) 50%, rgba(0,0,0,0.35) 100%)",
