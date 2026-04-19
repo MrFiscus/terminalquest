@@ -16,6 +16,9 @@ export interface DungeonMasterContext {
   requiredCommands?: string[];
   winCondition?: string;
   currentRoom?: string;
+  brokenDoorName?: string;
+  repairCommand?: string;
+  roomHintFiles?: string[];
   command?: string;
   resultSummary?: string;
   recentCommands?: string[];
@@ -83,6 +86,19 @@ export function buildGoalClarifierReply(context: DungeonMasterContext = {}): str
   return `Your goal is: ${goal}.${commandText}`;
 }
 
+function isRepairQuestion(input: string): boolean {
+  return /\b(repair|fix|mend|build|rebuild|broken|doorway|door)\b/.test(input);
+}
+
+function buildRepairReply(context: DungeonMasterContext): string | null {
+  if (!context.brokenDoorName) return null;
+  const hintFile = context.roomHintFiles?.[0];
+  if (hintFile) {
+    return `The ${context.brokenDoorName} door is broken. Type \`ls\` to survey this room, then read the clue with \`cat\`. The clue will tell you how to repair the door.`;
+  }
+  return `The ${context.brokenDoorName} door is broken. Type \`ls\` to look for a clue in this room, then use \`cat <file>\` to read it.`;
+}
+
 export function classifyTerminalInput(input: string): "command-like" | "help-like" {
   const normalized = normalizeInput(input);
   const first = shortCommand(normalized);
@@ -107,6 +123,9 @@ function fallbackTutorReply(input: string, context: DungeonMasterContext): strin
   const winCondition = context.winCondition || "mv <file> ~/inventory";
   const currentRoom = context.currentRoom || "this room";
   const targetItem = targetFromWinCondition(context.winCondition);
+
+  const repairReply = isRepairQuestion(normalized) ? buildRepairReply(context) : null;
+  if (repairReply) return repairReply;
 
   if (isLinuxBasicsQuestion(normalized)) {
     return "Linux works by typing commands into a terminal. Here, use ls to list the room, cd <door> to enter a directory, and mv <file> ~/inventory to move a file.";
@@ -177,11 +196,11 @@ async function askDungeonMasterMode(
     if (error) throw error;
 
     const message = typeof data?.message === "string" ? data.message.trim() : "";
-    const reply = message || fallbackDungeonMasterReply(cleanInput, mode, context);
+    const reply = sanitizeDungeonMasterReply(message || fallbackDungeonMasterReply(cleanInput, mode, context));
     replyCache.set(cacheKey, reply);
     return reply;
   } catch {
-    return fallbackDungeonMasterReply(cleanInput, mode, context);
+    return sanitizeDungeonMasterReply(fallbackDungeonMasterReply(cleanInput, mode, context));
   }
 }
 
@@ -190,9 +209,15 @@ export async function askDungeonMaster(input: string, context: DungeonMasterCont
   const mode: DungeonMasterMode =
     classifyTerminalInput(cleanInput) === "help-like" ? "help-tutor" : "unknown-command";
   const base = shortCommand(cleanInput);
+  const normalized = normalizeInput(cleanInput);
 
   if (mode === "help-tutor" && isGoalClarifier(cleanInput)) {
     return buildGoalClarifierReply(context);
+  }
+
+  if (mode === "help-tutor" && isRepairQuestion(normalized)) {
+    const repairReply = buildRepairReply(context);
+    if (repairReply) return repairReply;
   }
 
   if (mode === "unknown-command" && fallbackReplies[base]) {
@@ -204,6 +229,13 @@ export async function askDungeonMaster(input: string, context: DungeonMasterCont
 
 export function stripDungeonMasterPrefix(text: string) {
   return text.replace(/^Dungeon Master:\s*/i, "").trim();
+}
+
+export function sanitizeDungeonMasterReply(text: string): string {
+  return stripDungeonMasterPrefix(text).replace(
+    /`?find\s+~\s+-name\s+["']?([A-Za-z0-9._-]+)["']?`?/gi,
+    (_match, target: string) => `find ${target}`,
+  );
 }
 
 export async function askCommandFlavor(

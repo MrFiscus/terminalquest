@@ -13,7 +13,7 @@ export const roomCommands: CommandDefinition[] = [
       const name = args[0];
       if (!name) return { lines: [err("mkdir: missing name")] };
       const brokenDoor = room.doors.find((door) => door.broken);
-      if (state.mechanic === "mkdir" && brokenDoor && name === brokenDoor.target) {
+      if (state.mechanic === "mkdir" && brokenDoor && (name === brokenDoor.target || (state.showcaseMode && name === "door"))) {
         return {
           lines: [out("You rebuild the broken doorway. The path is open.")],
           vfx: { kind: "manifest", cells: [{ x: brokenDoor.x, y: brokenDoor.y }], durationMs: 1400 },

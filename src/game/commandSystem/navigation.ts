@@ -12,6 +12,14 @@ function insideDoorStop(room: { width: number; height: number }, door: { x: numb
   return { x: door.x, y: door.y };
 }
 
+function brokenDoorStop(room: { width: number; height: number }, door: { x: number; y: number }) {
+  if (door.x === 0) return { x: 2, y: door.y };
+  if (door.x === room.width - 1) return { x: room.width - 3, y: door.y };
+  if (door.y === 0) return { x: door.x, y: 2 };
+  if (door.y === room.height - 1) return { x: door.x, y: room.height - 3 };
+  return insideDoorStop(room, door);
+}
+
 export const navigationCommands: CommandDefinition[] = [
   {
     name: "ls",
@@ -83,9 +91,15 @@ export const navigationCommands: CommandDefinition[] = [
         }
       }
       if (liveDoor.broken) {
+        const stopAt = brokenDoorStop(room, liveDoor);
+        const fallbackStop = insideDoorStop(room, liveDoor);
         return {
           lines: [err("The door is broken. You need to repair it.")],
-          walkTo: { x: liveDoor.x, y: liveDoor.y },
+          walkTo: isWalkable(room, stopAt.x, stopAt.y)
+            ? stopAt
+            : isWalkable(room, fallbackStop.x, fallbackStop.y)
+              ? fallbackStop
+              : undefined,
         };
       }
       const mauBlocker = (room.npcs ?? []).find((npc) => npc.id === "mau" && npc.blocksDoorTarget === liveDoor.target);

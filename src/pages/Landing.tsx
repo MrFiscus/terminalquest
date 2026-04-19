@@ -125,8 +125,8 @@ function PixelDungeon({ sz = 24 }: { sz?: number }) {
   );
 }
 
-// ── Terminal demo ─────────────────────────────────────────────────────────────
-const DEMO = [
+// ── Terminal preview ─────────────────────────────────────────────────────────────
+const PREVIEW_LINES = [
   { k: "sys",  t: "Terminal Quest v1.0 — Linux Dungeon RPG" },
   { k: "sep",  t: "──────────────────────────────────────────" },
   { k: "in",   t: "user@dungeon:~/entrance$ ls" },
@@ -138,9 +138,9 @@ const DEMO = [
   { k: "dm",   t: "  ✦ Hint: try  cd crypt  to search for materials" },
 ];
 
-type DemoLine = { k: string; t: string };
+type PreviewLine = { k: string; t: string };
 
-const CANNED: Record<string, DemoLine[]> = {
+const CANNED: Record<string, PreviewLine[]> = {
   ls: [
     { k: "dir",  t: "  crypt/    torchroom/    ruins/" },
     { k: "file", t: "  chest.lock    bridge_plans.txt    key.txt" },
@@ -162,21 +162,21 @@ const CANNED: Record<string, DemoLine[]> = {
   ],
 };
 
-function TerminalDemo() {
+function TerminalPreview() {
   const [n, setN] = useState(0);
-  const [extra, setExtra] = useState<DemoLine[]>([]);
+  const [extra, setExtra] = useState<PreviewLine[]>([]);
   const [input, setInput] = useState("");
   const [loopKey, setLoopKey] = useState(0);
   const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
-    if (n >= DEMO.length) {
-      // If user hasn't typed anything yet, auto-loop the canned demo
+    if (n >= PREVIEW_LINES.length) {
+      // If user hasn't typed anything yet, auto-loop the canned preview
       if (extra.length > 0) return;
       const t = setTimeout(() => { setN(0); setLoopKey(k => k + 1); }, 6000);
       return () => clearTimeout(t);
     }
-    const t = setTimeout(() => setN(c => c + 1), DEMO[n].k === "in" ? 700 : 170);
+    const t = setTimeout(() => setN(c => c + 1), PREVIEW_LINES[n].k === "in" ? 700 : 170);
     return () => clearTimeout(t);
   }, [n, loopKey, extra.length]);
 
@@ -186,14 +186,14 @@ function TerminalDemo() {
     e.preventDefault();
     if (!input.trim()) return;
     const cmd = input.trim().toLowerCase().split(/\s+/)[0];
-    const echo: DemoLine = { k: "in", t: `user@dungeon:~/entrance$ ${input}` };
+    const echo: PreviewLine = { k: "in", t: `user@dungeon:~/entrance$ ${input}` };
     if (cmd === "clear") { setExtra([]); setInput(""); return; }
     const resp = CANNED[cmd] ?? CANNED.__unknown;
     setExtra(prev => [...prev, echo, ...resp]);
     setInput("");
   };
 
-  const ready = n >= DEMO.length;
+  const ready = n >= PREVIEW_LINES.length;
 
   return (
     <div
@@ -203,7 +203,7 @@ function TerminalDemo() {
     >
       <div style={{ position: "absolute", inset: 0, pointerEvents: "none", zIndex: 10, background: "repeating-linear-gradient(to bottom,transparent 0,transparent 2px,hsl(0 0% 0%/0.13) 3px)" }} />
       <div style={{ position: "absolute", inset: 0, pointerEvents: "none", zIndex: 11, background: "radial-gradient(ellipse at 50% 50%,transparent 40%,hsl(0 0% 0%/0.6) 100%)" }} />
-      {DEMO.slice(0, n).map((line, i) => (
+      {PREVIEW_LINES.slice(0, n).map((line, i) => (
         <div key={`d-${loopKey}-${i}`} style={{ color: col(line.k), fontStyle: line.k === "dm" ? "italic" : "normal", fontWeight: line.k === "dir" ? "bold" : "normal", whiteSpace: "pre", position: "relative", zIndex: 1 }}>
           {line.t}
         </div>
@@ -712,7 +712,7 @@ export default function Landing() {
 
           <div style={{ position: "relative", zIndex: 1, display: "grid", gridTemplateColumns: "1fr 4px 1fr", height: 288 }}>
             <MonitorFrame title="TERMINAL  /  DUNGEON-01" accent="hsl(38 100% 50%)">
-              <TerminalDemo />
+              <TerminalPreview />
             </MonitorFrame>
 
             {/* Pillar divider — exact game class */}

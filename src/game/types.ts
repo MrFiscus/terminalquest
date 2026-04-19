@@ -188,6 +188,7 @@ export interface GameState {
   completionMessage: string | null;
   completionReport: VictoryReport | null;
   playMode: PlayMode;
+  showcaseMode?: boolean;
   hintStage: number;
   activeMauQuiz?: MauQuiz;
   difficultyValue?: number;

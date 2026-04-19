@@ -17,6 +17,7 @@ import {
   askMistakeCoach,
   askRunReportFeedback,
   classifyTerminalInput,
+  sanitizeDungeonMasterReply,
   stripDungeonMasterPrefix,
 } from "@/game/aiDungeonMasterService";
 import { type GeneratedLevel, levelToStatePatch } from "@/game/aiLevelService";
@@ -59,7 +60,7 @@ import type {
   TerminalLine,
 } from "@/game/types";
 
-const STEP_MS = 110;
+const STEP_MS = 180;
 const PICKUP_MS = 800;
 
 const delay = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
@@ -80,7 +81,7 @@ interface UseGameStateOptions {
 }
 
 interface LoadLevelOptions {
-  demoMode?: boolean;
+  showcaseMode?: boolean;
   weakCommands?: string[];
 }
 
@@ -147,6 +148,7 @@ function initialState(): GameState {
     completionMessage: null,
     completionReport: null,
     playMode: "guided",
+    showcaseMode: false,
     hintStage: 0,
     lockedCommands: [],
     mauSecretKnown: false,
@@ -221,7 +223,7 @@ export function useGameState(options: UseGameStateOptions = {}) {
   }, []);
 
   const showDungeonMasterTip = useCallback((text: string) => {
-    const clean = stripDungeonMasterPrefix(text);
+    const clean = sanitizeDungeonMasterReply(text);
     if (!clean) return;
     setDungeonMasterTip(clean);
   }, []);
@@ -340,7 +342,12 @@ export function useGameState(options: UseGameStateOptions = {}) {
       console.log("[applyEffect] called with effect:", JSON.stringify(effect));
       if (effect.type === "enterRoom") {
         const next = getRoom(stateRef.current.rooms, effect.path);
-        if (next) showRoomSubtitle(next);
+        if (next) {
+          showRoomSubtitle(next);
+          if (stateRef.current.showcaseMode && next.files.some((file) => file.name === stateRef.current.targetFile)) {
+            showDungeonMasterTip("Almost there! Type: mv relic.txt ~/inventory");
+          }
+        }
       }
 
       setState((s) => {
@@ -572,6 +579,10 @@ export function useGameState(options: UseGameStateOptions = {}) {
       }
       const commandEffect = runCommandEffect(raw, result, failed);
       const currentRoom = getRoom(s.rooms, s.cwd);
+      const brokenDoorFailure =
+        failed &&
+        commandName === "cd" &&
+        result.lines.some((line) => /door is broken/i.test(line.text));
       const shouldRememberMistake =
         failed &&
         (Boolean(commandFromInput(raw)) ||
@@ -586,7 +597,8 @@ export function useGameState(options: UseGameStateOptions = {}) {
       const reaction = personalityReaction(performanceRef.current, raw);
       performanceRef.current = reaction.summary;
       const guided = s.playMode !== "real";
-      const mentorLine = guided
+      const useAiGuidance = guided;
+      const mentorLine = useAiGuidance && !brokenDoorFailure
         ? liveMentorReaction({
             state: s,
             raw,
@@ -649,7 +661,8 @@ export function useGameState(options: UseGameStateOptions = {}) {
 
       const magicLine = magicLineForCommandInput(raw);
       const magicCommand = raw.trim().split(/\s+/)[0]?.toLowerCase() ?? "";
-      const shouldShowMagic = guided && magicLine && !magicCommandsRef.current.has(magicCommand);
+      const shouldShowMagic =
+        guided && !brokenDoorFailure && magicLine && !magicCommandsRef.current.has(magicCommand);
       if (shouldShowMagic) magicCommandsRef.current.add(magicCommand);
 
       if (commandEffect.screen) {
@@ -686,9 +699,9 @@ export function useGameState(options: UseGameStateOptions = {}) {
             ]
           : result.lines;
       const aiCommandFeedback =
-        guided && isHintCommand
+        useAiGuidance && isHintCommand
           ? null
-          : guided && commandEffect.feedback
+          : useAiGuidance && commandEffect.feedback
           ? {
               ...commandEffect.feedback,
               text: `Dungeon Master: ${await askCommandFlavor(
@@ -699,14 +712,20 @@ export function useGameState(options: UseGameStateOptions = {}) {
             }
           : commandEffect.feedback;
       const shouldCoachMistake =
-        guided &&
+        useAiGuidance &&
         failed &&
+        !brokenDoorFailure &&
         !isHintCommand &&
         Boolean(commandName) &&
         !mistakeCoachShownRef.current.has(commandName) &&
         result.lines.some((line) => line.kind === "error");
       if (shouldCoachMistake) mistakeCoachShownRef.current.add(commandName);
-      const aiMistakeLine = shouldCoachMistake
+      const aiMistakeLine = brokenDoorFailure
+        ? {
+            kind: "dm" as const,
+            text: "Dungeon Master: The path is still sealed. Repair the broken door before trying to enter.",
+          }
+        : shouldCoachMistake
         ? {
             kind: "dm" as const,
             text: `Dungeon Master: ${await askMistakeCoach(
@@ -735,6 +754,15 @@ export function useGameState(options: UseGameStateOptions = {}) {
               )}`,
             }
           : null;
+      const wizardPrompt =
+        s.showcaseMode && !failed
+          ? commandName === "ls" || (commandName === "find" && raw.toLowerCase().includes("mau"))
+            ? (currentRoom?.npcs ?? []).some((npc) => npc.id === "mau")
+              ? "Mau's eyes glimmer. Speak with Mau by typing: cat mau"
+              : "First, find Mau with: find Mau"
+            : null
+          : null;
+      if (wizardPrompt) showDungeonMasterTip(wizardPrompt);
 
       aiReportFeedbackRef.current = null;
       if (guided && result.effect?.type === "win") {
@@ -770,11 +798,11 @@ export function useGameState(options: UseGameStateOptions = {}) {
       appendLines([
         ...(shouldShowMagic && magicLine ? [magicLine] : []),
         ...aiResultLines,
-        ...(guided && aiCommandFeedback ? [aiCommandFeedback] : []),
+        ...(useAiGuidance && aiCommandFeedback ? [aiCommandFeedback] : []),
         ...(aiMistakeLine ? [aiMistakeLine] : []),
         ...(shouldShowCombo && combo ? [combo.line] : []),
         ...(aiMentorLine ? [aiMentorLine] : []),
-        ...(guided && reaction.line ? [reaction.line] : []),
+        ...(useAiGuidance && !brokenDoorFailure && reaction.line ? [reaction.line] : []),
       ]);
 
       if (guided && shouldShowCombo) {
@@ -881,6 +909,7 @@ export function useGameState(options: UseGameStateOptions = {}) {
       commandHistory: [],
       completionReport: null,
       playMode,
+      showcaseMode: options.showcaseMode ?? false,
       hintStage: 0,
       history: [
         ...intro,
@@ -889,29 +918,33 @@ export function useGameState(options: UseGameStateOptions = {}) {
         { id: offset + 2, kind: "system", text: `Goal: ${level.goal}` },
         { id: offset + 3, kind: "system", text: `Required: ${level.required.join(", ")}` },
         { id: offset + 4, kind: "system", text: `Win: mv ${level.targetFile} ~/inventory` },
-        ...(playMode === "guided"
+        ...(playMode === "guided" && !options.showcaseMode
           ? [{ id: offset + 5, kind: "system" as const, text: level.hint ? `Hint: ${level.hint}` : "Type `ls` to look around." }]
           : []),
       ],
     }));
     if (playMode === "guided") {
       const fallbackIntro =
-        options.demoMode
-          ? "Judge Demo mode is active: this dungeon will show find practice, Mau, scroll reading, command coaching, and the final report."
+        options.showcaseMode
+          ? "First, find Mau with: find Mau"
           : adaptation || "This dungeon adapts to your command history. Start with ls.";
-      void askLevelIntro(
-        label,
-        {
-          goal: level.goal,
-          requiredCommands: level.required,
-          winCondition: `mv ${level.targetFile} ~/inventory`,
-          weakCommands: options.weakCommands ?? [],
-          eventKind: options.demoMode ? "judge-demo" : "adaptive-level",
-        },
-        fallbackIntro,
-      ).then((message) => {
-        appendLines([{ kind: "dm", text: `Dungeon Master: ${message}` }]);
-      });
+      if (options.showcaseMode) {
+        showDungeonMasterTip(fallbackIntro);
+      } else {
+        void askLevelIntro(
+          label,
+          {
+            goal: level.goal,
+            requiredCommands: level.required,
+            winCondition: `mv ${level.targetFile} ~/inventory`,
+            weakCommands: options.weakCommands ?? [],
+            eventKind: "adaptive-level",
+          },
+          fallbackIntro,
+        ).then((message) => {
+          appendLines([{ kind: "dm", text: `Dungeon Master: ${message}` }]);
+        });
+      }
     }
   }, [appendLines, dismissRoomSubtitle, showDungeonMasterTip]);
 
@@ -976,6 +1009,9 @@ export function useGameState(options: UseGameStateOptions = {}) {
         },
         ...(reward ? [{ kind: "output" as const, text: mechanicMessages[reward] ?? `${reward} is now usable.` }] : []),
       ]);
+      if (s.showcaseMode && reward === "mkdir") {
+        showDungeonMasterTip("The stones listen: type mkdir door to mend the doorway.");
+      }
       if (releaseMauTarget) applyEffect({ type: "releaseMau", target: releaseMauTarget });
       triggerScreenEffect("aware", 1200);
       

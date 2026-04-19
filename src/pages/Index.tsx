@@ -39,20 +39,20 @@ const Index = () => {
     if (generating || state.animating) return false;
     setGenerating(difficulty);
     try {
-      const demoMode = familiarity === 0;
-      const weakCommands = demoMode
-        ? ["find", "cat", "cd", "mv"]
+      const showcaseMode = familiarity === 50;
+      const weakCommands = showcaseMode
+        ? ["mkdir", "cd", "ls", "mv"]
         : getWeakCommands(state.commandStats, 4);
-      const playMode = demoMode ? "guided" : (familiarity ?? 0) >= 67 ? "real" : "guided";
+      const playMode = showcaseMode ? "guided" : (familiarity ?? 0) >= 67 ? "real" : "guided";
       const level = generateDifficultyMechanicLevel(difficulty, familiarity, weakCommands);
       loadLevel(
         level,
-        demoMode ? `judge demo (${level.rooms.length} rooms)` : `${difficulty} (${level.rooms.length} rooms)`,
-        demoMode
-          ? "Judge Demo: use `ls`, `find relic.txt`, talk to Mau, read the scroll, and finish with the relic report."
+        `${difficulty} (${level.rooms.length} rooms)`,
+        showcaseMode
+          ? "First, find Mau with: find Mau"
           : playMode === "guided" ? adaptationMessage(weakCommands) : null,
         playMode,
-        { demoMode, weakCommands },
+        { showcaseMode, weakCommands },
       );
       setActiveDifficulty(difficulty);
       return true;
@@ -75,6 +75,18 @@ const Index = () => {
   }
 
   const currentRoom = getRoom(state.rooms, state.cwd);
+  const brokenDoor = currentRoom?.doors.find((door) => door.broken);
+  const repairCommand = brokenDoor
+    ? state.showcaseMode
+      ? "mkdir door"
+      : `mkdir ${brokenDoor.target}`
+    : undefined;
+  const roomHintFiles =
+    brokenDoor && currentRoom
+      ? currentRoom.files
+          .filter((file) => file.contents && (file.name.endsWith(".txt") || file.name === "scroll"))
+          .map((file) => file.name)
+      : undefined;
   const mapSubtitle = roomSubtitle || (
     currentRoom ? `${currentRoom.name}: ${currentRoom.description}` : state.goal
   );
@@ -166,6 +178,9 @@ const Index = () => {
           requiredCommands: state.requiredCommands,
           winCondition: state.winCondition,
           currentRoom: currentRoom?.name || state.cwd,
+          brokenDoorName: brokenDoor?.target,
+          repairCommand,
+          roomHintFiles,
         }}
       />
     </main>

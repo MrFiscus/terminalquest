@@ -85,7 +85,12 @@ export const fileCommands: CommandDefinition[] = [
       }
       
       // Visual Scroll implementation
-      if (file.name.toLowerCase().includes("scroll") && file.contents) {
+      const shouldOpenScrollView =
+        file.contents &&
+        (file.name.toLowerCase().includes("scroll") ||
+          file.name.toLowerCase() === "readme.txt" ||
+          file.name.toLowerCase().endsWith(".txt"));
+      if (shouldOpenScrollView) {
         openScroll(file.name, file.contents);
       }
 
@@ -100,7 +105,7 @@ export const fileCommands: CommandDefinition[] = [
       const body = file.contents ?? "(empty file)";
       return {
         lines: body.split("\n").map(out),
-        popup: { title: name, body },
+        popup: shouldOpenScrollView ? undefined : { title: name, body },
         patch: file.name === "scroll" && file.permissions === "readable" ? { mauSecretKnown: true } : undefined,
       };
     },

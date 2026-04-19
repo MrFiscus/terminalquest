@@ -11,14 +11,12 @@ interface DifficultyMenuProps {
 }
 
 const tierFor = (v: number): { label: string; difficulty: Difficulty } => {
-  if (v === 0) return { label: "Judge Demo", difficulty: "easy" };
   if (v < 34) return { label: "Novice", difficulty: "easy" };
   if (v < 67) return { label: "Adept", difficulty: "medium" };
   return { label: "Archmage", difficulty: "hard" };
 };
 
 const rankFor = (v: number): string => {
-  if (v === 0) return "Judge Demo";
   if (v < 17) return "Novice";
   if (v < 33) return "Apprentice";
   if (v < 50) return "Adept";
@@ -183,14 +181,12 @@ export const DifficultyMenu = ({ onConfirm, busy }: DifficultyMenuProps) => {
           </div>
 
           <div className="flex justify-between px-2 text-[#8c8273] font-bold uppercase tracking-widest text-[9px] md:mx-12 md:px-0 md:text-[10px]" style={{ textShadow: "0 1px 0 #000" }}>
-            <span>0<br/><span className="mt-1 block italic text-[#5a5349]">Demo</span></span>
+            <span>0<br/><span className="mt-1 block italic text-[#5a5349]">Novice</span></span>
             <span>100<br/><span className="mt-1 block italic text-[#5a5349]">Archmage</span></span>
           </div>
 
           <p className="text-[#a89f91] italic text-xs md:text-sm px-4 leading-relaxed" style={{ textShadow: "0 1px 0 #000" }}>
-            {precise === 0
-              ? "\"Judge Demo awakens the showcase path: hints, AI coaching, Mau, generated rooms, and the final report.\""
-              : "\"Thy choice here defines the density of shadows and the weight of the trials ahead.\""}
+            "Thy choice here defines the density of shadows and the weight of the trials ahead."
           </p>
         </div>
 
@@ -201,7 +197,7 @@ export const DifficultyMenu = ({ onConfirm, busy }: DifficultyMenuProps) => {
           style={{ padding: "16px 40px", fontSize: "clamp(11px,1.5vw,15px)" }}
         >
           <span className="difficulty-eng-glow">
-            {busy ? "SUMMONING..." : precise === 0 ? ">\u00a0\u00a0ENTER JUDGE DEMO" : ">\u00a0\u00a0ENTER THE DUNGEON"}
+            {busy ? "SUMMONING..." : ">\u00a0\u00a0ENTER THE DUNGEON"}
           </span>
         </button>
       </div>

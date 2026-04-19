@@ -461,7 +461,6 @@
     color: hsl(310 50% 70%);
     font-style: italic;
   }
-
   /* ls-output tokens — directory/file/exec colors */
   .term-ls-dir {
     color: hsl(38 75% 60%);
