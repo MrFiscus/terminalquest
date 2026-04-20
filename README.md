@@ -4,53 +4,106 @@ A React + TypeScript terminal dungeon RPG for learning beginner Linux commands. 
 
 AI features use Claude through Supabase Edge Functions when an Anthropic key is available. Claude never runs directly in the browser. If the key is missing, expired, quota-limited, or the Edge Function is slow/unavailable, the app automatically falls back to deterministic local content so the game remains playable.
 
-## Output Gallery
-
-<table>
-  <tr>
-    <td><img src="readme-img/Screenshot%202026-04-19%20164539.png" alt="Terminal Quest gameplay screenshot 1" width="320" /></td>
-    <td><img src="readme-img/Screenshot%202026-04-19%20164557.png" alt="Terminal Quest gameplay screenshot 2" width="320" /></td>
-    <td><img src="readme-img/Screenshot%202026-04-19%20164608.png" alt="Terminal Quest gameplay screenshot 3" width="320" /></td>
-  </tr>
-  <tr>
-    <td><img src="readme-img/Screenshot%202026-04-19%20164619.png" alt="Terminal Quest gameplay screenshot 4" width="320" /></td>
-    <td><img src="readme-img/Screenshot%202026-04-19%20164629.png" alt="Terminal Quest gameplay screenshot 5" width="320" /></td>
-    <td><img src="readme-img/Screenshot%202026-04-19%20164637.png" alt="Terminal Quest gameplay screenshot 6" width="320" /></td>
-  </tr>
-  <tr>
-    <td><img src="readme-img/Screenshot%202026-04-19%20164645.png" alt="Terminal Quest gameplay screenshot 7" width="320" /></td>
-    <td><img src="readme-img/Screenshot%202026-04-19%20164654.png" alt="Terminal Quest gameplay screenshot 8" width="320" /></td>
-    <td><img src="readme-img/Screenshot%202026-04-19%20164715.png" alt="Terminal Quest gameplay screenshot 9" width="320" /></td>
-  </tr>
-  <tr>
-    <td><img src="readme-img/Screenshot%202026-04-19%20164726.png" alt="Terminal Quest gameplay screenshot 10" width="320" /></td>
-    <td><img src="readme-img/Screenshot%202026-04-19%20164743.png" alt="Terminal Quest gameplay screenshot 11" width="320" /></td>
-    <td><img src="readme-img/Screenshot%202026-04-19%20164809.png" alt="Terminal Quest gameplay screenshot 12" width="320" /></td>
-  </tr>
-  <tr>
-    <td><img src="readme-img/Screenshot%202026-04-19%20164818.png" alt="Terminal Quest gameplay screenshot 13" width="320" /></td>
-    <td><img src="readme-img/Screenshot%202026-04-19%20164825.png" alt="Terminal Quest gameplay screenshot 14" width="320" /></td>
-    <td><img src="readme-img/Screenshot%202026-04-19%20164836.png" alt="Terminal Quest gameplay screenshot 15" width="320" /></td>
-  </tr>
-</table>
-
 ## Features
 
-- Split-screen terminal + 2D dungeon renderer
-- Room-by-room visibility, not a full-map view
-- Linux-style commands: `ls`, `cd`, `pwd`, `cat`, `file`, `find`, `mkdir`, `rm`, `mv`, `help`, `clear`
+### Cinematic Dungeon Onboarding
+
+Terminal Quest opens with a cinematic dungeon landing page that frames the app as a playable Linux RPG, not a plain command tutorial.
+
+<img src="readme-img/Screenshot%202026-04-19%20164809.png" alt="Terminal Quest landing page with Enter the Dungeon call to action" width="720" />
+
+The landing page teaches the premise before the player ever signs in: Linux commands become spells, rooms become directories, and the keyboard becomes the controller.
+
+<img src="readme-img/Screenshot%202026-04-19%20164818.png" alt="Landing page command cards and split terminal dungeon preview" width="720" />
+
+The onboarding flow demonstrates the core interaction with a simple example: type a command, submit it, and watch the dungeon react.
+
+<img src="readme-img/Screenshot%202026-04-19%20164825.png" alt="How we play section showing a cd command and dungeon transition" width="720" />
+
+The first screen is built for beginners too, with a clear start action and no Linux experience required.
+
+<img src="readme-img/Screenshot%202026-04-19%20164836.png" alt="Landing page testimonial and enter dungeon button" width="720" />
+
+### Supabase Login And Saved Runs
+
+Players can create an account or continue with Google through Supabase authentication. The screen keeps the terminal fantasy alive while still behaving like a real login flow.
+
+<img src="readme-img/Screenshot%202026-04-19%20164726.png" alt="Login screen with email password and Google authentication" width="720" />
+
+If a previous quest exists, the app offers to resume it and shows the saved room, difficulty, explored rooms, and commands used.
+
+<img src="readme-img/Screenshot%202026-04-19%20164743.png" alt="Saved quest resume screen with chamber stats and continue button" width="720" />
+
+### Terminal Dungeon Gameplay
+
+The main game is a split-screen terminal and tile-based dungeon. The player types real Linux-style commands on the left and sees the current dungeon room on the right.
+
+<img src="readme-img/Screenshot%202026-04-19%20164539.png" alt="Terminal command output next to generated dungeon room with wizard guidance" width="720" />
+
+Commands such as `ls`, `cd`, `pwd`, `cat`, `file`, `find`, `mkdir`, `rm`, and `mv` drive real movement, discovery, items, locked doors, and room transitions.
+
+### Procedural Dungeon Rooms
+
+Rooms are generated with connected wall structures, lighting, banners, skulls, vents, doors, archways, keys, scrolls, and decorative dungeon props while preserving playable paths.
+
+<img src="readme-img/Screenshot%202026-04-19%20164557.png" alt="Generated dungeon room with locked door item labels and dungeon lighting" width="720" />
+
+The map uses room-by-room visibility instead of a full-map reveal, so each chamber feels like a new directory to inspect.
+
+### Directory-Based Movement
+
+Moving through a door updates the shell path and the dungeon view together. Rooms behave like directories, doors behave like folders, and the player physically walks to exits before changing rooms.
+
+<img src="readme-img/Screenshot%202026-04-19%20164715.png" alt="Player entering a generated room after running cd in the terminal" width="720" />
+
+### AI Dungeon Master And Hint Book
+
+The Dungeon Master reacts through the wizard popup instead of cluttering the terminal. It can explain mistakes, nudge stuck players, praise useful commands, and guide beginners toward the next action.
+
+<img src="readme-img/Screenshot%202026-04-19%20164825.png" alt="AI mentor hint explaining how to proceed through the dungeon" width="720" />
+
+The hint book and inventory sit under the map, keeping guidance, collected items, and the current room visible without hiding the game board.
+
+<img src="readme-img/Screenshot%202026-04-19%20164539.png" alt="Hint book inventory bar and wizard popup during gameplay" width="720" />
+
+### Profile, Stats, And Learning Progression
+
+The profile page turns each run into a learning record. The account tab shows login identity and the current shell archetype generated from play history.
+
+<img src="readme-img/Screenshot%202026-04-19%20164608.png" alt="Adventure profile account tab with player identity and shell archetype" width="720" />
+
+The stats tab tracks progression such as completed levels, favorite command, keys found, streaks, and total commands.
+
+<img src="readme-img/Screenshot%202026-04-19%20164619.png" alt="Adventure profile stats tab with command and quest metrics" width="720" />
+
+The mastery tab explains each command as a spell, showing what the command teaches and what the player should practice next.
+
+<img src="readme-img/Screenshot%202026-04-19%20164629.png" alt="Adventure profile mastery tab showing Linux commands as spells" width="720" />
+
+Achievements reward milestones such as finishing levels, practicing `find`, and opening locked doors.
+
+<img src="readme-img/Screenshot%202026-04-19%20164637.png" alt="Adventure profile achievements tab with unlockable milestones" width="720" />
+
+The progress tab visualizes commands used, time per run, efficiency, and command mastery shape.
+
+<img src="readme-img/Screenshot%202026-04-19%20164645.png" alt="Adventure profile progress charts for commands and completion time" width="720" />
+
+The difficulty tab lets the player calibrate Linux familiarity, which feeds the adaptive level generation system.
+
+<img src="readme-img/Screenshot%202026-04-19%20164654.png" alt="Adventure profile difficulty calibration slider" width="720" />
+
+### AI-Enhanced Systems With Local Fallbacks
+
+Claude can power Dungeon Master tutoring, command flavor text, adaptive level generation, generated `mkdir` rooms, Mau quizzes, profile summaries, and run reports. If the API key is missing, expired, quota-limited, or slow, deterministic local fallbacks keep the whole game playable.
+
+Core gameplay also includes:
+
 - Dungeon-style inventory at `~/inventory`
 - Win condition by moving the target file into inventory
-- Tile-based deterministic room generation
 - Door placement on wall boundaries only
 - Door labels above exits
-- Player walks to doors/files before changing rooms or picking items up
-- Provided `door.png` and GIF assets used for doors and character animation
-- Optional Claude Dungeon Master tutor for natural-language help and unknown commands
-- Optional Claude-based AI level generation with deterministic fallback
-- Optional Claude-based AI room generation for `mkdir` with deterministic fallback
-- Optional Claude-based Mau quizzes with deterministic fallback
-- AI calls time out and fall back quickly so expired API credits do not block gameplay
+- Player walking to doors/files before changing rooms or picking items up
+- Sound effects and dungeon ambience for movement, doors, rooms, and actions
 
 ## Requirements
 
