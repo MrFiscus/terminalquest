@@ -1512,6 +1512,55 @@ export function GameWorld({ state, onDismissPopup, headerRight, headerSubtitle }
             </div>
           </motion.div>
 
+          {/* Interior arch foreground: frame sits above the player so movement reads as passing through. */}
+          {interiorDoors.map((d) => {
+            const cap = horizontalInteriorCapFor(d.x, d.y);
+            const framePieces: Array<{ key: string; clipPath: string }> = [
+              { key: "top", clipPath: "inset(0 0 62% 0)" },
+              { key: "left", clipPath: "inset(28% 69% 0 0)" },
+              { key: "right", clipPath: "inset(28% 0 0 69%)" },
+            ];
+            return (
+              <div
+                key={`id-fg-${d.x}-${d.y}`}
+                className="pointer-events-none absolute"
+                style={{
+                  left: d.x * tileW,
+                  top: d.y * tileH,
+                  width: tileW,
+                  height: tileH,
+                  zIndex: 41,
+                }}
+              >
+                {framePieces.map((piece) => (
+                  <img
+                    key={piece.key}
+                    src={elementAsset("arch-gate")}
+                    alt=""
+                    draggable={false}
+                    className="absolute inset-0 h-full w-full object-cover"
+                    style={{
+                      clipPath: piece.clipPath,
+                      imageRendering: "pixelated",
+                      filter: "drop-shadow(0 4px 4px rgba(0,0,0,0.72))",
+                    }}
+                  />
+                ))}
+                <img
+                  src={cap.src}
+                  alt=""
+                  draggable={false}
+                  className="absolute object-cover"
+                  style={{
+                    ...cap.style,
+                    imageRendering: "pixelated",
+                    filter: "drop-shadow(0 4px 4px rgba(0,0,0,0.55))",
+                  }}
+                />
+              </div>
+            );
+          })}
+
           {/* ------- NPCs ------- */}
           {(room.npcs || []).map((npc) => {
             const dist = Math.abs(state.player.x - npc.x) + Math.abs(state.player.y - npc.y);
