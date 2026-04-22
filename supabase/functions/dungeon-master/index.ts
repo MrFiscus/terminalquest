@@ -480,10 +480,18 @@ Be specific and actionable.
 Only suggest commands available in this game: ls, cd, mkdir, pwd, cat, mv, rm, find, file.`;
 };
 
-async function askClaude(input: string, mode: DungeonMasterMode, context: DungeonMasterContext) {
-  const ANTHROPIC_API_KEY = Deno.env.get("ANTHROPIC_API_KEY");
-  const ANTHROPIC_MODEL = Deno.env.get("ANTHROPIC_MODEL") ?? "claude-3-haiku-20240307";
-  if (!ANTHROPIC_API_KEY) return fallbackReply(input, mode, context);
+const geminiTextFromResponse = (data: unknown) => {
+  const candidates = (data as { candidates?: Array<{ content?: { parts?: Array<{ text?: string }> } }> })?.candidates;
+  return candidates?.[0]?.content?.parts
+    ?.map((part) => part.text ?? "")
+    .join("")
+    .trim() ?? "";
+};
+
+async function askGemini(input: string, mode: DungeonMasterMode, context: DungeonMasterContext) {
+  const GEMINI_API_KEY = Deno.env.get("GEMINI_API_KEY");
+  const GEMINI_MODEL = Deno.env.get("GEMINI_MODEL") ?? "gemini-2.5-flash";
+  if (!GEMINI_API_KEY) return fallbackReply(input, mode, context);
 
   const systemPrompt =
     mode === "help-tutor" ? helpTutorSystemPrompt(context) :
@@ -518,32 +526,39 @@ ${systemPrompt}${
     mode === "command-flavor" ? 0.55 :
     0.45;
 
-  const response = await fetch("https://api.anthropic.com/v1/messages", {
+  const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent`, {
     method: "POST",
     headers: {
-      "x-api-key": ANTHROPIC_API_KEY,
-      "anthropic-version": "2023-06-01",
+      "x-goog-api-key": GEMINI_API_KEY,
       "content-type": "application/json",
     },
     body: JSON.stringify({
-      model: ANTHROPIC_MODEL,
-      max_tokens: maxTokens,
-      temperature,
-      system: systemWithDemoContext,
-      messages: [{ role: "user", content: userPrompt(input, mode, context) }],
+      systemInstruction: {
+        parts: [{ text: systemWithDemoContext }],
+      },
+      contents: [
+        {
+          role: "user",
+          parts: [{ text: userPrompt(input, mode, context) }],
+        },
+      ],
+      generationConfig: {
+        maxOutputTokens: maxTokens,
+        temperature,
+        thinkingConfig: {
+          thinkingBudget: 0,
+        },
+      },
     }),
   });
 
   if (!response.ok) {
-    console.error("Anthropic error", response.status, await response.text());
+    console.error("Gemini error", response.status, await response.text());
     return fallbackReply(input, mode, context);
   }
 
   const data = await response.json();
-  const text = data?.content
-    ?.map((part: { type?: string; text?: string }) => (part.type === "text" ? part.text ?? "" : ""))
-    ?.join("")
-    ?.trim();
+  const text = geminiTextFromResponse(data);
   return text || fallbackReply(input, mode, context);
 }
 
@@ -583,7 +598,7 @@ Deno.serve(async (req) => {
       });
     }
 
-    const message = await askClaude(input, mode, context);
+    const message = await askGemini(input, mode, context);
     return new Response(JSON.stringify({ message }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });

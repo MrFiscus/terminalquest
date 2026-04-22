@@ -98,9 +98,9 @@ async function generateQuiz(
   );
   if (cached) return cached;
 
-  const ANTHROPIC_API_KEY = Deno.env.get("ANTHROPIC_API_KEY");
-  const ANTHROPIC_MODEL = Deno.env.get("ANTHROPIC_MODEL") ?? "claude-3-haiku-20240307";
-  if (!ANTHROPIC_API_KEY) return fallbackQuiz(mechanic, difficulty, previousQuestions, previousAnswers);
+  const GEMINI_API_KEY = Deno.env.get("GEMINI_API_KEY");
+  const GEMINI_MODEL = Deno.env.get("GEMINI_MODEL") ?? "gemini-2.5-flash";
+  if (!GEMINI_API_KEY) return fallbackQuiz(mechanic, difficulty, previousQuestions, previousAnswers);
 
   const isDemoMode = difficulty === 0;
 
@@ -137,40 +137,43 @@ Output ONLY valid JSON:
   "hint": "a subtle hint if player is stuck"
 }`;
 
-  const response = await fetch("https://api.anthropic.com/v1/messages", {
+  const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent`, {
     method: "POST",
     headers: {
-      "x-api-key": ANTHROPIC_API_KEY,
-      "anthropic-version": "2023-06-01",
+      "x-goog-api-key": GEMINI_API_KEY,
       "content-type": "application/json",
     },
     body: JSON.stringify({
-      model: ANTHROPIC_MODEL,
-      max_tokens: 180,
-      temperature: 0.75,
-      system,
-      messages: [
+      systemInstruction: {
+        parts: [{ text: system }],
+      },
+      contents: [
         {
           role: "user",
-          content: JSON.stringify({
+          parts: [{ text: JSON.stringify({
             mechanic,
             difficulty,
             previousQuestions,
             previousAnswers,
-          }),
+          }) }],
         },
       ],
+      generationConfig: {
+        maxOutputTokens: 180,
+        temperature: 0.75,
+        responseMimeType: "application/json",
+      },
     }),
   });
 
   if (!response.ok) {
-    console.error("Anthropic quiz error", response.status, await response.text());
+    console.error("Gemini quiz error", response.status, await response.text());
     return fallbackQuiz(mechanic, difficulty, previousQuestions, previousAnswers);
   }
 
   const data = await response.json();
-  const text = data?.content
-    ?.map((part: { type?: string; text?: string }) => (part.type === "text" ? part.text ?? "" : ""))
+  const text = data?.candidates?.[0]?.content?.parts
+    ?.map((part: { text?: string }) => part.text ?? "")
     ?.join("")
     ?.trim() ?? "";
   const parsedQuiz = extractJson(text);

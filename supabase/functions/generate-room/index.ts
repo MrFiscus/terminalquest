@@ -74,42 +74,48 @@ Deno.serve(async (req) => {
       difficulty: typeof body.difficulty === "string" ? body.difficulty : "normal",
     };
 
-    const ANTHROPIC_API_KEY = Deno.env.get("ANTHROPIC_API_KEY");
-    const ANTHROPIC_MODEL = Deno.env.get("ANTHROPIC_MODEL") ?? "claude-3-haiku-20240307";
-    if (!ANTHROPIC_API_KEY) {
-      return new Response(JSON.stringify({ error: "Anthropic not configured" }), {
+    const GEMINI_API_KEY = Deno.env.get("GEMINI_API_KEY");
+    const GEMINI_MODEL = Deno.env.get("GEMINI_MODEL") ?? "gemini-2.5-flash";
+    if (!GEMINI_API_KEY) {
+      return new Response(JSON.stringify({ error: "Gemini not configured" }), {
         status: 500,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
-    const response = await fetch("https://api.anthropic.com/v1/messages", {
+    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent`, {
       method: "POST",
       headers: {
-        "x-api-key": ANTHROPIC_API_KEY,
-        "anthropic-version": "2023-06-01",
+        "x-goog-api-key": GEMINI_API_KEY,
         "content-type": "application/json",
       },
       body: JSON.stringify({
-        model: ANTHROPIC_MODEL,
-        max_tokens: 260,
-        temperature: 0.4,
-        system: "Return only compact valid JSON. No markdown.",
-        messages: [{ role: "user", content: prompt(input) }],
+        systemInstruction: {
+          parts: [{ text: "Return only compact valid JSON. No markdown." }],
+        },
+        contents: [{
+          role: "user",
+          parts: [{ text: prompt(input) }],
+        }],
+        generationConfig: {
+          maxOutputTokens: 260,
+          temperature: 0.4,
+          responseMimeType: "application/json",
+        },
       }),
     });
 
     if (!response.ok) {
-      console.error("Anthropic room error", response.status, await response.text());
-      return new Response(JSON.stringify({ error: "Anthropic API error" }), {
+      console.error("Gemini room error", response.status, await response.text());
+      return new Response(JSON.stringify({ error: "Gemini API error" }), {
         status: 500,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
     const data = await response.json();
-    const room = data?.content
-      ?.map((part: { type?: string; text?: string }) => (part.type === "text" ? part.text ?? "" : ""))
+    const room = data?.candidates?.[0]?.content?.parts
+      ?.map((part: { text?: string }) => part.text ?? "")
       ?.join("")
       ?.trim() ?? "{}";
 

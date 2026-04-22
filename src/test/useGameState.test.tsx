@@ -67,6 +67,18 @@ describe('useGameState Hook', () => {
       expect(errorTokens[errorTokens.length - 1].text).toMatch(/command not found/i);
     });
 
+    it('routes plain-English help questions to the Dungeon Master without command errors', async () => {
+      const onOpenProfile = vi.fn();
+      const { result } = renderHook(() => useGameState({ onOpenProfile }));
+
+      await act(async () => {
+        await result.current.submit('what does mv do?');
+      });
+
+      const errorTokens = result.current.state.history.filter(h => h.kind === 'error');
+      expect(errorTokens.some(h => /command not found/i.test(h.text))).toBe(false);
+    });
+
     it('can load a generated level', () => {
       const onOpenProfile = vi.fn();
       const { result } = renderHook(() => useGameState({ onOpenProfile }));

@@ -2,7 +2,7 @@
 
 A React + TypeScript terminal dungeon RPG for learning beginner Linux commands. Rooms behave like directories, files behave like items, and doors behave like folders. The player types commands in the left terminal and sees the current dungeon room on the right.
 
-AI features use Claude through Supabase Edge Functions when an Anthropic key is available. Claude never runs directly in the browser. If the key is missing, expired, quota-limited, or the Edge Function is slow/unavailable, the app automatically falls back to deterministic local content so the game remains playable.
+AI features use Gemini through Supabase Edge Functions when a Gemini key is available. Gemini never runs directly in the browser. If the key is missing, expired, quota-limited, or the Edge Function is slow/unavailable, the app automatically falls back to deterministic local content so the game remains playable.
 
 ## Features
 
@@ -94,7 +94,7 @@ The difficulty tab lets the player calibrate Linux familiarity, which feeds the 
 
 ### AI-Enhanced Systems With Local Fallbacks
 
-Claude can power Dungeon Master tutoring, command flavor text, adaptive level generation, generated `mkdir` rooms, Mau quizzes, profile summaries, and run reports. If the API key is missing, expired, quota-limited, or slow, deterministic local fallbacks keep the whole game playable.
+Gemini can power Dungeon Master tutoring, command flavor text, adaptive level generation, generated `mkdir` rooms, Mau quizzes, profile summaries, and run reports. If the API key is missing, expired, quota-limited, or slow, deterministic local fallbacks keep the whole game playable.
 
 Core gameplay also includes:
 
@@ -110,7 +110,7 @@ Core gameplay also includes:
 - Node.js 18 or newer
 - npm
 - Supabase project
-- Anthropic API key for Claude, optional
+- Gemini API key, optional
 
 ## Local Setup
 
@@ -154,11 +154,11 @@ If you edit `.env`, restart Vite with `Ctrl + C`, then:
 npm run dev
 ```
 
-## Optional Claude And Supabase
+## Optional Gemini And Supabase
 
-Claude keys belong in Supabase secrets, not in `.env`.
+Gemini keys belong in Supabase secrets, not in `.env`.
 
-The app works without a Claude key. Without `ANTHROPIC_API_KEY`, these systems fall back automatically:
+The app works without a Gemini key. Without `GEMINI_API_KEY`, these systems fall back automatically:
 
 ```text
 Dungeon Master chat      -> local tutor replies
@@ -173,8 +173,8 @@ Profile summary          -> local profile summary
 If you want AI-enhanced text/generation, set hosted secrets:
 
 ```bash
-npx supabase secrets set ANTHROPIC_API_KEY=your-anthropic-api-key --project-ref vtizdyjqkwcrygqblpcm
-npx supabase secrets set ANTHROPIC_MODEL=claude-3-haiku-20240307 --project-ref vtizdyjqkwcrygqblpcm
+npx supabase secrets set GEMINI_API_KEY=your-gemini-api-key --project-ref vtizdyjqkwcrygqblpcm
+npx supabase secrets set GEMINI_MODEL=gemini-2.5-flash --project-ref vtizdyjqkwcrygqblpcm
 ```
 
 If you stop paying for the key or remove it later, no code change is required. The Supabase functions and browser services both return fallback content.
@@ -199,8 +199,8 @@ cp supabase/.env.example supabase/.env.local
 Then fill in only if testing AI locally:
 
 ```env
-ANTHROPIC_API_KEY="your-anthropic-api-key"
-ANTHROPIC_MODEL="claude-3-haiku-20240307"
+GEMINI_API_KEY="your-gemini-api-key"
+GEMINI_MODEL="gemini-2.5-flash"
 ```
 
 ## Fallback Behavior
@@ -215,25 +215,25 @@ Supabase functions: supabase/functions/*
 Browser calls time out after a short wait and continue with local fallback content. This protects the player experience if:
 
 ```text
-ANTHROPIC_API_KEY is missing
-ANTHROPIC_API_KEY expires
-Anthropic quota is exceeded
+GEMINI_API_KEY is missing
+GEMINI_API_KEY expires
+Gemini quota is exceeded
 Supabase Edge Functions return an error
 Network calls hang or fail
 ```
 
-To intentionally test no-AI mode, remove or rename the `ANTHROPIC_API_KEY` Supabase secret, redeploy the functions, and play normally. The app should still generate levels, rooms, quizzes, reports, and guidance.
+To intentionally test no-AI mode, remove or rename the `GEMINI_API_KEY` Supabase secret, redeploy the functions, and play normally. The app should still generate levels, rooms, quizzes, reports, and guidance.
 
 If you want to remove the hosted secret:
 
 ```bash
-npx supabase secrets unset ANTHROPIC_API_KEY --project-ref vtizdyjqkwcrygqblpcm
+npx supabase secrets unset GEMINI_API_KEY --project-ref vtizdyjqkwcrygqblpcm
 ```
 
 
 ## Testing AI
 
-These command-like inputs intentionally use local hardcoded replies to save Claude credits:
+These command-like inputs intentionally use local hardcoded replies to save Gemini credits:
 
 ```text
 sudo
@@ -241,7 +241,7 @@ grep file
 find
 ```
 
-Use natural-language prompts to test Claude tutor mode:
+Use natural-language prompts to test Gemini tutor mode:
 
 ```text
 i am new to linux how does this work
@@ -259,7 +259,7 @@ If every answer looks identical or generic, that usually means fallback mode is 
 
 - `.env` points to the same Supabase project that has the functions
 - `VITE_SUPABASE_PUBLISHABLE_KEY` belongs to that project
-- `ANTHROPIC_API_KEY` is set as a Supabase secret and still has credits/quota
+- `GEMINI_API_KEY` is set as a Supabase secret and still has credits/quota
 - Edge Functions were redeployed after code changes
 - Vite was restarted after `.env` changes
 
@@ -285,7 +285,7 @@ Default win command:
 mv victory.jpg ~/inventory
 ```
 
-For Claude-generated levels, the terminal prints the exact `Win:` command.
+For Gemini-generated levels, the terminal prints the exact `Win:` command.
 
 ## Scripts
 
@@ -305,7 +305,7 @@ Build command: npm run build
 Output directory: dist
 ```
 
-Keep `ANTHROPIC_API_KEY` in Supabase secrets only if AI-enhanced mode is desired. Do not put Anthropic keys in frontend hosting environment variables.
+Keep `GEMINI_API_KEY` in Supabase secrets only if AI-enhanced mode is desired. Do not put Gemini keys in frontend hosting environment variables.
 
 ## Git Safety
 

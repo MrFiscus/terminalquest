@@ -739,10 +739,15 @@ export function useGameState(options: UseGameStateOptions = {}) {
         openScroll,
         closeScroll
       });
-      const failed = Boolean(result.unknown || result.lines.some((line) => line.kind === "error"));
+      const unknownInputKind = result.unknown ? classifyTerminalInput(result.unknown) : null;
+      const conversationalHelp = unknownInputKind === "help-like";
+      const failed = Boolean(
+        (!conversationalHelp && result.unknown) ||
+        result.lines.some((line) => line.kind === "error"),
+      );
       const previousCommands = [...runTrackerRef.current.commands];
       const commandName = baseCommand(raw);
-      if (commandName) {
+      if (commandName && !conversationalHelp) {
         runTrackerRef.current.commands.push(raw.trim());
         if (failed) runTrackerRef.current.mistakes.push(raw.trim());
         saveActiveRun(activeRunFromTracker(runTrackerRef.current, s.targetFile));
@@ -787,19 +792,20 @@ export function useGameState(options: UseGameStateOptions = {}) {
       const shouldRememberMistake =
         failed &&
         (Boolean(commandFromInput(raw)) ||
-          Boolean(result.unknown && classifyTerminalInput(result.unknown) === "command-like"));
+          Boolean(unknownInputKind === "command-like"));
 
       setState((cur) => ({
         ...cur,
-        commandStats: recordCommandAttempt(cur.commandStats, raw, failed),
+        commandStats: conversationalHelp ? cur.commandStats : recordCommandAttempt(cur.commandStats, raw, failed),
         recentMistakes: shouldRememberMistake ? rememberMistake(cur.recentMistakes, raw) : cur.recentMistakes,
       }));
-      performanceRef.current = updatePerformanceSummary(performanceRef.current, raw, failed);
-      const reaction = personalityReaction(performanceRef.current, raw);
+      const reaction = conversationalHelp
+        ? { summary: performanceRef.current, line: null }
+        : personalityReaction(updatePerformanceSummary(performanceRef.current, raw, failed), raw);
       performanceRef.current = reaction.summary;
       const guided = s.playMode !== "real";
       const useAiGuidance = guided;
-      const mentorLine = useAiGuidance && !brokenDoorFailure
+      const mentorLine = useAiGuidance && !brokenDoorFailure && !conversationalHelp
         ? liveMentorReaction({
             state: s,
             raw,
@@ -821,7 +827,9 @@ export function useGameState(options: UseGameStateOptions = {}) {
 
       if (result.unknown) {
         if (commandEffect.screen) triggerScreenEffect(commandEffect.screen, 450);
-        appendLines([{ kind: "error", text: `command not found: ${result.unknown}` }]);
+        if (!conversationalHelp) {
+          appendLines([{ kind: "error", text: `command not found: ${result.unknown}` }]);
+        }
         const message = await askDungeonMaster(result.unknown, {
           ...sharedAiContext,
         });
