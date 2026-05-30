@@ -16,6 +16,7 @@ import {
   askLiveDungeonMasterReaction,
   askMistakeCoach,
   askRunReportFeedback,
+  askChronicleNarration,
   classifyTerminalInput,
   sanitizeDungeonMasterReply,
   stripDungeonMasterPrefix,
@@ -28,7 +29,7 @@ import {
   rememberMistake,
 } from "@/game/adaptiveDungeon";
 import { teachingForCommandInput, type TeachingTip } from "@/game/commandTeaching";
-import { magicLineForCommandInput } from "@/game/commandMagic";
+// magicLineForCommandInput is disabled because magic command narration is now combined with teaching tips
 import { runCommandEffect } from "@/game/commandEffects";
 import { detectCommandCombo } from "@/game/commandCombos";
 import { buildVictoryReport, liveMentorReaction } from "@/game/liveMentor";
@@ -186,6 +187,7 @@ function initialState(): GameState {
     vfx: [],
     screenEffect: null,
     popup: null,
+    errorPopup: null,
     goal: `Find ${TARGET_FILE} and move it into your inventory.`,
     requiredCommands: ["ls", "cd", "find", "mv"],
     winCondition: `mv ${TARGET_FILE} ~/inventory`,
@@ -216,9 +218,8 @@ function isDemoState(state: GameState) {
 export function useGameState(options: UseGameStateOptions = {}) {
   const { onOpenProfile } = options;
   const [state, setState] = useState<GameState>(initialState);
-  const [teachingTip, setTeachingTip] = useState<TeachingTip | null>(null);
-  const [dungeonMasterTip, setDungeonMasterTip] = useState<string | null>(null);
   const [roomSubtitle, setRoomSubtitle] = useState<string | null>(null);
+  const [chronicleLog, setChronicleLog] = useState<{ command: string; narration: string }[]>([]);
   const idRef = useRef(100);
   const performanceRef = useRef<PerformanceSummary>(createPerformanceSummary());
   const taughtCommandsRef = useRef(new Set<string>());
@@ -389,7 +390,7 @@ export function useGameState(options: UseGameStateOptions = {}) {
   const showDungeonMasterTip = useCallback((text: string) => {
     const clean = sanitizeDungeonMasterReply(text);
     if (!clean) return;
-    setDungeonMasterTip(clean);
+    setChronicleLog((prev) => [...prev, { command: "", narration: clean }].slice(-50));
   }, []);
 
   const appendLines = useCallback((lines: Omit<TerminalLine, "id">[]) => {
@@ -414,28 +415,11 @@ export function useGameState(options: UseGameStateOptions = {}) {
     }, durationMs);
   }, []);
 
-  const dismissTeaching = useCallback(() => {
-    if (teachingTimerRef.current) {
-      clearTimeout(teachingTimerRef.current);
-      teachingTimerRef.current = null;
-    }
-    setTeachingTip(null);
-  }, []);
-
-  const dismissDungeonMasterTip = useCallback(() => {
-    setDungeonMasterTip(null);
-  }, []);
-
   const triggerTeaching = useCallback((commandInput: string) => {
     const tip = teachingForCommandInput(commandInput);
     if (!tip || taughtCommandsRef.current.has(tip.command)) return;
     taughtCommandsRef.current.add(tip.command);
-    setTeachingTip(tip);
-    if (teachingTimerRef.current) clearTimeout(teachingTimerRef.current);
-    teachingTimerRef.current = setTimeout(() => {
-      setTeachingTip(null);
-      teachingTimerRef.current = null;
-    }, 5200);
+    setChronicleLog((prev) => [...prev, { command: "", narration: tip.message }].slice(-50));
   }, []);
 
   const dismissRoomSubtitle = useCallback(() => {
@@ -685,6 +669,8 @@ export function useGameState(options: UseGameStateOptions = {}) {
     [checkAchievements, completeRun, showDungeonMasterTip, showRoomSubtitle],
   );
 
+  const shortCommand = (cmd: string) => cmd.trim().split(/\s+/)[0]?.toLowerCase() ?? "";
+
   const submit = useCallback(
     async (raw: string) => {
       const s = stateRef.current;
@@ -700,29 +686,25 @@ export function useGameState(options: UseGameStateOptions = {}) {
           playGameSound("quiz");
           if (s.mechanic === "chmod" && npc.blocksDoorTarget) {
             if (s.mauSecretKnown) {
-              startMauQuiz(mauKeyQuizForDoor(npc.blocksDoorTarget));
-              appendLines([
-                { kind: "npc", text: "Mau studies the opened scroll in your paws." },
-                { kind: "npc", text: "Mau: \"Speak the key the scroll revealed.\"" },
-              ]);
+              const quiz = mauKeyQuizForDoor(npc.blocksDoorTarget);
+              startMauQuiz({
+                ...quiz,
+                introMessage: "Mau: \"Speak the key the scroll revealed.\""
+              });
               return;
             }
             if (!(s.lockedCommands ?? []).includes("chmod")) {
-              appendLines([
-                { kind: "npc", text: "Mau guards the way." },
-                { kind: "npc", text: "Mau: \"Read the scroll, then tell me its key.\"" },
-              ]);
+              showDungeonMasterTip("Mau guards the way. Read the scroll, then tell him its key.");
               return;
             }
           }
           const depth = s.cwd.split("/").filter(Boolean).length;
           const dungeonDifficulty = s.difficultyValue ?? Math.min(100, Math.max(0, depth * 20));
           const quiz = await generateMauQuiz(dungeonDifficulty, s.mechanic);
-          startMauQuiz(quiz);
-          appendLines([
-            { kind: "npc", text: "Mau's eyes glow with ancient knowledge." },
-            { kind: "npc", text: "Mau: \"Show me your command of the shell, little fox.\"" },
-          ]);
+          startMauQuiz({
+            ...quiz,
+            introMessage: "Mau: \"Show me your command of the shell, little fox.\""
+          });
         }
         return;
       }
@@ -827,19 +809,24 @@ export function useGameState(options: UseGameStateOptions = {}) {
 
       if (result.unknown) {
         if (commandEffect.screen) triggerScreenEffect(commandEffect.screen, 450);
-        if (!conversationalHelp) {
-          appendLines([{ kind: "error", text: `command not found: ${result.unknown}` }]);
-        }
+        
         const message = await askDungeonMaster(result.unknown, {
           ...sharedAiContext,
         });
-        appendLines([{ kind: "dm", text: `Dungeon Master: ${message}` }]);
-        if (reaction.line) appendLines([reaction.line]);
+        
+        const id = nextId();
+        setState((cur) => ({ 
+          ...cur, 
+          animating: false,
+          errorPopup: { 
+            id, 
+            title: "Spell Fizzled", 
+            body: stripDungeonMasterPrefix(message) 
+          } 
+        }));
+        
+        // We still record the mistake but don't append to terminal history
         return;
-      }
-
-      if (!failed && guided) {
-        triggerTeaching(raw);
       }
 
       if (result.patch) {
@@ -910,11 +897,10 @@ export function useGameState(options: UseGameStateOptions = {}) {
         setState((cur) => ({ ...cur, popup: { id, ...result.popup! } }));
       }
 
-      const magicLine = magicLineForCommandInput(raw);
+      // Magic line is disabled/merged with command teaching tips to avoid duplicate entries in the Chronicle
+      const magicLine = null;
       const magicCommand = raw.trim().split(/\s+/)[0]?.toLowerCase() ?? "";
-      const shouldShowMagic =
-        guided && !brokenDoorFailure && magicLine && !magicCommandsRef.current.has(magicCommand);
-      if (shouldShowMagic) magicCommandsRef.current.add(magicCommand);
+      const shouldShowMagic = false;
 
       if (commandEffect.screen) {
         triggerScreenEffect(commandEffect.screen, failed ? 450 : 650);
@@ -928,6 +914,37 @@ export function useGameState(options: UseGameStateOptions = {}) {
       };
       const resultSummary = result.lines.map((line) => line.text).join(" ").slice(0, 160);
       const isHintCommand = commandName === "hint";
+
+      // Collect wizard narration for the Chronicle of Deeds instead of showing it in terminal
+      const wizardNarration = 
+        useAiGuidance && !isHintCommand && commandEffect.feedback && !failed
+          ? await askCommandFlavor(
+              raw,
+              { ...aiContext, resultSummary },
+              commandEffect.feedback.text,
+            )
+          : null;
+
+      // Also redirect personality reactions to the Chronicle if they exist
+      const personalityLine = !failed ? reaction.line : null;
+      const personalityText = personalityLine ? personalityLine.text.replace(/^Dungeon Master:\s*/i, "") : null;
+
+      if (!failed && guided) {
+        triggerTeaching(raw);
+        const cmd = shortCommand(raw);
+        if (!["cd", "ls", "pwd", "hint"].includes(cmd)) {
+          // Priority: Personality > Wizard Flavor > Chronicle AI
+          const narrationSource = personalityText || wizardNarration;
+          if (narrationSource) {
+            setChronicleLog((prev) => [...prev, { command: raw, narration: narrationSource }].slice(-50));
+          } else {
+            void askChronicleNarration(raw, aiContext).then((narration) => {
+              setChronicleLog((prev) => [...prev, { command: raw, narration }].slice(-50));
+            });
+          }
+        }
+      }
+
       const aiResultLines =
         guided && isHintCommand && result.lines[0]?.kind === "dm"
           ? [
@@ -946,19 +963,8 @@ export function useGameState(options: UseGameStateOptions = {}) {
               ...result.lines.slice(1),
             ]
           : result.lines;
-      const aiCommandFeedback =
-        useAiGuidance && isHintCommand
-          ? null
-          : useAiGuidance && commandEffect.feedback
-          ? {
-              ...commandEffect.feedback,
-              text: `Dungeon Master: ${await askCommandFlavor(
-                raw,
-                { ...aiContext, resultSummary },
-                commandEffect.feedback.text,
-              )}`,
-            }
-          : commandEffect.feedback;
+
+      const aiCommandFeedback = commandEffect.feedback;
       const shouldCoachMistake =
         useAiGuidance &&
         failed &&
@@ -1046,14 +1052,30 @@ export function useGameState(options: UseGameStateOptions = {}) {
         );
       }
 
+      if (failed) {
+        const errorText = 
+          aiMistakeLine?.text || 
+          aiMentorLine?.text || 
+          result.lines.find(l => l.kind === "error")?.text ||
+          "Your spell fizzled... something went wrong.";
+        
+        const id = nextId();
+        setState((cur) => ({ 
+          ...cur, 
+          errorPopup: { 
+            id, 
+            title: "Spell Fizzled", 
+            body: stripDungeonMasterPrefix(errorText) 
+          } 
+        }));
+      }
+
       appendLines([
         ...(shouldShowMagic && magicLine ? [magicLine] : []),
-        ...aiResultLines,
-        ...(useAiGuidance && aiCommandFeedback ? [aiCommandFeedback] : []),
-        ...(aiMistakeLine ? [aiMistakeLine] : []),
+        ...aiResultLines.filter(l => l.kind !== "error"),
         ...(shouldShowCombo && combo ? [combo.line] : []),
-        ...(aiMentorLine ? [aiMentorLine] : []),
-        ...(useAiGuidance && !brokenDoorFailure && reaction.line ? [reaction.line] : []),
+        // Mentor/personality lines are now suppressed in the terminal 
+        // as they are redirected to the Chronicle of Deeds
       ]);
 
       if (guided && shouldShowCombo) {
@@ -1072,6 +1094,7 @@ export function useGameState(options: UseGameStateOptions = {}) {
 
       if (result.openProfile) {
         playGameSound("profile");
+        setState((cur) => ({ ...cur, animating: false }));
         onOpenProfile?.();
         return;
       }
@@ -1102,9 +1125,10 @@ export function useGameState(options: UseGameStateOptions = {}) {
           await delay(commandEffect.delayedStateMs);
         }
         applyEffect(result.effect);
-        if (commandEffect.delayedStateMs) {
-          setState((cur) => ({ ...cur, animating: false }));
-        }
+        setState((cur) => ({ ...cur, animating: false }));
+      } else {
+        // No animation or effect triggered, ensure we unblock the terminal
+        setState((cur) => ({ ...cur, animating: false }));
       }
     },
     [animateWalk, animatePickup, appendLines, applyEffect, checkAchievements, onOpenProfile, triggerTeaching, triggerScreenEffect],
@@ -1112,6 +1136,10 @@ export function useGameState(options: UseGameStateOptions = {}) {
 
   const dismissPopup = useCallback(() => {
     setState((cur) => ({ ...cur, popup: null }));
+  }, []);
+
+  const dismissErrorPopup = useCallback(() => {
+    setState((cur) => ({ ...cur, errorPopup: null }));
   }, []);
 
   const dismissVictory = useCallback(() => {
@@ -1135,12 +1163,10 @@ export function useGameState(options: UseGameStateOptions = {}) {
     comboRef.current.clear();
     mentorShownRef.current.clear();
     mistakeCoachShownRef.current.clear();
-    setDungeonMasterTip(null);
-    dismissTeaching();
     dismissRoomSubtitle();
     clearActiveRun();
     setState(initialState());
-  }, [dismissTeaching, dismissRoomSubtitle]);
+  }, [dismissRoomSubtitle]);
 
   const loadLevel = useCallback((
     level: GeneratedLevel,
@@ -1255,18 +1281,14 @@ export function useGameState(options: UseGameStateOptions = {}) {
         activeMauQuiz: {
           ...s.activeMauQuiz!,
           completedMessage: successMessage,
+          errorMessage: undefined,
         }
       }));
 
-      appendLines([
-        {
-          kind: "npc",
-          text: successMessage,
-        },
-        ...(reward
-          ? [{ kind: "dm" as const, text: `Dungeon Master: ${mechanicMessages[reward] ?? `${reward} is now usable.`}` }]
-          : []),
-      ]);
+      if (reward) {
+        appendLines([{ kind: "dm" as const, text: `Dungeon Master: ${mechanicMessages[reward] ?? `${reward} is now usable.`}` }]);
+      }
+
       if (s.showcaseMode && reward === "mkdir") {
         // Hint, not command — let the player connect the dots between
         // their new mkdir power and the broken doorway.
@@ -1286,7 +1308,13 @@ export function useGameState(options: UseGameStateOptions = {}) {
 
     } else {
       playGameSound("error");
-      appendLines([{ kind: "npc", text: "Mau: \"Not quite. Try again, little fox.\"" }]);
+      setState(cur => ({
+        ...cur,
+        activeMauQuiz: {
+          ...s.activeMauQuiz!,
+          errorMessage: "Mau: \"Not quite. Try again, little fox.\"",
+        }
+      }));
       triggerScreenEffect("error", 800);
     }
   }, [appendLines, applyEffect, showDungeonMasterTip, triggerScreenEffect]);
@@ -1298,10 +1326,6 @@ export function useGameState(options: UseGameStateOptions = {}) {
     dismissPopup,
     dismissVictory,
     loadLevel,
-    teachingTip,
-    dismissTeaching,
-    dungeonMasterTip,
-    dismissDungeonMasterTip,
     roomSubtitle,
     submitMauQuiz,
     closeMauQuiz,
@@ -1310,5 +1334,7 @@ export function useGameState(options: UseGameStateOptions = {}) {
     achievementQueue,
     dismissAchievement,
     resumeSession,
+    dismissErrorPopup,
+    chronicleLog,
   };
 }

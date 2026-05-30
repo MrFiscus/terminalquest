@@ -9,15 +9,20 @@ import scrollItem from "@/assets/scroll-item.png";
 import { dungeonElementAsset, dungeonNewAsset, dungeonPropAsset } from "@/game/dungeonAssetUrls";
 import type { DecorKind, GameState, Room, VfxPulse } from "@/game/types";
 
+import { ErrorPopup } from "./ErrorPopup";
+
 interface GameWorldProps {
   state: GameState;
   onDismissPopup: () => void;
+  onDismissErrorPopup: () => void;
   headerRight?: ReactNode;
-  headerSubtitle?: string | null;
+  hideHeader?: boolean;
+  roomSubtitle?: string | null;
 }
 
-const MIN_TILE = 24;
-const MAX_TILE = 96;
+const MIN_TILE = 32;
+const MAX_TILE = 128;
+
 
 function edist(ax: number, ay: number, bx: number, by: number) {
   return Math.hypot(ax - bx, ay - by);
@@ -459,7 +464,14 @@ function middleWallTorchStyle(
 }
 
 // ------------------------------------------------------------------
-export function GameWorld({ state, onDismissPopup, headerRight, headerSubtitle }: GameWorldProps) {
+export function GameWorld({
+  state,
+  onDismissPopup,
+  onDismissErrorPopup,
+  headerRight,
+  hideHeader = false,
+  roomSubtitle,
+}: GameWorldProps) {
   const room = getRoom(state.rooms, state.cwd);
   const stageRef = useRef<HTMLDivElement>(null);
   const [tileW, setTileW] = useState(44);
@@ -746,7 +758,7 @@ export function GameWorld({ state, onDismissPopup, headerRight, headerSubtitle }
   const showMinimap = state.vfx.some((v) => v.kind === "pwd");
 
   return (
-    <div className="relative flex h-full flex-col bg-background stone-tex">
+    <div className="relative flex h-full flex-col bg-background">
       <AnimatePresence>
         {state.transitioning && (
           <motion.div
@@ -761,23 +773,21 @@ export function GameWorld({ state, onDismissPopup, headerRight, headerSubtitle }
         )}
       </AnimatePresence>
 
-      <div className="relative z-10 flex items-center justify-between gap-3 overflow-hidden px-4 py-2 iron-header border-b-2 border-[hsl(var(--terminal-frame))]">
-        <div className="relative z-10 flex flex-col min-w-0">
-          <span className="font-pixel carved-gold text-[13px] truncate">{room.name}</span>
-          <span className="font-pixel text-[10px] text-parchment mt-1 truncate">{room.path}</span>
-          {headerSubtitle && (
-            <span
-              className="mt-1 max-w-[min(44rem,calc(100vw-22rem))] truncate font-mono-clean text-[12px] leading-tight text-parchment"
-              style={{ textShadow: "0 1px 2px rgba(0,0,0,0.95), 0 0 8px rgba(255,204,92,0.18)" }}
-            >
-              {headerSubtitle}
-            </span>
-          )}
+      {!hideHeader && (
+        <div className="relative z-10 flex items-center justify-between gap-3 overflow-hidden px-4 py-1 iron-header border-b-2 border-[hsl(var(--terminal-frame))]">
+          <div className="relative z-10 flex flex-col min-w-0">
+            <span className="font-pixel carved-gold text-[11px] truncate">{room.name}</span>
+            {roomSubtitle && (
+              <span className="font-mono-clean text-[9px] italic text-parchment/60 truncate">
+                {roomSubtitle}
+              </span>
+            )}
+          </div>
+          <div className="relative z-10 scale-90 origin-right">{headerRight}</div>
         </div>
-        <div className="relative z-10">{headerRight}</div>
-      </div>
+      )}
 
-      <div ref={stageRef} className="relative flex-1 overflow-hidden grid place-items-center">
+      <div ref={stageRef} className="relative flex-1 overflow-hidden flex items-center justify-center">
         {/* This container handles the stable room key and the one-time entry animation */}
         <div key={state.cwd} className="pixelate-in relative overflow-visible">
           {/* This inner div handles the dynamic command pulses/shakes without re-triggering the blur */}
@@ -1635,6 +1645,14 @@ export function GameWorld({ state, onDismissPopup, headerRight, headerSubtitle }
 
           {state.popup && (
             <ScrollPopup title={state.popup.title} body={state.popup.body} onDismiss={onDismissPopup} />
+          )}
+
+          {state.errorPopup && (
+            <ErrorPopup 
+              title={state.errorPopup.title} 
+              body={state.errorPopup.body} 
+              onDismiss={onDismissErrorPopup} 
+            />
           )}
         </div>
         </div>

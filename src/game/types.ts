@@ -182,6 +182,8 @@ export interface MauQuiz {
   completedMessage?: string;
   successMessage?: string;
   releaseMauTarget?: string;
+  errorMessage?: string;
+  introMessage?: string;
 }
 
 export type DifficultyMechanic = "rm" | "mkdir" | "chmod";
@@ -205,6 +207,7 @@ export interface GameState {
   vfx: VfxPulse[];
   screenEffect: ScreenEffect | null;
   popup: ScrollPopup | null;
+  errorPopup: ScrollPopup | null;
   goal: string;
   requiredCommands: string[];
   winCondition: string;

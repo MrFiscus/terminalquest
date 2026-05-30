@@ -10,7 +10,8 @@ export type DungeonMasterMode =
   | "mistake-coach"
   | "hint-ladder"
   | "level-intro"
-  | "profile-summary";
+  | "profile-summary"
+  | "chronicle-narration";
 
 export interface DungeonMasterContext {
   goal?: string;
@@ -202,7 +203,8 @@ export function fallbackDungeonMasterReply(
     mode === "mistake-coach" ||
     mode === "hint-ladder" ||
     mode === "level-intro" ||
-    mode === "profile-summary"
+    mode === "profile-summary" ||
+    mode === "chronicle-narration"
   ) {
     return context.fallback || "The dungeon listens, then answers in a low, practical whisper.";
   }
@@ -351,5 +353,16 @@ export async function askProfileSummary(
   return askDungeonMasterMode(input, "profile-summary", {
     ...context,
     fallback: stripDungeonMasterPrefix(fallback),
+  });
+}
+
+export async function askChronicleNarration(
+  input: string,
+  context: DungeonMasterContext,
+): Promise<string> {
+  const fallback = "A deed is done in the dark silence.";
+  return askDungeonMasterMode(input, "chronicle-narration", {
+    ...context,
+    fallback,
   });
 }

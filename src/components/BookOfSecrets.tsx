@@ -367,7 +367,7 @@ export function BookOfSecrets({ onClose }: BookOfSecretsProps) {
           <div style={{
             textAlign: "center",
             fontFamily: "'Pirata One', 'Cinzel', Georgia, serif",
-            fontSize: 36, color: "#f0d68a",
+            fontSize: 48, color: "#f0d68a",
             letterSpacing: "0.25em", textTransform: "uppercase",
             textShadow: "0 2px 8px rgba(0,0,0,0.95), 0 0 30px rgba(200,145,58,0.5)",
             lineHeight: 1,

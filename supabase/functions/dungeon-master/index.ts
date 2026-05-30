@@ -12,7 +12,8 @@ type DungeonMasterMode =
   | "mistake-coach"
   | "hint-ladder"
   | "level-intro"
-  | "profile-summary";
+  | "profile-summary"
+  | "chronicle-narration";
 
 type DungeonMasterContext = {
   goal?: unknown;
@@ -198,6 +199,13 @@ const levelIntroSystemPrompt =
 
 const profileSummarySystemPrompt =
   "You are a Linux learning coach writing a player's profile title and summary. Use the stats only. Give one short archetype line and one concrete next skill. Keep it encouraging and specific.";
+
+const chronicleNarrationSystemPrompt = `You are a medieval chronicler recording a player's Linux deeds in a dungeon.
+Rewrite the player's successful command into a short, gamified, epic narration.
+- 1 short sentence max.
+- Use past tense.
+- High-fantasy tone (e.g., "The adventurer scoured the room...", "A path was revealed...").
+- Reference the actual action (e.g., ls = surveying, cd = moving, cat = reading).`;
 
 const safeText = (value: unknown, fallback = "") =>
   typeof value === "string" ? value.slice(0, 160) : fallback;
@@ -463,6 +471,19 @@ Sentence 2: Give the next skill to practice.
 Do not start with "Dungeon Master:".`;
   }
 
+  if (mode === "chronicle-narration") {
+    return `Successful command: "${input}"
+Current room: "${safeText(context.currentRoom)}"
+Items here: "${safeList(context.roomFiles)}"
+Inventory: "${safeList(context.inventory)}"
+
+Apply the chronicle rules:
+- One epic, gamified sentence.
+- Past tense.
+- High fantasy tone.
+- Do not start with "Dungeon Master:".`;
+  }
+
   return `Player message: "${input}"
 Goal: "${safeText(context.goal)}"
 Required commands: "${safeCommands(context.requiredCommands)}"
@@ -502,6 +523,7 @@ async function askGemini(input: string, mode: DungeonMasterMode, context: Dungeo
     mode === "hint-ladder" ? hintLadderSystemPrompt :
     mode === "level-intro" ? levelIntroSystemPrompt :
     mode === "profile-summary" ? profileSummarySystemPrompt :
+    mode === "chronicle-narration" ? chronicleNarrationSystemPrompt :
     unknownCommandSystemPrompt(context);
   const demoScript = safeLongText(context.demoScript);
   const systemWithDemoContext = demoScript
@@ -582,6 +604,7 @@ Deno.serve(async (req) => {
       "hint-ladder",
       "level-intro",
       "profile-summary",
+      "chronicle-narration",
     ]);
     const requestedMode = typeof body.mode === "string" ? body.mode : "";
     const mode: DungeonMasterMode = allowedModes.has(requestedMode as DungeonMasterMode)

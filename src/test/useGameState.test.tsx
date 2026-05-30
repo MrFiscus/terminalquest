@@ -62,9 +62,8 @@ describe('useGameState Hook', () => {
         await result.current.submit('notarealcmd');
       });
 
-      const errorTokens = result.current.state.history.filter(h => h.kind === 'error');
-      expect(errorTokens.length).toBeGreaterThan(0);
-      expect(errorTokens[errorTokens.length - 1].text).toMatch(/command not found/i);
+      expect(result.current.state.errorPopup).toBeDefined();
+      expect(result.current.state.errorPopup?.body).toMatch(/unknown/i);
     });
 
     it('routes plain-English help questions to the Dungeon Master without command errors', async () => {

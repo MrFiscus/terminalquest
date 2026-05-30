@@ -63,11 +63,18 @@ export const fileCommands: CommandDefinition[] = [
         const mau = (room.npcs || []).find(n => n.id === "mau");
         if (mau) {
           if (state.mechanic === "chmod" && mau.blocksDoorTarget && state.mauSecretKnown) {
-            startMauQuiz(mauKeyQuizForDoor(mau.blocksDoorTarget));
+            startMauQuiz({
+              ...mauKeyQuizForDoor(mau.blocksDoorTarget),
+              introMessage: "Mau: \"Speak the key the scroll revealed.\""
+            });
           } else if (state.mechanic) {
             const depth = state.cwd.split("/").filter(Boolean).length;
             const dungeonDifficulty = state.difficultyValue ?? Math.min(100, Math.max(0, depth * 20));
-            startMauQuiz(await generateMauQuiz(dungeonDifficulty, state.mechanic));
+            const quiz = await generateMauQuiz(dungeonDifficulty, state.mechanic);
+            startMauQuiz({
+              ...quiz,
+              introMessage: "Mau: \"Show me your command of the shell, little fox.\""
+            });
           }
           return {
             lines: [

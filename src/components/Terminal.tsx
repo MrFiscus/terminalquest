@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState, type KeyboardEvent } from "react";
 import { useNavigate } from "react-router-dom";
+import { Pin } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { GameState, TerminalLine } from "@/game/types";
 import { commandDefinitions } from "@/game/commandSystem/registry";
@@ -7,6 +8,7 @@ import { commandDefinitions } from "@/game/commandSystem/registry";
 interface TerminalProps {
   state: GameState;
   onSubmit: (raw: string) => void;
+  isEmbedded?: boolean;
 }
 
 // Dungeon palette — rune colors on dark stone:
@@ -105,11 +107,15 @@ function isDeepOrRestricted(cwd: string): boolean {
   return restricted.test(cwd);
 }
 
-export function Terminal({ state, onSubmit }: TerminalProps) {
+export function Terminal({ state, onSubmit, isEmbedded = false }: TerminalProps) {
   const navigate = useNavigate();
   const [input, setInput] = useState("");
   const [cursorPos, setCursorPos] = useState(0);
   const [histIndex, setHistIndex] = useState<number | null>(null);
+  const [isHovered, setIsHovered] = useState(false);
+  const [isFocused, setIsFocused] = useState(false);
+  const [isPinned, setIsPinned] = useState(false);
+  const [isOpen, setIsOpen] = useState(false);
   // Bumps on every command submit; the wrapper div is keyed on this so the
   // CSS animation re-plays from scratch every time. This is the visual
   // "terminal firing into the map" bridge.
@@ -118,18 +124,42 @@ export function Terminal({ state, onSubmit }: TerminalProps) {
   const scrollRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
+  const collapseTerminal = () => {
+    if (isEmbedded || isPinned) return;
+    setIsOpen(false);
+    setIsFocused(false);
+    setIsHovered(false);
+    inputRef.current?.blur();
+  };
+
   useEffect(() => {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: "smooth" });
   }, [state.history.length]);
 
   useEffect(() => {
-    if (!state.animating) inputRef.current?.focus();
-  }, [state.animating]);
+    if (!state.animating && !state.errorPopup && (isEmbedded || isFocused || isPinned)) inputRef.current?.focus();
+  }, [state.animating, state.errorPopup, isEmbedded, isFocused, isPinned]);
+
+  useEffect(() => {
+    if (state.errorPopup || state.popup || state.activeScroll) {
+      inputRef.current?.blur();
+      setIsFocused(false);
+    }
+  }, [state.errorPopup, state.popup, state.activeScroll]);
 
   useEffect(() => {
     const onKey = (e: globalThis.KeyboardEvent) => {
-      if (state.animating || state.won || state.activeMauQuiz) return;
+      if (state.animating || state.won || state.activeMauQuiz || state.popup || state.errorPopup || state.activeScroll) return;
       
+      if (e.key === "Escape") {
+        setIsPinned(false);
+        setIsOpen(false);
+        setIsFocused(false);
+        setIsHovered(false);
+        inputRef.current?.blur();
+        return;
+      }
+
       const target = document.activeElement;
       if (
         target?.tagName === "INPUT" ||
@@ -145,12 +175,18 @@ export function Terminal({ state, onSubmit }: TerminalProps) {
         setInput("");
         setCursorPos(0);
         setHistIndex(null);
-        inputRef.current?.focus();
+        collapseTerminal();
         flashSubmit();
         onSubmit(value);
         return;
       }
-      if (document.activeElement !== inputRef.current) inputRef.current?.focus();
+      if (document.activeElement !== inputRef.current) {
+        // If user starts typing, we assume they want to use the terminal.
+        // We only focus if it's a character key or similar (not Meta, Alt, etc.)
+        if (e.key.length === 1 || e.key === "Backspace" || e.key === "Delete") {
+          inputRef.current?.focus();
+        }
+      }
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
@@ -163,8 +199,17 @@ export function Terminal({ state, onSubmit }: TerminalProps) {
       setInput("");
       setCursorPos(0);
       setHistIndex(null);
+      collapseTerminal();
       flashSubmit();
       onSubmit(value);
+    } else if (e.key === "Escape") {
+      e.preventDefault();
+      setIsPinned(false);
+      // Wait for state to update or just manually close
+      setIsOpen(false);
+      setIsFocused(false);
+      setIsHovered(false);
+      inputRef.current?.blur();
     } else if (e.key === "ArrowUp") {
       e.preventDefault();
       const ch = state.commandHistory;
@@ -209,9 +254,24 @@ export function Terminal({ state, onSubmit }: TerminalProps) {
 
   const twoLinePrompt = finalPath.length > 14;
 
+  const active = isEmbedded || isPinned || isOpen;
+
   return (
     <div
-      className="dungeon-terminal relative flex h-full flex-col"
+      className={cn(
+        "dungeon-terminal relative flex flex-col transition-all duration-300 ease-in-out",
+        isEmbedded
+          ? "h-full w-full shadow-2xl opacity-100"
+          : (active ? "h-[45vh] opacity-100 shadow-2xl" : "h-[34px] opacity-100")
+      )}
+      onMouseEnter={isEmbedded ? undefined : () => {
+        setIsHovered(true);
+        setIsOpen(true);
+      }}
+      onMouseLeave={isEmbedded ? undefined : () => {
+        setIsHovered(false);
+        if (!isPinned && !isFocused) setIsOpen(false);
+      }}
       onClick={() => inputRef.current?.focus()}
     >
       {/* Stone-texture scanline overlay */}
@@ -220,56 +280,120 @@ export function Terminal({ state, onSubmit }: TerminalProps) {
       {/* Torchlight vignette */}
       <div className="dungeon-terminal-vignette" aria-hidden />
 
-      {/* Title bar — iron plate with rune text */}
-      <div className="dungeon-terminal-header">
-        <button
-          onClick={() => navigate("/")}
-          className="cursor-pointer hover:opacity-80 transition-opacity"
-          title="Return to Landing Page"
-        >
-          <span className="dungeon-terminal-header-text">
-            <span style={{ letterSpacing: '0.12em' }}>TERMINAL QUEST</span>
-          </span>
-        </button>
-        <span className="dungeon-terminal-header-sub">rune·shell</span>
+      {/* Title bar — iron plate with rune text (PERSISTENT) */}
+      <div className="dungeon-terminal-header border-none">
+        <div className="flex items-center gap-3">
+          <button
+            onClick={() => navigate("/")}
+            className="cursor-pointer hover:opacity-80 transition-opacity"
+            title="Return to Landing Page"
+          >
+            <span className="dungeon-terminal-header-text">
+              <span style={{ letterSpacing: '0.12em' }}>TERMINAL</span>
+            </span>
+          </button>
+          {!isEmbedded && (
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                setIsPinned(!isPinned);
+              }}
+              className={cn(
+                "transition-colors cursor-pointer",
+                isPinned ? "text-amber-500" : "text-amber-500/40 hover:text-amber-500/80"
+              )}
+              title={isPinned ? "Unpin terminal" : "Pin terminal open"}
+            >
+              <Pin size={10} className={isPinned ? "" : "rotate-45"} />
+            </button>
+          )}
+        </div>
       </div>
 
-      {/* History & Active Prompt — scrolling rune inscriptions */}
-      <div
-        ref={scrollRef}
-        className="dungeon-terminal-scroll relative flex-1 overflow-y-auto px-5 py-4 flex flex-col gap-1"
-      >
-        {state.history.map((line, idx) => {
-          const isLast = idx === state.history.length - 1;
-          const tokenColor = line.kind === "output" ? lsTokenClass(line.text) : null;
-          return (
-            <div
-              key={line.id ?? idx}
-              className={cn(
-                "whitespace-pre-wrap text-left transition-opacity duration-300",
-                tokenColor ?? lineClass[line.kind],
-                isLast ? "opacity-100" : "opacity-70",
-              )}
-            >
-              {line.text}
-            </div>
-          );
-        })}
-
-        {/* Active Input Prompt — `key` re-mounts on every submit so the
-            terminal-input-pulse animation replays, bridging terminal → map. */}
-        <div key={submitFlashKey} className="mt-2 terminal-input-pulse rounded-sm px-1">
-          {twoLinePrompt ? (
-            <>
-              <div className="dungeon-prompt-line">
-                <span className="dungeon-prompt-user">adventurer</span>
-                <span className="dungeon-prompt-sep">⟩</span>
-                <span className={cn("dungeon-prompt-path", deep && "dungeon-prompt-path-deep")}>
-                  {finalPath}
-                </span>
+      {/* Sliding Content Area */}
+      <div className={cn(
+        "flex-1 flex flex-col transition-all duration-300 overflow-hidden",
+        active ? "opacity-100" : "opacity-0 h-0"
+      )}>
+        {/* History — scrolling rune inscriptions */}
+        <div
+          ref={scrollRef}
+          className="dungeon-terminal-scroll relative flex-1 overflow-y-auto px-3 py-2 flex flex-col gap-1"
+        >
+          {state.history.map((line, idx) => {
+            const isLast = idx === state.history.length - 1;
+            const tokenColor = line.kind === "output" ? lsTokenClass(line.text) : null;
+            return (
+              <div
+                key={line.id ?? idx}
+                className={cn(
+                  "whitespace-pre-wrap text-left transition-opacity duration-300",
+                  tokenColor ?? lineClass[line.kind],
+                  isLast ? "opacity-100" : "opacity-70",
+                )}
+              >
+                {line.text}
               </div>
+            );
+          })}
+
+          {/* Active Input Prompt — `key` re-mounts on every submit so the
+              terminal-input-pulse animation replays, bridging terminal → map. */}
+          <div key={submitFlashKey} className="mt-2 terminal-input-pulse rounded-sm px-1">
+            {twoLinePrompt ? (
+              <>
+                <div className="dungeon-prompt-line">
+                  <span className="dungeon-prompt-user">adventurer</span>
+                  <span className="dungeon-prompt-sep">⟩</span>
+                  <span className={cn("dungeon-prompt-path", deep && "dungeon-prompt-path-deep")}>
+                    {finalPath}
+                  </span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="dungeon-prompt-sigil">❯</span>
+                  <div className="relative flex-1">
+                    <input
+                      ref={inputRef}
+                      value={input}
+                      onChange={(e) => {
+                        setInput(e.target.value);
+                        setCursorPos(e.target.selectionStart ?? e.target.value.length);
+                      }}
+                      onSelect={(e) => setCursorPos(e.currentTarget.selectionStart ?? input.length)}
+                      onKeyDown={handleKey}
+                      onFocus={() => {
+                        setIsFocused(true);
+                        setIsOpen(true);
+                      }}
+                      onBlur={() => {
+                        setIsFocused(false);
+                        if (!isHovered && !isPinned) setIsOpen(false);
+                      }}
+                      disabled={state.animating || state.won}
+                      autoFocus
+                      spellCheck={false}
+                      autoComplete="off"
+                      className="dungeon-terminal-input"
+                      aria-label="Terminal input"
+                    />
+                    <span
+                      className="dungeon-cursor pointer-events-none absolute top-1/2 -translate-y-1/2"
+                      style={{ left: `${cursorPos}ch` }}
+                      aria-hidden
+                    />
+                  </div>
+                </div>
+              </>
+            ) : (
               <div className="flex items-center gap-2">
-                <span className="dungeon-prompt-sigil">❯</span>
+                <span className="dungeon-prompt-line flex-shrink-0">
+                  <span className="dungeon-prompt-user">adventurer</span>
+                  <span className="dungeon-prompt-sep">⟩</span>
+                  <span className={cn("dungeon-prompt-path", deep && "dungeon-prompt-path-deep")}>
+                    {finalPath}
+                  </span>
+                  <span className="dungeon-prompt-sigil ml-1">❯</span>
+                </span>
                 <div className="relative flex-1">
                   <input
                     ref={inputRef}
@@ -280,6 +404,14 @@ export function Terminal({ state, onSubmit }: TerminalProps) {
                     }}
                     onSelect={(e) => setCursorPos(e.currentTarget.selectionStart ?? input.length)}
                     onKeyDown={handleKey}
+                    onFocus={() => {
+                      setIsFocused(true);
+                      setIsOpen(true);
+                    }}
+                    onBlur={() => {
+                      setIsFocused(false);
+                      if (!isHovered && !isPinned) setIsOpen(false);
+                    }}
                     disabled={state.animating || state.won}
                     autoFocus
                     spellCheck={false}
@@ -294,42 +426,8 @@ export function Terminal({ state, onSubmit }: TerminalProps) {
                   />
                 </div>
               </div>
-            </>
-          ) : (
-            <div className="flex items-center gap-2">
-              <span className="dungeon-prompt-line flex-shrink-0">
-                <span className="dungeon-prompt-user">adventurer</span>
-                <span className="dungeon-prompt-sep">⟩</span>
-                <span className={cn("dungeon-prompt-path", deep && "dungeon-prompt-path-deep")}>
-                  {finalPath}
-                </span>
-                <span className="dungeon-prompt-sigil ml-1">❯</span>
-              </span>
-              <div className="relative flex-1">
-                <input
-                  ref={inputRef}
-                  value={input}
-                  onChange={(e) => {
-                    setInput(e.target.value);
-                    setCursorPos(e.target.selectionStart ?? e.target.value.length);
-                  }}
-                  onSelect={(e) => setCursorPos(e.currentTarget.selectionStart ?? input.length)}
-                  onKeyDown={handleKey}
-                  disabled={state.animating || state.won}
-                  autoFocus
-                  spellCheck={false}
-                  autoComplete="off"
-                  className="dungeon-terminal-input"
-                  aria-label="Terminal input"
-                />
-                <span
-                  className="dungeon-cursor pointer-events-none absolute top-1/2 -translate-y-1/2"
-                  style={{ left: `${cursorPos}ch` }}
-                  aria-hidden
-                />
-              </div>
-            </div>
-          )}
+            )}
+          </div>
         </div>
       </div>
     </div>

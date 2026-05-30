@@ -1,6 +1,7 @@
 import { GameWorld } from "@/components/GameWorld";
-import { InventoryBar } from "@/components/InventoryBar";
+import { HudTabs } from "@/components/HudTabs";
 import { Terminal } from "@/components/Terminal";
+import { StatusBars } from "@/components/StatusBars";
 import { BookOfSecrets } from "@/components/BookOfSecrets";
 import { ProfileModal } from "@/components/ProfileModal";
 import { VictoryOverlay } from "@/components/VictoryOverlay";
@@ -26,9 +27,6 @@ import {
   type LevelSessionSnapshot,
 } from "@/game/progressStats";
 import { ResumeDialog } from "@/components/ResumeDialog";
-import { UserRound } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
-import type { User } from "@supabase/supabase-js";
 import { AnimatePresence } from "framer-motion";
 import type { LinuxCommand, VictoryReport } from "@/game/types";
 import type { GeneratedLevel } from "@/game/aiLevelService";
@@ -93,52 +91,21 @@ function nextLevelWeakCommands(stats: CommandStats, report?: VictoryReport | nul
   ].filter(Boolean))).slice(0, 8) as LinuxCommand[];
 }
 
-const headerNounNotes: Record<string, string> = {
-  archive: "Dusty shelves lean over narrow paths, hiding clues between old records.",
-  cellar: "Damp stone and low vents make every footstep sound closer than it is.",
-  chamber: "A worked stone room waits in silence, marked by old travel and newer danger.",
-  crypt: "Cold graves and cracked floor tiles make the air feel heavy.",
-  forge: "Scorched brick and rusted tools hint at work abandoned in a hurry.",
-  foyer: "A threshold room opens into branching passages and watchful shadows.",
-  gallery: "Long walls carry banners, scratches, and signs of previous explorers.",
-  hall: "A broad passage pulls your attention toward every doorway at once.",
-  keep: "Reinforced stone and old storage crates make this room feel defended.",
-  library: "Broken stacks and scattered notes turn the room into a puzzle of paper.",
-  observatory: "Dark vents and old markings suggest someone studied the maze from here.",
-  sanctum: "Quiet symbols and candle-stained stone make the room feel deliberate.",
-  vault: "Heavy masonry and guarded corners make this chamber feel important.",
-};
-
-function fallbackRoomNote(roomName: string) {
-  const parts = roomName.split(/[._-]+/).filter(Boolean);
-  const noun = [...parts].reverse().find((part) => headerNounNotes[part]) ?? "chamber";
-  return headerNounNotes[noun];
-}
-
-function roomHeaderNote(room: ReturnType<typeof getRoom>, transientNote: string | null, fallback: string) {
-  if (!room) return fallback;
-  const escapedName = room.name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-  const escapedPathName = room.path.split("/").pop()?.replace(/[.*+?^${}()|[\]\\]/g, "\\$&") ?? escapedName;
-  const raw = transientNote || room.description || fallback;
-  const cleaned = raw
-    .replace(new RegExp(`^${escapedName}\\s*:\\s*`, "i"), "")
-    .replace(new RegExp(`^You enter\\s+${escapedName}\\.\\s*`, "i"), "")
-    .replace(new RegExp(`^A generated chamber named\\s+${escapedPathName}\\.?\\s*`, "i"), "")
-    .replace(new RegExp(`^A generated chamber named\\s+${escapedName}\\.?\\s*`, "i"), "")
-    .trim();
-  return cleaned || fallbackRoomNote(room.name) || fallback;
-}
-
 const Index = () => {
   const [profileOpen, setProfileOpen] = useState(false);
-  const openProfile = useCallback(() => setProfileOpen(true), []);
+  const openProfile = useCallback(() => {
+    setProfileOpen(true);
+    setBookOpen(false);
+  }, []);
   const {
-    state, submit, dismissPopup, loadLevel,
-    teachingTip, dungeonMasterTip, roomSubtitle,
-    submitMauQuiz, closeMauQuiz, openScroll, closeScroll,
+    state, submit, dismissPopup, loadLevel, roomSubtitle,
+    submitMauQuiz,
+    closeMauQuiz, openScroll, closeScroll,
     achievementQueue, dismissAchievement,
     dismissVictory,
     resumeSession,
+    dismissErrorPopup,
+    chronicleLog,
   } = useGameState({
     onOpenProfile: openProfile,
   });
@@ -170,23 +137,6 @@ const Index = () => {
   const [bookOpen, setBookOpen] = useState(false);
   const [advancingLevel, setAdvancingLevel] = useState(false);
 
-  // Track the signed-in user so the header button can show their actual
-  // avatar (Google profile pic, custom avatar, or auto-generated initials)
-  // instead of a generic placeholder icon.
-  const [headerUser, setHeaderUser] = useState<User | null>(null);
-  useEffect(() => {
-    let alive = true;
-    supabase.auth.getUser().then(({ data }) => {
-      if (alive) setHeaderUser(data.user ?? null);
-    });
-    const { data: sub } = supabase.auth.onAuthStateChange((_event, session) => {
-      if (alive) setHeaderUser(session?.user ?? null);
-    });
-    return () => {
-      alive = false;
-      sub.subscription.unsubscribe();
-    };
-  }, []);
   const replayPayloadRef = useRef<ReplayLoadPayload | null>(null);
 
   useEffect(() => {
@@ -433,92 +383,51 @@ const Index = () => {
           .filter((file) => file.contents && (file.name.endsWith(".txt") || file.name === "scroll"))
           .map((file) => file.name)
       : undefined;
-  const mapSubtitle = roomHeaderNote(currentRoom, roomSubtitle, state.goal);
-
-  // Header avatar — prefer the OAuth provider's profile image, then
-  // initials from the user's name/email, then the generic UserRound.
-  // Wrapped in a single button so the click target is the whole circle.
-  const headerAvatarUrl =
-    (headerUser?.user_metadata?.avatar_url as string | undefined) ?? null;
-  const headerInitialsSource = (
-    (headerUser?.user_metadata?.username as string | undefined) ??
-    (headerUser?.user_metadata?.full_name as string | undefined) ??
-    (headerUser?.user_metadata?.name as string | undefined) ??
-    headerUser?.email ??
-    ""
-  ).trim();
-  const headerInitials = headerInitialsSource
-    ? headerInitialsSource
-        .split(/[\s@._-]+/)
-        .filter(Boolean)
-        .slice(0, 2)
-        .map((part) => part[0]?.toUpperCase() ?? "")
-        .join("") || headerInitialsSource[0]?.toUpperCase()
-    : null;
-
-  const headerActions = (
-    <div className="flex items-center gap-2">
-      <button
-        type="button"
-        onClick={() => setProfileOpen(true)}
-        aria-label="Open profile"
-        title={headerUser ? "Open profile" : "Sign in"}
-        className="z-[60] flex h-10 w-10 items-center justify-center overflow-hidden rounded-full border-2 border-amber-500 bg-gray-900 text-amber-300 shadow-[0_0_0_hsl(38_92%_50%/0)] transition hover:scale-105 hover:shadow-[0_0_18px_hsl(38_92%_50%/0.75)]"
-        style={{ padding: 0 }}
-      >
-        {headerAvatarUrl ? (
-          <img
-            src={headerAvatarUrl}
-            alt={headerInitialsSource || "Profile avatar"}
-            referrerPolicy="no-referrer"
-            className="h-full w-full object-cover"
-            onError={(e) => {
-              // If the avatar URL fails (CORS, expired Google ref, etc.)
-              // hide the broken image so the initials fallback shows.
-              (e.currentTarget as HTMLImageElement).style.display = "none";
-            }}
-          />
-        ) : headerInitials ? (
-          <span
-            aria-hidden
-            style={{
-              fontFamily: "'Cinzel', Georgia, serif",
-              fontSize: 13,
-              fontWeight: 700,
-              letterSpacing: "0.02em",
-              color: "hsl(38 80% 70%)",
-              textShadow: "0 0 6px hsl(38 90% 55% / 0.6)",
-            }}
-          >
-            {headerInitials}
-          </span>
-        ) : (
-          <UserRound className="h-5 w-5" aria-hidden />
-        )}
-      </button>
-    </div>
-  );
 
   return (
-    <main className="relative grid h-screen w-screen grid-cols-[40vw_4px_60vw] overflow-hidden bg-background">
+    <main className="relative h-screen w-screen overflow-hidden bg-background">
       <h1 className="sr-only">Terminal Quest - Linux Dungeon RPG</h1>
-      <section aria-label="Terminal" className="h-full min-h-0">
-        <Terminal state={state} onSubmit={submit} />
-      </section>
 
-      <div className="pillar-divider h-full" aria-hidden />
+      {/* Main Content Area */}
+      <div className="absolute inset-0 min-h-0">
+        {/* Left-side HUD: StatusBars + Tabs + Terminal */}
+        {!profileOpen && !bookOpen && (
+          <section
+            aria-label="Player Status & Terminal"
+            className="absolute left-0 top-0 bottom-0 z-[140] w-[300px] pl-4 pr-1 py-4 pointer-events-none"
+          >
+            <div className="w-full h-full pointer-events-auto pb-[50px] flex flex-col gap-2">
+              <StatusBars
+                playerName="Adventurer"
+                className="flex-none"
+              />
+              <HudTabs
+                items={state.inventory}
+                slots={5}
+                commandLog={chronicleLog}
+                onOpenBook={() => setBookOpen(true)}
+                onOpenProfile={() => setProfileOpen(true)}
+                className="flex-1 min-h-0 px-2"
+              />
+            </div>
+            <div className="absolute bottom-4 left-4 right-[-60px] z-10 pointer-events-auto">
+              <Terminal state={state} onSubmit={submit} />
+            </div>
+          </section>
+        )}
 
-      <section aria-label="Dungeon" className="relative flex h-full min-h-0 flex-col">
-        <div className="min-h-0 flex-1">
+        {/* Map area — fills from left panel edge to right edge */}
+        <section aria-label="Dungeon" className={`absolute top-0 bottom-0 z-[10] ${
+          profileOpen ? "left-0 right-0" : "left-[300px] right-0"
+        }`}>
           <GameWorld
             state={state}
             onDismissPopup={dismissPopup}
-            headerRight={headerActions}
-            headerSubtitle={mapSubtitle}
+            onDismissErrorPopup={dismissErrorPopup}
+            roomSubtitle={roomSubtitle}
           />
-        </div>
-        <InventoryBar items={state.inventory} slots={5} onOpenBook={() => setBookOpen(true)} />
-      </section>
+        </section>
+      </div>
 
       {state.won && (
         <VictoryOverlay
@@ -558,32 +467,30 @@ const Index = () => {
 
       <AchievementToastQueue queue={achievementQueue} onDismiss={dismissAchievement} />
 
-      <WizardDialog
-        externalMessage={dungeonMasterTip || teachingTip?.message || null}
-        playerFamiliarity={linuxFamiliarity}
-        context={{
-          goal: state.goal,
-          requiredCommands: state.requiredCommands,
-          winCondition: state.winCondition,
-          currentRoom: currentRoom?.name || state.cwd,
-          currentPath: state.cwd,
-          // Inventory and visible room contents — letting the wizard
-          // reference these directly is what turns generic answers into
-          // ones that point at the right item or door.
-          inventory: state.inventory.map((file) => file.name),
-          roomFiles: currentRoom?.files.map((file) => file.name) ?? [],
-          roomDoors: currentRoom?.doors.map((door) =>
-            door.locked ? `${door.target}(locked)` : door.target,
-          ) ?? [],
-          recentCommands: state.commandHistory.slice(-6),
-          mistakes: state.recentMistakes.slice(-4),
-          weakCommands: nextLevelWeakCommands(state.commandStats, state.completionReport),
-          brokenDoorName: brokenDoor?.target,
-          repairCommand,
-          roomHintFiles,
-          demoScript: isDemoMode ? DEMO_CONTEXT : undefined,
-        }}
-      />
+      {!profileOpen && (
+        <WizardDialog
+          playerFamiliarity={linuxFamiliarity}
+          context={{
+            goal: state.goal,
+            requiredCommands: state.requiredCommands,
+            winCondition: state.winCondition,
+            currentRoom: currentRoom?.name || state.cwd,
+            currentPath: state.cwd,
+            inventory: state.inventory.map((file) => file.name),
+            roomFiles: currentRoom?.files.map((file) => file.name) ?? [],
+            roomDoors: currentRoom?.doors.map((door) =>
+              door.locked ? `${door.target}(locked)` : door.target,
+            ) ?? [],
+            recentCommands: state.commandHistory.slice(-6),
+            mistakes: state.recentMistakes.slice(-4),
+            weakCommands: nextLevelWeakCommands(state.commandStats, state.completionReport),
+            brokenDoorName: brokenDoor?.target,
+            repairCommand,
+            roomHintFiles,
+            demoScript: isDemoMode ? DEMO_CONTEXT : undefined,
+          }}
+        />
+      )}
     </main>
   );
 };

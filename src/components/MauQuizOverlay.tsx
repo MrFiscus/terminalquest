@@ -78,9 +78,21 @@ export function MauQuizOverlay({ quiz, onSubmit, onClose }: MauQuizOverlayProps)
 	          <div className="h-[2px] flex-1 bg-[#8b6914]/30" />
 	        </h3>
 	
+	        {quiz.introMessage && !quiz.completedMessage && !quiz.errorMessage && (
+	          <p className="font-pixel-text text-lg leading-relaxed mb-4 text-center text-[#8b6914] italic">
+	            {quiz.introMessage}
+	          </p>
+	        )}
+
 	        <p className="font-pixel-text text-2xl leading-relaxed mb-6 text-center text-[#3b1f0a]">
 	          {quiz.completedMessage ?? quiz.question}
 	        </p>
+
+          {quiz.errorMessage && !quiz.completedMessage && (
+            <p className="font-pixel-text text-lg leading-relaxed mb-4 text-center text-[#8b1f0a] italic animate-in fade-in slide-in-from-top-1">
+              {quiz.errorMessage}
+            </p>
+          )}
 
         {quiz.completedMessage ? (
           <div className="flex justify-center">
