@@ -222,6 +222,8 @@ export interface GameState {
   lockedCommands?: LinuxCommand[];
   mauSecretKnown?: boolean;
   activeScroll?: { name: string; contents: string };
+  tutorialId?: string;
+  tutorialProgress?: Record<string, boolean>;
 }
 
 export interface CommandResult {

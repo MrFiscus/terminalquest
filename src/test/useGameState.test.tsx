@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { renderHook, act } from '@testing-library/react';
 import { useGameState } from '../hooks/useGameState';
+import { createLanternCatacombsLevel, LANTERN_PATHS } from '../game/tutorialLevels';
 
 // Mock dependencies that rely on browser/DOM or contextual state
 vi.mock('../hooks/use-toast', () => ({
@@ -62,8 +63,9 @@ describe('useGameState Hook', () => {
         await result.current.submit('notarealcmd');
       });
 
-      expect(result.current.state.errorPopup).toBeDefined();
-      expect(result.current.state.errorPopup?.body).toMatch(/unknown/i);
+      expect(result.current.state.errorPopup).toBeNull();
+      expect(result.current.state.history.some(h => h.kind === 'error' && /notarealcmd: command not found/i.test(h.text))).toBe(true);
+      expect(result.current.wizardMessage).toBeTruthy();
     });
 
     it('routes plain-English help questions to the Dungeon Master without command errors', async () => {
@@ -109,7 +111,25 @@ describe('useGameState Hook', () => {
 
       expect(result.current.state.rooms['/home/user']).toBeDefined();
       expect(result.current.state.goal).toBe('find ghost');
-      expect(result.current.state.winCondition).toBe('mv ghost.txt ~/inventory');
+      expect(result.current.state.winCondition).toBe('mv ghost /home/user/inventory');
+    });
+
+    it('loads tutorial levels from their custom start path', () => {
+      const onOpenProfile = vi.fn();
+      const { result } = renderHook(() => useGameState({ onOpenProfile }));
+
+      act(() => {
+        result.current.loadLevel(
+          createLanternCatacombsLevel(12),
+          'easy Lantern Catacombs (4 rooms)',
+          'Enter the catacombs.',
+        );
+      });
+
+      expect(result.current.state.cwd).toBe(LANTERN_PATHS.entrance);
+      expect(result.current.state.tutorialId).toBe('lantern-catacombs');
+      expect(result.current.state.goal).toMatch(/lantern\.key/i);
+      expect(result.current.state.winCondition).toMatch(/cd sanctum/i);
     });
   });
 

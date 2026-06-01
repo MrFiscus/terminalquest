@@ -14,6 +14,8 @@ export type DungeonMasterMode =
   | "chronicle-narration";
 
 export interface DungeonMasterContext {
+  tutorialId?: string;
+  tutorialProgress?: Record<string, boolean>;
   goal?: string;
   requiredCommands?: string[];
   winCondition?: string;
@@ -69,6 +71,81 @@ export interface DungeonMasterContext {
   playerFamiliarity?: number;
 }
 
+const LANTERN_CATACOMBS_ID = "lantern-catacombs";
+
+function hasRecentCommand(context: DungeonMasterContext, exact: string) {
+  return context.recentCommands?.some((command) => normalizeInput(command) === normalizeInput(exact)) ?? false;
+}
+
+function isExplicitCommandAsk(input: string) {
+  return /\b(what command|what should i type|what do i type|what next exactly|exact command|give me the command|tell me exactly|show me the command|next step)\b/.test(input);
+}
+
+function lanternStepReply(input: string, context: DungeonMasterContext): string | null {
+  if (context.tutorialId !== LANTERN_CATACOMBS_ID) return null;
+
+  const normalized = normalizeInput(input);
+  const path = context.currentPath ?? "";
+  const progress = context.tutorialProgress ?? {};
+  const inventory = new Set(context.inventory ?? []);
+  const files = new Set(context.roomFiles ?? []);
+  const doors = new Set(context.roomDoors?.map((door) => door.replace(/\(locked\)/g, "")) ?? []);
+  const explicit = isExplicitCommandAsk(normalized) || isGoalClarifier(normalized) || /\b(stuck|lost|hint|help|what now)\b/.test(normalized);
+
+  if (path.endsWith("/catacombs/entrance")) {
+    if (!progress.echoChildMet) {
+      return "Start simple: type `help`, then `ls`, then `echo hello`.";
+    }
+    if (files.has("lantern.txt") && !hasRecentCommand(context, "cat lantern.txt")) {
+      return explicit
+        ? "Read the clue now: type `cat lantern.txt`."
+        : "Read the clue with `cat lantern.txt`, then keep moving.";
+    }
+    if (doors.has("hallway")) {
+      return "You have what you need here. Continue with `cd hallway`.";
+    }
+  }
+
+  if (path.endsWith("/catacombs/entrance/hallway")) {
+    if (!progress.cartographerMet) {
+      return "First orient yourself: type `pwd`.";
+    }
+    if (!hasRecentCommand(context, "find bell")) {
+      return explicit
+        ? "Search for the clue by name: type `find bell`."
+        : "Search for the clue by name with `find bell`.";
+    }
+    if (files.has("strange_bell.txt") && !hasRecentCommand(context, "cat strange_bell.txt")) {
+      return explicit
+        ? "Read what you found: type `cat strange_bell.txt`."
+        : "Read what you found with `cat strange_bell.txt`.";
+    }
+    if (!progress.gateOpened) {
+      return "Use the word the stone is waiting for: type `echo OPEN`.";
+    }
+    return "The gate is open now. Move on with `cd sealed_gate`.";
+  }
+
+  if (path.endsWith("/sealed_gate")) {
+    if (!progress.elyraAskedWhoami) {
+      if (!hasRecentCommand(context, "man ls")) {
+        return "Elyra wants knowledge first. Type `man ls`.";
+      }
+      return "Now answer Elyra directly: type `whoami`.";
+    }
+    if (!inventory.has("lantern.key")) {
+      return "Take the key into your inventory with `mv lantern.key ~/inventory`.";
+    }
+    return "You are ready to finish the tutorial. Type `cd sanctum`.";
+  }
+
+  if (path.endsWith("/sanctum")) {
+    return "You have reached the sanctum. The next adaptive dungeon should follow from here.";
+  }
+
+  return null;
+}
+
 const fallbackReplies: Record<string, string> = {
   sudo: "Thou art not the root of this realm. Try ls to see what power you do have.",
   grep: "grep is a master scrying spell, not yet in thy grimoire. Use find <name> to search instead.",
@@ -108,6 +185,9 @@ export function isGoalClarifier(input: string): boolean {
 }
 
 export function buildGoalClarifierReply(context: DungeonMasterContext = {}): string {
+  const tutorialReply = lanternStepReply("what is my goal", context);
+  if (tutorialReply) return tutorialReply;
+
   const goal = context.goal || "Find the goal item and move it into your inventory.";
   const commands = context.requiredCommands ?? [];
   const target = targetFromWinCondition(context.winCondition);
@@ -154,6 +234,8 @@ export function classifyTerminalInput(input: string): "command-like" | "help-lik
 
 function fallbackTutorReply(input: string, context: DungeonMasterContext): string {
   const normalized = normalizeInput(input);
+  const tutorialReply = lanternStepReply(normalized, context);
+  if (tutorialReply) return tutorialReply;
   const goal = context.goal || "Find the goal item and carry it to your inventory.";
   const winCondition = context.winCondition || "mv <file> ~/inventory";
   const currentRoom = context.currentRoom || "this room";
@@ -249,6 +331,11 @@ export async function askDungeonMaster(input: string, context: DungeonMasterCont
     classifyTerminalInput(cleanInput) === "help-like" ? "help-tutor" : "unknown-command";
   const base = shortCommand(cleanInput);
   const normalized = normalizeInput(cleanInput);
+
+  if (mode === "help-tutor") {
+    const tutorialReply = lanternStepReply(normalized, context);
+    if (tutorialReply) return tutorialReply;
+  }
 
   if (mode === "help-tutor" && isGoalClarifier(cleanInput)) {
     return buildGoalClarifierReply(context);

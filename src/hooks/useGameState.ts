@@ -36,12 +36,14 @@ import { buildVictoryReport, liveMentorReaction } from "@/game/liveMentor";
 import { roomFlavor } from "@/game/roomFlavor";
 import { levelCompletionLine } from "@/game/levelCompletion";
 import { playCommandSound, playFootstep, playGameSound, unlockGameAudio } from "@/game/audio";
+import { generateSmartHint } from "@/game/smartHints";
 import {
   appendRun,
   applyFamiliarityProgression,
   baseCommand,
   clearActiveRun,
   clearLevelSession,
+  markTutorialCompleted,
   countCommands,
   saveActiveRun,
   saveLevelSession,
@@ -73,6 +75,7 @@ import type {
   TerminalLine,
   VfxPulse,
 } from "@/game/types";
+import { LANTERN_CATACOMBS_ID, LANTERN_PATHS } from "@/game/tutorialLevels";
 
 const STEP_MS = 180;
 const PICKUP_MS = 800;
@@ -131,16 +134,37 @@ interface LoadLevelOptions {
   weakCommands?: string[];
 }
 
-function createRunTracker(difficulty = "default"): RunTracker {
+function createRunTracker(difficulty = "default", startPath = START_PATH): RunTracker {
   return {
     difficulty,
     startedAt: Date.now(),
     commands: [],
     mistakes: [],
-    visitedRooms: new Set([START_PATH]),
+    visitedRooms: new Set([startPath]),
     keysFound: 0,
     lockedDoorsUnlocked: 0,
     completed: false,
+  };
+}
+
+function isLanternCatacombs(state: Pick<GameState, "tutorialId">) {
+  return state.tutorialId === LANTERN_CATACOMBS_ID;
+}
+
+function mergeStatePatch(
+  base: Partial<GameState> | undefined,
+  extra: Partial<GameState> | undefined,
+): Partial<GameState> | undefined {
+  if (!base) return extra;
+  if (!extra) return base;
+  return {
+    ...base,
+    ...extra,
+    rooms: extra.rooms ? { ...(base.rooms ?? {}), ...extra.rooms } : base.rooms,
+    tutorialProgress: {
+      ...(base.tutorialProgress ?? {}),
+      ...(extra.tutorialProgress ?? {}),
+    },
   };
 }
 
@@ -198,6 +222,8 @@ function initialState(): GameState {
     hintStage: 0,
     lockedCommands: [],
     mauSecretKnown: false,
+    tutorialId: undefined,
+    tutorialProgress: undefined,
   };
 }
 
@@ -212,12 +238,19 @@ function isNear(a: { x: number; y: number }, b: { x: number; y: number }) {
 }
 
 function isDemoState(state: GameState) {
+  if (isLanternCatacombs(state)) return false;
   return Boolean(state.showcaseMode || state.difficultyValue === 0);
+}
+
+function lanternTutorialPrompt(state: Pick<GameState, "tutorialId" | "tutorialProgress" | "inventory" | "cwd" | "rooms" | "targetFile">) {
+  if (!isLanternCatacombs(state)) return null;
+  return generateSmartHint(state as GameState, "direct");
 }
 
 export function useGameState(options: UseGameStateOptions = {}) {
   const { onOpenProfile } = options;
   const [state, setState] = useState<GameState>(initialState);
+  const [wizardMessage, setWizardMessage] = useState<string | null>(null);
   const [roomSubtitle, setRoomSubtitle] = useState<string | null>(null);
   const [chronicleLog, setChronicleLog] = useState<{ command: string; narration: string }[]>([]);
   const idRef = useRef(100);
@@ -390,6 +423,7 @@ export function useGameState(options: UseGameStateOptions = {}) {
   const showDungeonMasterTip = useCallback((text: string) => {
     const clean = sanitizeDungeonMasterReply(text);
     if (!clean) return;
+    setWizardMessage(clean);
     setChronicleLog((prev) => [...prev, { command: "", narration: clean }].slice(-50));
   }, []);
 
@@ -490,12 +524,42 @@ export function useGameState(options: UseGameStateOptions = {}) {
   const applyEffect = useCallback(
     (effect: NonNullable<CommandResult["effect"]>) => {
       console.log("[applyEffect] called with effect:", JSON.stringify(effect));
+      const currentState = stateRef.current;
+      const enteringElyraRoom =
+        isLanternCatacombs(currentState) &&
+        effect.type === "enterRoom" &&
+        effect.path === LANTERN_PATHS.sealedGate &&
+        !currentState.tutorialProgress?.elyraIntroduced;
+      const enteringLanternSanctum =
+        isLanternCatacombs(currentState) &&
+        effect.type === "enterRoom" &&
+        effect.path === LANTERN_PATHS.sanctum &&
+        currentState.inventory.some((file) => file.name === "lantern.key");
+      const movingLanternKey =
+        isLanternCatacombs(currentState) &&
+        effect.type === "pickup" &&
+        currentState.cwd === LANTERN_PATHS.sealedGate &&
+        effect.fileName === "lantern.key" &&
+        !currentState.tutorialProgress?.lanternKeyMoved;
+
       if (effect.type === "enterRoom") {
         const next = getRoom(stateRef.current.rooms, effect.path);
         if (next) {
           showRoomSubtitle(next);
           playGameSound("room");
-          showDungeonMasterTip(`You enter ${next.name}. ${next.description}`);
+          const nextState = {
+            ...stateRef.current,
+            cwd: effect.path,
+            tutorialProgress: enteringElyraRoom
+              ? { ...(stateRef.current.tutorialProgress ?? {}), elyraIntroduced: true }
+              : stateRef.current.tutorialProgress,
+          };
+          const tutorialPrompt = lanternTutorialPrompt(nextState);
+          showDungeonMasterTip(
+            tutorialPrompt
+              ? `You enter ${next.name}. ${tutorialPrompt}`
+              : `You enter ${next.name}. ${next.description}`,
+          );
           if (stateRef.current.showcaseMode && next.files.some((file) => file.name === stateRef.current.targetFile)) {
             // Hint, not a command — let the demo player work out the move.
             showDungeonMasterTip("The relic glints on the floor. It must travel home with you.");
@@ -510,7 +574,11 @@ export function useGameState(options: UseGameStateOptions = {}) {
         }
       }
       if (effect.type === "pickup") {
-        showDungeonMasterTip(`${effect.fileName} is now in ~/inventory.`);
+        if (movingLanternKey) {
+          showDungeonMasterTip("The key is now in ~/inventory. Finish the Catacombs with `cd sanctum`.");
+        } else {
+          showDungeonMasterTip(`${effect.fileName} is now in ~/inventory.`);
+        }
       }
       if (effect.type === "win") {
         showDungeonMasterTip(`You seize ${effect.fileName}.`);
@@ -539,10 +607,27 @@ export function useGameState(options: UseGameStateOptions = {}) {
           const spawn = effect.from === "child" && next.returnSpawn ? next.returnSpawn : next.spawn;
           runTrackerRef.current.visitedRooms.add(next.path);
           saveActiveRun(activeRunFromTracker(runTrackerRef.current, s.targetFile));
+          if (enteringLanternSanctum) {
+            const report = completeRun(s.targetFile, next.name, aiReportFeedbackRef.current);
+            aiReportFeedbackRef.current = null;
+            return {
+              ...s,
+              cwd: next.path,
+              player: { ...spawn },
+              won: true,
+              completionMessage: "The sanctum accepts the lantern key. The adaptive dungeon beyond begins to stir.",
+              completionReport: report,
+              tutorialProgress: { ...(s.tutorialProgress ?? {}), sanctumReached: true },
+              history: s.history,
+            };
+          }
           return {
             ...s,
             cwd: next.path,
             player: { ...spawn },
+            tutorialProgress: enteringElyraRoom
+              ? { ...(s.tutorialProgress ?? {}), elyraIntroduced: true }
+              : s.tutorialProgress,
             history: s.history,
           };
         }
@@ -558,6 +643,9 @@ export function useGameState(options: UseGameStateOptions = {}) {
             ...s,
             rooms: { ...s.rooms, [room.path]: newRoom },
             inventory: [...s.inventory, file],
+            tutorialProgress: movingLanternKey
+              ? { ...(s.tutorialProgress ?? {}), lanternKeyMoved: true }
+              : s.tutorialProgress,
             history: s.history,
           };
         }
@@ -661,12 +749,22 @@ export function useGameState(options: UseGameStateOptions = {}) {
         }
         return s;
       });
+      if (enteringElyraRoom) {
+        appendLines([{ kind: "npc", text: "Elyra the Lantern Witch: Knowledge is not memory. Knowledge is knowing where to look." }]);
+      }
+      if (movingLanternKey) {
+        appendLines([{ kind: "npc", text: "Elyra the Lantern Witch: The lantern recognizes your hand." }]);
+      }
+      if (enteringLanternSanctum) {
+        markTutorialCompleted(LANTERN_CATACOMBS_ID);
+        showDungeonMasterTip("The Catacombs yield. A deeper dungeon now waits beyond the sanctum.");
+      }
       // After any effect that touches runTracker / localStorage-backed run
       // stats (pickup / enterRoom lockpick / win), re-check achievement
       // unlocks so newly-earned ones surface as toasts.
       checkAchievements();
     },
-    [checkAchievements, completeRun, showDungeonMasterTip, showRoomSubtitle],
+    [appendLines, checkAchievements, completeRun, showDungeonMasterTip, showRoomSubtitle],
   );
 
   const shortCommand = (cmd: string) => cmd.trim().split(/\s+/)[0]?.toLowerCase() ?? "";
@@ -714,13 +812,103 @@ export function useGameState(options: UseGameStateOptions = {}) {
         commandHistory: [...cur.commandHistory, raw],
       }));
 
-      const result = await runCommand(raw, s, { 
-        startMauQuiz, 
-        submitMauQuiz, 
-        closeMauQuiz,
-        openScroll,
-        closeScroll
-      });
+      const normalizedRaw = raw.trim().toLowerCase();
+      let result =
+        isLanternCatacombs(s) &&
+        s.cwd === LANTERN_PATHS.hallway &&
+        normalizedRaw === "cd sealed_gate" &&
+        !s.tutorialProgress?.gateOpened
+          ? {
+              lines: [{ kind: "error" as const, text: "cd: sealed_gate: the echo wall will not yield" }],
+            }
+          : await runCommand(raw, s, {
+              startMauQuiz,
+              submitMauQuiz,
+              closeMauQuiz,
+              openScroll,
+              closeScroll,
+            });
+
+      if (isLanternCatacombs(s) && !result.unknown) {
+        let tutorialPatch: Partial<GameState> | undefined;
+        const tutorialLines: Omit<TerminalLine, "id">[] = [];
+        const currentTutorialRoom = getRoom(s.rooms, s.cwd);
+
+        if (
+          s.cwd === LANTERN_PATHS.entrance &&
+          normalizedRaw === "echo hello" &&
+          !s.tutorialProgress?.echoChildMet
+        ) {
+          tutorialLines.push({ kind: "npc", text: "Echo Child: hello..." });
+          tutorialPatch = mergeStatePatch(tutorialPatch, {
+            tutorialProgress: { echoChildMet: true },
+          });
+          showDungeonMasterTip("Good. Now read the clue with `cat lantern.txt`.");
+        }
+
+        if (
+          s.cwd === LANTERN_PATHS.hallway &&
+          normalizedRaw === "pwd" &&
+          !s.tutorialProgress?.cartographerMet
+        ) {
+          tutorialLines.push({ kind: "npc", text: "Lost Cartographer: Ah. A path remembered is a path survived." });
+          tutorialPatch = mergeStatePatch(tutorialPatch, {
+            tutorialProgress: { cartographerMet: true },
+          });
+          showDungeonMasterTip("You know where you stand now. Type `ls`, then search for the bell with `find bell`.");
+        }
+
+        if (
+          s.cwd === LANTERN_PATHS.hallway &&
+          normalizedRaw === "echo open" &&
+          !s.tutorialProgress?.gateOpened &&
+          currentTutorialRoom
+        ) {
+          tutorialLines.push({ kind: "system", text: "The echo wall trembles, then parts from the sealed gate." });
+          tutorialPatch = mergeStatePatch(tutorialPatch, {
+            rooms: {
+              [currentTutorialRoom.path]: {
+                ...currentTutorialRoom,
+                doors: currentTutorialRoom.doors.map((door) =>
+                  door.target === "sealed_gate" ? { ...door, locked: false } : door,
+                ),
+              },
+            },
+            tutorialProgress: { gateOpened: true },
+          });
+          showDungeonMasterTip("The way is open. Continue with `cd sealed_gate`.");
+        }
+
+        if (
+          s.cwd === LANTERN_PATHS.sealedGate &&
+          normalizedRaw === "man ls" &&
+          !s.tutorialProgress?.elyraAskedWhoami
+        ) {
+          tutorialLines.push({ kind: "npc", text: "Elyra the Lantern Witch: Tell me who stands before me." });
+          tutorialPatch = mergeStatePatch(tutorialPatch, {
+            tutorialProgress: { elyraAskedWhoami: true },
+          });
+          showDungeonMasterTip("Elyra is waiting for your name. Type `whoami` next.");
+        }
+
+        if (
+          s.cwd === LANTERN_PATHS.sealedGate &&
+          normalizedRaw === "whoami" &&
+          s.tutorialProgress?.elyraAskedWhoami &&
+          !s.tutorialProgress?.lanternKeyMoved
+        ) {
+          showDungeonMasterTip("Now take the key with `mv lantern.key ~/inventory`.");
+        }
+
+        if (tutorialLines.length || tutorialPatch) {
+          result = {
+            ...result,
+            lines: [...result.lines, ...tutorialLines],
+            patch: mergeStatePatch(result.patch, tutorialPatch),
+          };
+        }
+      }
+
       const unknownInputKind = result.unknown ? classifyTerminalInput(result.unknown) : null;
       const conversationalHelp = unknownInputKind === "help-like";
       const failed = Boolean(
@@ -753,6 +941,8 @@ export function useGameState(options: UseGameStateOptions = {}) {
       const isDemoMode = isDemoState(s);
       const demoScript = isDemoMode ? DEMO_CONTEXT : undefined;
       const sharedAiContext = {
+        tutorialId: s.tutorialId,
+        tutorialProgress: s.tutorialProgress,
         goal: s.goal,
         requiredCommands: s.requiredCommands,
         winCondition: s.winCondition,
@@ -813,24 +1003,30 @@ export function useGameState(options: UseGameStateOptions = {}) {
         const message = await askDungeonMaster(result.unknown, {
           ...sharedAiContext,
         });
-        
-        const id = nextId();
-        setState((cur) => ({ 
-          ...cur, 
-          animating: false,
-          errorPopup: { 
-            id, 
-            title: "Spell Fizzled", 
-            body: stripDungeonMasterPrefix(message) 
-          } 
-        }));
-        
-        // We still record the mistake but don't append to terminal history
+        const clean = stripDungeonMasterPrefix(message);
+        if (guided) {
+          if (!conversationalHelp) {
+            appendLines([{ kind: "error", text: `${result.unknown}: command not found` }]);
+          }
+          showDungeonMasterTip(clean);
+          setState((cur) => ({ ...cur, animating: false }));
+        } else {
+          const id = nextId();
+          setState((cur) => ({ 
+            ...cur, 
+            animating: false,
+            errorPopup: { 
+              id, 
+              title: "Spell Fizzled", 
+              body: clean,
+            } 
+          }));
+        }
         return;
       }
 
       if (result.patch) {
-        setState((cur) => ({ ...cur, ...result.patch }));
+        setState((cur) => ({ ...cur, ...mergeStatePatch(cur, result.patch) }));
       }
 
       if (result.vfx && (guided || ["rm", "manifest", "inspect"].includes(result.vfx.kind))) {
@@ -1058,21 +1254,24 @@ export function useGameState(options: UseGameStateOptions = {}) {
           aiMentorLine?.text || 
           result.lines.find(l => l.kind === "error")?.text ||
           "Your spell fizzled... something went wrong.";
-        
-        const id = nextId();
-        setState((cur) => ({ 
-          ...cur, 
-          errorPopup: { 
-            id, 
-            title: "Spell Fizzled", 
-            body: stripDungeonMasterPrefix(errorText) 
-          } 
-        }));
+        if (guided) {
+          showDungeonMasterTip(stripDungeonMasterPrefix(errorText));
+        } else {
+          const id = nextId();
+          setState((cur) => ({ 
+            ...cur, 
+            errorPopup: { 
+              id, 
+              title: "Spell Fizzled", 
+              body: stripDungeonMasterPrefix(errorText) 
+            } 
+          }));
+        }
       }
 
       appendLines([
         ...(shouldShowMagic && magicLine ? [magicLine] : []),
-        ...aiResultLines.filter(l => l.kind !== "error"),
+        ...aiResultLines,
         ...(shouldShowCombo && combo ? [combo.line] : []),
         // Mentor/personality lines are now suppressed in the terminal 
         // as they are redirected to the Chronicle of Deeds
@@ -1179,7 +1378,7 @@ export function useGameState(options: UseGameStateOptions = {}) {
     playGameSound("room");
     idRef.current = 100;
     const difficulty = label.split(/\s+/)[0]?.toLowerCase() || "default";
-    runTrackerRef.current = createRunTracker(difficulty);
+    runTrackerRef.current = createRunTracker(difficulty, patch.cwd);
     saveActiveRun(activeRunFromTracker(runTrackerRef.current, level.targetFile));
     dismissRoomSubtitle();
     if (adaptation) showDungeonMasterTip(adaptation);
@@ -1200,12 +1399,14 @@ export function useGameState(options: UseGameStateOptions = {}) {
       hintStage: 0,
       history: [],
     }));
-    if (playMode === "guided") {
-      const fallbackIntro =
+      if (playMode === "guided") {
+        const fallbackIntro =
         options.showcaseMode
           ? "The dungeon whispers: type ls to survey your surroundings."
+          : level.tutorialId
+          ? "The Lantern Catacombs awaken. Start with `help`, then `ls`, then `echo hello`."
           : adaptation || "This dungeon adapts to your command history. Start with ls.";
-      if (options.showcaseMode) {
+      if (options.showcaseMode || level.tutorialId) {
         showDungeonMasterTip(fallbackIntro);
       } else {
         void askLevelIntro(
@@ -1213,7 +1414,7 @@ export function useGameState(options: UseGameStateOptions = {}) {
           {
             goal: level.goal,
             requiredCommands: level.required,
-            winCondition: `mv ${level.targetFile} ~/inventory`,
+            winCondition: level.winCondition ?? `mv ${level.targetFile} ~/inventory`,
             weakCommands: options.weakCommands ?? [],
             eventKind: "adaptive-level",
           },
@@ -1321,6 +1522,7 @@ export function useGameState(options: UseGameStateOptions = {}) {
 
   return {
     state,
+    wizardMessage,
     submit,
     reset,
     dismissPopup,

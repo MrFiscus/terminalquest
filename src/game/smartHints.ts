@@ -1,5 +1,6 @@
 import { START_PATH, pathfind } from "./dungeon";
 import type { GameState, Room } from "./types";
+import { LANTERN_CATACOMBS_ID, LANTERN_PATHS } from "./tutorialLevels";
 
 export type HintMode = "light" | "direct";
 
@@ -16,9 +17,67 @@ const nextStepToward = (currentPath: string, targetPath: string): string | null 
   return "..";
 };
 
+function lanternTutorialHint(state: GameState, mode: HintMode): string | null {
+  if (state.tutorialId !== LANTERN_CATACOMBS_ID) return null;
+  const progress = state.tutorialProgress ?? {};
+  const hasKey = state.inventory.some((file) => file.name === "lantern.key");
+
+  if (state.cwd === LANTERN_PATHS.entrance) {
+    if (!progress.echoChildMet) {
+      return mode === "direct"
+        ? "Start by learning what is here: use `help`, then `ls`, then `echo hello`."
+        : "Begin with the basics. Ask for help, look around, and answer the child who waits for your voice.";
+    }
+    return mode === "direct"
+      ? "Read the clue with `cat lantern.txt`, then go forward with `cd hallway`."
+      : "The lantern's clue should be read before you walk deeper.";
+  }
+
+  if (state.cwd === LANTERN_PATHS.hallway) {
+    if (!progress.cartographerMet) {
+      return mode === "direct"
+        ? "Learn your location with `pwd`, then inspect the hallway with `ls`."
+        : "A remembered path matters here. There is a command that tells you exactly where you stand.";
+    }
+    if (!progress.gateOpened) {
+      return mode === "direct"
+        ? "Search for the bell with `find bell`, read it with `cat strange_bell.txt`, then say the word using `echo OPEN`."
+        : "Something in this hall can be found by name, and stone here listens when spoken to.";
+    }
+    return mode === "direct"
+      ? "The way is open now. Use `cd sealed_gate`."
+      : "The sealed gate has yielded. You can move forward now.";
+  }
+
+  if (state.cwd === LANTERN_PATHS.sealedGate) {
+    if (!progress.elyraAskedWhoami) {
+      return mode === "direct"
+        ? "Elyra wants knowledge first. Use `man ls`, then `whoami`."
+        : "The witch asks for knowledge before passage. One command teaches, another names you.";
+    }
+    if (!hasKey) {
+      return mode === "direct"
+        ? "Take the key into your inventory with `mv lantern.key ~/inventory`."
+        : "The lantern key must be carried, not merely seen.";
+    }
+    return mode === "direct"
+      ? "You have the key. Finish the tutorial with `cd sanctum`."
+      : "The key is yours now. One final step remains into the sanctum.";
+  }
+
+  if (state.cwd === LANTERN_PATHS.sanctum) {
+    return "You have reached the sanctum. The next dungeon awaits.";
+  }
+
+  return null;
+}
+
 export function generateSmartHint(state: GameState, mode: HintMode = "light"): string {
   const room = state.rooms[state.cwd];
   if (!room) return "The dungeon goes silent. Type `pwd` to steady yourself.";
+
+  const tutorialHint = lanternTutorialHint(state, mode);
+  if (tutorialHint) return tutorialHint;
 
   const targetName = state.targetFile;
   const targetRoom = roomWithFile(state.rooms, targetName);

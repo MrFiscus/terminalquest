@@ -1,12 +1,7 @@
 import { type CSSProperties } from "react";
 import type { LevelSessionSnapshot } from "@/game/progressStats";
-
-/**
- * Offered on first mount when an unfinished level is present in storage.
- * Styled to match the stone-slab + ember-glow theme used on the Auth and
- * Landing pages (see Auth.tsx boxStyle) so it reads as part of the same
- * world, not a system dialog.
- */
+import loginBg from "@/assets/background_login.png";
+import lampSprite from "@/assets/lamp.png";
 
 interface ResumeDialogProps {
   session: LevelSessionSnapshot;
@@ -15,7 +10,7 @@ interface ResumeDialogProps {
   onClose?: () => void;
 }
 
-const slabStyle: CSSProperties = {
+const boxStyle: CSSProperties = {
   background: "linear-gradient(180deg, hsl(228 10% 16%), hsl(228 12% 10%))",
   border: "2px solid hsl(0 0% 3%)",
   borderRadius: "4px",
@@ -28,21 +23,19 @@ const slabStyle: CSSProperties = {
     "inset 0 0 22px hsl(0 0% 0% / 0.55)",
     "0 6px 18px hsl(0 0% 0% / 0.65)",
   ].join(", "),
+  backdropFilter: "blur(3px)",
 };
 
-const labelStyle: CSSProperties = {
-  fontFamily: "'Cinzel', serif",
-  fontSize: "9px",
-  letterSpacing: "0.22em",
-  textTransform: "uppercase",
-  color: "hsl(38 80% 58%)",
-  textShadow: "0 0 8px hsl(33 100% 45% / 0.35)",
-};
-
-const valueStyle: CSSProperties = {
-  fontFamily: "'JetBrains Mono', 'Courier New', monospace",
-  fontSize: "13px",
+const fieldStyle: CSSProperties = {
+  width: "100%",
+  background: "hsl(228 14% 7%)",
+  border: "1px solid hsl(0 0% 6%)",
+  borderRadius: "3px",
   color: "hsl(42 45% 82%)",
+  fontFamily: "'JetBrains Mono', monospace",
+  fontSize: "14px",
+  padding: "10px 12px",
+  boxShadow: "inset 0 2px 6px hsl(0 0% 0% / 0.6)",
 };
 
 function formatAgo(ms: number): string {
@@ -64,19 +57,62 @@ export function ResumeDialog({ session, onContinue, onNew, onClose }: ResumeDial
 
   return (
     <div
-      className="fixed inset-0 z-[90] flex items-center justify-center"
+      className="fixed inset-0 flex items-center"
       style={{
-        background: "radial-gradient(ellipse at center, hsl(228 18% 6% / 0.82) 40%, hsl(0 0% 0% / 0.95) 100%)",
+        backgroundImage: `url(${loginBg})`,
+        backgroundSize: "cover",
+        backgroundPosition: "center",
+        backgroundRepeat: "no-repeat",
         fontFamily: "'VT323', 'Courier New', monospace",
       }}
       role="dialog"
       aria-modal="true"
       aria-labelledby="resume-dialog-title"
     >
+      <div
+        className="pointer-events-none fixed inset-0"
+        style={{ background: "radial-gradient(ellipse at center, transparent 38%, hsl(0 0% 0% / 0.75) 100%)" }}
+      />
+      <div
+        className="pointer-events-none fixed inset-0"
+        style={{ background: "hsl(230 18% 5% / 0.45)" }}
+      />
+
+      <div className="pointer-events-none fixed bottom-[8%] right-[-67%] z-[2] hidden md:block auth-lamp-wrap" aria-hidden>
+        <div className="auth-lamp-halo" />
+        <div className="auth-lamp-glow" />
+        <img src={lampSprite} alt="" className="auth-lamp-sprite" />
+      </div>
+
       <form
-        onSubmit={(e) => { e.preventDefault(); onContinue(); }}
-        className="relative flex flex-col gap-4"
-        style={{ width: "420px", maxWidth: "92vw" }}
+        onSubmit={(e) => {
+          e.preventDefault();
+          onContinue();
+        }}
+        className="relative z-10 flex flex-col gap-4"
+        style={{
+          width: "clamp(390px, 30vw, 460px)",
+          maxHeight: "90vh",
+          overflowY: "auto",
+          marginLeft: "0%",
+          padding: "18px",
+          borderRadius: "10px",
+          backgroundColor: "hsl(226 12% 8% / 0.42)",
+          backgroundImage: [
+            "radial-gradient(120% 90% at 86% 8%, hsl(34 92% 50% / 0.14), transparent 54%)",
+            "radial-gradient(120% 130% at 18% 100%, hsl(214 42% 30% / 0.16), transparent 62%)",
+            "linear-gradient(180deg, hsl(226 12% 15% / 0.5), hsl(224 16% 7% / 0.62))",
+            "repeating-linear-gradient(45deg, hsl(0 0% 100% / 0.02) 0 2px, transparent 2px 7px)",
+          ].join(", "),
+          border: "1px solid hsl(34 30% 58% / 0.22)",
+          backdropFilter: "blur(12px) saturate(115%)",
+          boxShadow: [
+            "0 18px 42px hsl(0 0% 0% / 0.55)",
+            "0 0 22px hsl(32 100% 45% / 0.15)",
+            "inset 0 1px 0 hsl(0 0% 100% / 0.08)",
+            "inset 0 -2px 16px hsl(0 0% 0% / 0.5)",
+          ].join(", "),
+        }}
       >
         {onClose && (
           <button
@@ -101,8 +137,7 @@ export function ResumeDialog({ session, onContinue, onNew, onClose }: ResumeDial
           </button>
         )}
 
-        {/* Title slab */}
-        <div style={{ ...slabStyle, padding: "18px 22px 14px" }}>
+        <div style={{ ...boxStyle, padding: "20px 22px 16px" }}>
           <p
             style={{
               fontFamily: "'Cinzel', serif",
@@ -111,7 +146,7 @@ export function ResumeDialog({ session, onContinue, onNew, onClose }: ResumeDial
               textTransform: "uppercase",
               color: "hsl(0 0% 28%)",
               fontWeight: 700,
-              marginBottom: "6px",
+              marginBottom: "8px",
               textShadow: "-1px -1px 0 hsl(0 0% 0%/0.85), 1px 1px 0 hsl(0 0% 100%/0.22)",
             }}
           >
@@ -121,9 +156,9 @@ export function ResumeDialog({ session, onContinue, onNew, onClose }: ResumeDial
             id="resume-dialog-title"
             style={{
               fontFamily: "'Cinzel', 'Pirata One', serif",
-              fontSize: "clamp(20px, 3.4vw, 26px)",
+              fontSize: "clamp(22px, 4vw, 30px)",
               fontWeight: 900,
-              letterSpacing: "0.05em",
+              letterSpacing: "0.06em",
               lineHeight: 1.1,
               margin: 0,
               color: "hsl(38 80% 60%)",
@@ -136,64 +171,96 @@ export function ResumeDialog({ session, onContinue, onNew, onClose }: ResumeDial
               ].join(", "),
             }}
           >
-            Return to your quest?
+            Return to Your Quest
           </h1>
           <div
             style={{
-              marginTop: "10px",
+              marginTop: "12px",
               height: "1px",
-              width: "64px",
+              width: "60px",
               background: "linear-gradient(90deg, hsl(33 100% 45% / 0.6), transparent)",
             }}
           />
         </div>
 
-        {/* Terminal-style status line */}
         <div
           style={{
-            ...slabStyle,
+            ...boxStyle,
             padding: "10px 14px",
             fontFamily: "'JetBrains Mono', monospace",
             fontSize: "12px",
           }}
         >
-          <span style={{ color: "hsl(140 55% 52%)", fontWeight: "bold" }}>adventurer</span>
+          <span style={{ color: "hsl(140 55% 52%)", fontWeight: "bold" }}>player</span>
           <span style={{ color: "#f3f4f6" }}>@dungeon</span>
           <span style={{ color: "hsl(0 0% 40%)" }}>:~$ </span>
           <span style={{ color: "hsl(38 100% 55%)", textShadow: "0 0 8px hsl(38 100% 50% / 0.5)" }}>
-            last session detected - saved {formatAgo(session.savedAt)}
+            restore-session --saved {formatAgo(session.savedAt)}
           </span>
-          <span style={{ color: "hsl(38 100% 55%)", boxShadow: "0 0 8px hsl(38 100% 55%/0.8)" }}>|</span>
+          <span style={{ color: "hsl(38 100% 55%)", boxShadow: "0 0 8px hsl(38 100% 55%/0.8)" }}>▮</span>
         </div>
 
-        {/* Session details */}
-        <div style={{ ...slabStyle, padding: "14px 18px" }}>
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px 18px" }}>
+        <div>
+          <label
+            style={{
+              fontFamily: "'Cinzel', serif",
+              fontSize: "9px",
+              letterSpacing: "0.2em",
+              textTransform: "uppercase",
+              color: "hsl(38 80% 58%)",
+              display: "block",
+              marginBottom: "6px",
+              textShadow: "0 0 8px hsl(33 100% 45% / 0.4)",
+            }}
+          >
+            ✦ Current Chamber
+          </label>
+          <div style={fieldStyle}>{session.label || "Unknown chamber"}</div>
+        </div>
+
+        <div>
+          <label
+            style={{
+              fontFamily: "'Cinzel', serif",
+              fontSize: "9px",
+              letterSpacing: "0.2em",
+              textTransform: "uppercase",
+              color: "hsl(38 80% 58%)",
+              display: "block",
+              marginBottom: "6px",
+              textShadow: "0 0 8px hsl(33 100% 45% / 0.4)",
+            }}
+          >
+            ✦ Dungeon Details
+          </label>
+          <div
+            style={{
+              ...fieldStyle,
+              display: "grid",
+              gridTemplateColumns: "1fr 1fr",
+              gap: "10px 14px",
+            }}
+          >
             <div>
-              <div style={labelStyle}>Chamber</div>
-              <div style={{ ...valueStyle, marginTop: 4, wordBreak: "break-word" }}>
-                {session.label || "unknown"}
-              </div>
+              <div style={{ fontSize: 10, opacity: 0.6, textTransform: "uppercase", letterSpacing: "0.14em" }}>Difficulty</div>
+              <div style={{ marginTop: 2, textTransform: "capitalize" }}>{difficulty}</div>
             </div>
             <div>
-              <div style={labelStyle}>Difficulty</div>
-              <div style={{ ...valueStyle, marginTop: 4, textTransform: "capitalize" }}>
-                {difficulty}
-              </div>
+              <div style={{ fontSize: 10, opacity: 0.6, textTransform: "uppercase", letterSpacing: "0.14em" }}>Saved</div>
+              <div style={{ marginTop: 2 }}>{formatAgo(session.savedAt)}</div>
             </div>
             <div>
-              <div style={labelStyle}>Commands cast</div>
-              <div style={{ ...valueStyle, marginTop: 4 }}>{commandCount}</div>
+              <div style={{ fontSize: 10, opacity: 0.6, textTransform: "uppercase", letterSpacing: "0.14em" }}>Commands Cast</div>
+              <div style={{ marginTop: 2 }}>{commandCount}</div>
             </div>
             <div>
-              <div style={labelStyle}>Rooms explored</div>
-              <div style={{ ...valueStyle, marginTop: 4 }}>{roomsVisited}</div>
+              <div style={{ fontSize: 10, opacity: 0.6, textTransform: "uppercase", letterSpacing: "0.14em" }}>Rooms Explored</div>
+              <div style={{ marginTop: 2 }}>{roomsVisited}</div>
             </div>
           </div>
         </div>
 
-        {/* Continue button */}
-        <div style={{ ...slabStyle, padding: "14px 16px" }}>
+        <div style={{ ...boxStyle, padding: "14px 16px" }}>
           <button
             type="submit"
             className="stone-tablet-btn w-full py-2 tracking-widest"
@@ -207,26 +274,15 @@ export function ResumeDialog({ session, onContinue, onNew, onClose }: ResumeDial
           </button>
         </div>
 
-        {/* Divider */}
         <div style={{ display: "flex", alignItems: "center", gap: "12px", padding: "0 4px" }}>
           <div style={{ flex: 1, height: "1px", background: "linear-gradient(90deg, transparent, hsl(0 0% 100% / 0.1), transparent)" }} />
-          <span
-            style={{
-              color: "hsl(0 0% 28%)",
-              fontFamily: "'Cinzel', serif",
-              fontSize: "10px",
-              letterSpacing: "0.2em",
-              fontWeight: 700,
-              textShadow: "-1px -1px 0 hsl(0 0% 0%/0.85), 1px 1px 0 hsl(0 0% 100%/0.22)",
-            }}
-          >
+          <span style={{ color: "hsl(0 0% 28%)", fontFamily: "'Cinzel', serif", fontSize: "10px", letterSpacing: "0.2em", fontWeight: 700, textShadow: "-1px -1px 0 hsl(0 0% 0%/0.85), 1px 1px 0 hsl(0 0% 100%/0.22)" }}>
             OR
           </span>
           <div style={{ flex: 1, height: "1px", background: "linear-gradient(90deg, transparent, hsl(0 0% 100% / 0.1), transparent)" }} />
         </div>
 
-        {/* Start new button */}
-        <div style={{ ...slabStyle, padding: "14px 16px" }}>
+        <div style={{ ...boxStyle, padding: "14px 16px" }}>
           <button
             type="button"
             onClick={onNew}
@@ -238,14 +294,12 @@ export function ResumeDialog({ session, onContinue, onNew, onClose }: ResumeDial
               color: "hsl(42 35% 68%)",
               fontFamily: "'Cinzel', serif",
               fontSize: "12px",
-              letterSpacing: "0.2em",
-              padding: "9px",
+              letterSpacing: "0.15em",
+              padding: "8px",
               cursor: "pointer",
-              textTransform: "uppercase",
             }}
             onMouseEnter={(e) => {
-              (e.currentTarget as HTMLButtonElement).style.boxShadow =
-                "inset 0 0 24px hsl(30 100%50%/0.22), 0 0 18px hsl(30 100%50%/0.32), 0 0 36px hsl(30 100%45%/0.2)";
+              (e.currentTarget as HTMLButtonElement).style.boxShadow = "inset 0 0 24px hsl(30 100%50%/0.25), 0 0 18px hsl(30 100%50%/0.35), 0 0 36px hsl(30 100%45%/0.2)";
               (e.currentTarget as HTMLButtonElement).style.color = "hsl(38 80% 60%)";
             }}
             onMouseLeave={(e) => {
@@ -253,22 +307,10 @@ export function ResumeDialog({ session, onContinue, onNew, onClose }: ResumeDial
               (e.currentTarget as HTMLButtonElement).style.color = "hsl(42 35% 68%)";
             }}
           >
-            Generate a new world
+            Start a New World
           </button>
-          <p
-            style={{
-              marginTop: "10px",
-              marginBottom: 0,
-              fontFamily: "Georgia, serif",
-              fontSize: "11px",
-              fontStyle: "italic",
-              color: "hsl(0 0% 45%)",
-              textAlign: "center",
-            }}
-          >
-            Starting a new world will discard the saved quest above.
-          </p>
         </div>
+
       </form>
     </div>
   );

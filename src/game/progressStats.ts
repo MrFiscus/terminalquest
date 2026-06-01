@@ -6,6 +6,7 @@ export const ACTIVE_RUN_STORAGE_KEY = "terminalquest_active_run";
 export const FAMILIARITY_STORAGE_KEY = "terminalquest_familiarity";
 export const ONBOARDED_STORAGE_KEY = "terminalquest_onboarded";
 export const LEVEL_SESSION_STORAGE_KEY = "terminalquest_level_session";
+export const COMPLETED_TUTORIALS_STORAGE_KEY = "terminalquest_completed_tutorials";
 const PROFILE_SCOPE_STORAGE_KEY = "terminalquest_profile_scope";
 
 export const PROFILE_COMMANDS = ["ls", "cd", "mv", "cat", "find", "mkdir", "rm", "pwd", "file"] as const;
@@ -322,6 +323,22 @@ export function saveLevelSession(session: LevelSessionSnapshot) {
 
 export function clearLevelSession() {
   storage()?.removeItem(scopedKey(LEVEL_SESSION_STORAGE_KEY));
+}
+
+export function readCompletedTutorials(): string[] {
+  const parsed = readJson<unknown>(scopedKey(COMPLETED_TUTORIALS_STORAGE_KEY), []);
+  if (!Array.isArray(parsed)) return [];
+  return parsed.filter((id): id is string => typeof id === "string");
+}
+
+export function isTutorialCompleted(tutorialId: string) {
+  return readCompletedTutorials().includes(tutorialId);
+}
+
+export function markTutorialCompleted(tutorialId: string) {
+  const completed = Array.from(new Set([...readCompletedTutorials(), tutorialId]));
+  storage()?.setItem(scopedKey(COMPLETED_TUTORIALS_STORAGE_KEY), JSON.stringify(completed));
+  return completed;
 }
 
 export function baseCommand(raw: string) {

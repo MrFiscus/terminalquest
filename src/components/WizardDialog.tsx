@@ -20,6 +20,43 @@ interface ChatTurn {
 
 const HISTORY_LIMIT = 5; // last N turns sent as conversation context
 
+function tutorialQuickChips(context: DungeonMasterContext): string[] | null {
+  if (!context.currentPath?.includes("/catacombs/")) return null;
+
+  const path = context.currentPath;
+  const progress = context.tutorialProgress ?? {};
+  const inventory = new Set(context.inventory ?? []);
+
+  if (path.endsWith("/catacombs/entrance")) {
+    if (!progress.echoChildMet) {
+      return ["What should I type first?", "Explain `help`", "Explain `echo`"];
+    }
+    return ["What command should I type next?", "Explain `cat`", "Explain `cd`"];
+  }
+
+  if (path.endsWith("/catacombs/entrance/hallway")) {
+    if (!progress.cartographerMet) {
+      return ["What should I type next?", "Explain `pwd`", "Explain `ls`"];
+    }
+    if (!progress.gateOpened) {
+      return ["What command should I type next?", "Explain `find`", "Explain `echo`"];
+    }
+    return ["What command should I type next?", "Explain `cd`", "I'm still stuck."];
+  }
+
+  if (path.endsWith("/sealed_gate")) {
+    if (!progress.elyraAskedWhoami) {
+      return ["What command should I type next?", "Explain `man`", "Explain `whoami`"];
+    }
+    if (!inventory.has("lantern.key")) {
+      return ["What command should I type next?", "Explain `mv`", "How does inventory work?"];
+    }
+    return ["What command should I type next?", "Explain `cd`", "How do I finish this room?"];
+  }
+
+  return ["What should I do next?", "Explain the goal", "I'm stuck."];
+}
+
 export function WizardDialog({ context, externalMessage, playerFamiliarity }: WizardDialogProps) {
   const [isOpen, setIsOpen] = useState(true);
   const [isChatting, setIsChatting] = useState(false);
@@ -49,14 +86,19 @@ export function WizardDialog({ context, externalMessage, playerFamiliarity }: Wi
    * invent a question from scratch.
    */
   const quickChips = useMemo(() => {
+    const tutorialChips = tutorialQuickChips(context);
+    if (tutorialChips) return tutorialChips;
+
     const chips: string[] = [];
-    chips.push("What should I do next?");
+    chips.push(context.currentPath?.includes("/catacombs/") ? "Give me the next step." : "What should I do next?");
     if (context.weakCommands && context.weakCommands.length > 0) {
       chips.push(`Explain \`${context.weakCommands[0]}\``);
     } else if (context.requiredCommands && context.requiredCommands.length > 0) {
       chips.push(`Explain \`${context.requiredCommands[0]}\``);
     }
-    if (context.brokenDoorName) {
+    if (context.currentPath?.includes("/catacombs/")) {
+      chips.push("What command should I type next?");
+    } else if (context.brokenDoorName) {
       chips.push("How do I fix the broken door?");
     } else if ((context.roomDoors ?? []).some((d) => /\(locked\)/.test(d))) {
       chips.push("Where is the key?");
@@ -142,10 +184,12 @@ export function WizardDialog({ context, externalMessage, playerFamiliarity }: Wi
                 isChatting && "cursor-default w-[34rem] p-4"
               )}
               style={{
-                backgroundColor: "#f5e6d3",
-                backgroundImage: "linear-gradient(135deg, #f5e6d3 0%, #eaddca 100%)",
-                boxShadow: "2px 4px 12px rgba(0,0,0,0.55), inset 0 0 24px rgba(139,69,19,0.14)",
-                border: "1.5px solid #5d4037",
+                backgroundColor: "rgba(245, 230, 211, 0.34)",
+                backgroundImage: "linear-gradient(135deg, rgba(245, 230, 211, 0.38) 0%, rgba(234, 221, 202, 0.2) 100%)",
+                backdropFilter: "blur(8px) saturate(0.88)",
+                WebkitBackdropFilter: "blur(8px) saturate(0.88)",
+                boxShadow: "2px 4px 12px rgba(0,0,0,0.18), inset 0 0 14px rgba(139,69,19,0.05)",
+                border: "1.5px solid rgba(93, 64, 55, 0.34)",
                 borderRadius: "3px 10px 5px 14px / 10px 3px 14px 3px",
                 // Hard cap so the dialog stays roughly within the
                 // inventory zone — it can spill a little above, but
@@ -266,8 +310,8 @@ export function WizardDialog({ context, externalMessage, playerFamiliarity }: Wi
                       <div
                         className="overflow-y-auto p-2 pr-3 rounded flex-1 min-h-0 wizard-scroll"
                         style={{
-                          background: "rgba(93,64,55,0.08)",
-                          border: "1px solid rgba(93,64,55,0.18)",
+                          background: "rgba(93,64,55,0.03)",
+                          border: "1px solid rgba(93,64,55,0.12)",
                           fontFamily: "Georgia, 'Times New Roman', serif",
                           fontSize: 14,
                           lineHeight: 1.5,
@@ -300,17 +344,17 @@ export function WizardDialog({ context, externalMessage, playerFamiliarity }: Wi
                             fontSize: 12,
                             lineHeight: 1.2,
                             color: "#3e2723",
-                            background: "rgba(201,168,76,0.18)",
-                            border: "1px solid rgba(139,105,20,0.5)",
+                            background: "rgba(201,168,76,0.08)",
+                            border: "1px solid rgba(139,105,20,0.32)",
                             padding: "4px 9px",
                             borderRadius: 12,
                             cursor: "pointer",
                           }}
                           onMouseEnter={(e) => {
-                            (e.currentTarget as HTMLButtonElement).style.background = "rgba(201,168,76,0.32)";
+                            (e.currentTarget as HTMLButtonElement).style.background = "rgba(201,168,76,0.16)";
                           }}
                           onMouseLeave={(e) => {
-                            (e.currentTarget as HTMLButtonElement).style.background = "rgba(201,168,76,0.18)";
+                            (e.currentTarget as HTMLButtonElement).style.background = "rgba(201,168,76,0.08)";
                           }}
                         >
                           {chip}
@@ -334,19 +378,19 @@ export function WizardDialog({ context, externalMessage, playerFamiliarity }: Wi
                           fontFamily: "Georgia, 'Times New Roman', serif",
                           fontSize: 15,
                           color: "#3b1f0a",
-                          background: "rgba(255,248,220,0.85)",
-                          border: "1.5px solid #8b6914",
+                          background: "rgba(255,248,220,0.36)",
+                          border: "1.5px solid rgba(139,105,20,0.58)",
                           borderRadius: 4,
                           padding: "8px 12px",
-                          boxShadow: "inset 0 1px 3px rgba(93,64,55,0.18)",
+                          boxShadow: "inset 0 1px 3px rgba(93,64,55,0.1)",
                         }}
                         onFocus={(e) => {
                           (e.currentTarget as HTMLInputElement).style.boxShadow =
-                            "inset 0 1px 3px rgba(93,64,55,0.18), 0 0 0 2px rgba(201,168,76,0.4)";
+                            "inset 0 1px 3px rgba(93,64,55,0.1), 0 0 0 2px rgba(201,168,76,0.22)";
                         }}
                         onBlur={(e) => {
                           (e.currentTarget as HTMLInputElement).style.boxShadow =
-                            "inset 0 1px 3px rgba(93,64,55,0.18)";
+                            "inset 0 1px 3px rgba(93,64,55,0.1)";
                         }}
                       />
                       <button
@@ -359,12 +403,12 @@ export function WizardDialog({ context, externalMessage, playerFamiliarity }: Wi
                           fontSize: 11,
                           letterSpacing: "0.18em",
                           textTransform: "uppercase",
-                          background: "linear-gradient(180deg, #5d4037, #3e2723)",
+                          background: "linear-gradient(180deg, rgba(93,64,55,0.72), rgba(62,39,35,0.56))",
                           color: "#f5e6d3",
-                          border: "1.5px solid #3e2723",
+                          border: "1.5px solid rgba(62,39,35,0.5)",
                           padding: "8px 14px",
                           borderRadius: 4,
-                          boxShadow: "0 1px 3px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.08)",
+                          boxShadow: "0 1px 3px rgba(0,0,0,0.22), inset 0 1px 0 rgba(255,255,255,0.04)",
                           cursor: "pointer",
                         }}
                       >
@@ -390,7 +434,7 @@ export function WizardDialog({ context, externalMessage, playerFamiliarity }: Wi
               {/* Paper tail */}
               <div
                 className="absolute bottom-4 -right-[6px] w-3 h-3 rotate-45 border-r border-b border-[#5d4037]"
-                style={{ backgroundColor: "#eaddca" }}
+                style={{ backgroundColor: "rgba(234, 221, 202, 0.26)", borderColor: "rgba(93, 64, 55, 0.34)" }}
               />
             </div>
           </motion.div>

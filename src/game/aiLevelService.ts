@@ -34,18 +34,22 @@ export interface LevelLockedExit {
 
 export interface GeneratedLevel {
   goal: string;
+  winCondition?: string;
   required: LinuxCommand[];
   rooms: LevelRoom[];
   start: string;
   hint: string;
   roomMap: Record<string, Room>;
   targetFile: string;
+  startPath?: string;
   lockedRoom?: string;
   keyRoom?: string;
   keyName?: string;
   difficultyValue?: number;
   mechanic?: DifficultyMechanic;
   lockedCommands?: LinuxCommand[];
+  tutorialId?: string;
+  tutorialProgress?: Record<string, boolean>;
 }
 
 type RawLevel = {
@@ -694,24 +698,27 @@ export async function generateLevel(input: GenerateLevelInput): Promise<Generate
 
 export function levelToStatePatch(level: GeneratedLevel): Pick<
   GameState,
-  "rooms" | "cwd" | "player" | "inventory" | "targetFile" | "goal" | "requiredCommands" | "winCondition" | "won" | "completionMessage" | "difficultyValue" | "mechanic" | "lockedCommands" | "mauSecretKnown"
+  "rooms" | "cwd" | "player" | "inventory" | "targetFile" | "goal" | "requiredCommands" | "winCondition" | "won" | "completionMessage" | "difficultyValue" | "mechanic" | "lockedCommands" | "mauSecretKnown" | "tutorialId" | "tutorialProgress"
 > {
   const rooms = markLevelLocks(level, level.roomMap);
-  const startRoom = rooms[START_PATH];
+  const startPath = level.startPath ?? START_PATH;
+  const startRoom = rooms[startPath];
   return {
     rooms,
-    cwd: START_PATH,
+    cwd: startPath,
     player: { ...startRoom.spawn },
     inventory: [],
     targetFile: level.targetFile,
     goal: level.goal,
     requiredCommands: level.required,
-    winCondition: `mv ${level.targetFile} ~/inventory`,
+    winCondition: level.winCondition ?? `mv ${level.targetFile} ~/inventory`,
     won: false,
     completionMessage: null,
     difficultyValue: level.difficultyValue,
     mechanic: level.mechanic,
     lockedCommands: level.lockedCommands ?? [],
     mauSecretKnown: false,
+    tutorialId: level.tutorialId,
+    tutorialProgress: level.tutorialProgress,
   };
 }

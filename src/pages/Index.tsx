@@ -19,6 +19,7 @@ import { startGameAmbience, stopGameAmbience } from "@/game/audio";
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
   clearLevelSession,
+  isTutorialCompleted,
   readFamiliarity,
   readLevelSession,
   readOnboarded,
@@ -30,6 +31,7 @@ import { ResumeDialog } from "@/components/ResumeDialog";
 import { AnimatePresence } from "framer-motion";
 import type { LinuxCommand, VictoryReport } from "@/game/types";
 import type { GeneratedLevel } from "@/game/aiLevelService";
+import { createLanternCatacombsLevel, LANTERN_CATACOMBS_ID } from "@/game/tutorialLevels";
 
 interface ReplayLoadPayload {
   level: GeneratedLevel;
@@ -98,7 +100,7 @@ const Index = () => {
     setBookOpen(false);
   }, []);
   const {
-    state, submit, dismissPopup, loadLevel, roomSubtitle,
+    state, wizardMessage, submit, dismissPopup, loadLevel, roomSubtitle,
     submitMauQuiz,
     closeMauQuiz, openScroll, closeScroll,
     achievementQueue, dismissAchievement,
@@ -149,11 +151,16 @@ const Index = () => {
     if (generating || state.animating) return false;
     setGenerating(difficulty);
     try {
-      const showcaseMode = familiarity === 0;
+      const shouldLoadTutorial =
+        (familiarity ?? 0) <= 33 &&
+        !isTutorialCompleted(LANTERN_CATACOMBS_ID);
+      const showcaseMode = familiarity === 0 && !shouldLoadTutorial;
       const weakCommands = showcaseMode
         ? ["mkdir", "cd", "ls", "mv"]
         : getWeakCommands(state.commandStats, 4);
-      const playMode = showcaseMode ? "guided" : (familiarity ?? 0) >= 67 ? "real" : "guided";
+      const playMode = shouldLoadTutorial || showcaseMode
+        ? "guided"
+        : (familiarity ?? 0) >= 67 ? "real" : "guided";
       const generationSeed = [
         difficulty,
         familiarity ?? "unknown",
@@ -161,7 +168,9 @@ const Index = () => {
         Math.random().toString(36).slice(2, 10),
         state.commandHistory.length,
       ].join("-");
-      const level = showcaseMode
+      const level = shouldLoadTutorial
+        ? createLanternCatacombsLevel(familiarity ?? 20)
+        : showcaseMode
         ? generateDifficultyMechanicLevel(difficulty, familiarity, weakCommands)
         : await generateLevel({
             difficulty,
@@ -170,8 +179,12 @@ const Index = () => {
             recentMistakes: state.recentMistakes,
             generationSeed,
           });
-      const label = `${difficulty} (${level.rooms.length} rooms)`;
-      const adaptation = showcaseMode
+      const label = shouldLoadTutorial
+        ? `${difficulty} Lantern Catacombs (${level.rooms.length} rooms)`
+        : `${difficulty} (${level.rooms.length} rooms)`;
+      const adaptation = shouldLoadTutorial
+        ? "The Lantern Catacombs awaken. Read what is near, and let each command teach the next."
+        : showcaseMode
         ? "The dungeon whispers: type ls to survey your surroundings."
         : playMode === "guided" ? adaptationMessage(weakCommands) : null;
       replayPayloadRef.current = {
@@ -370,7 +383,7 @@ const Index = () => {
   }
 
   const currentRoom = getRoom(state.rooms, state.cwd);
-  const isDemoMode = Boolean(state.showcaseMode || state.difficultyValue === 0);
+  const isDemoMode = Boolean(!state.tutorialId && (state.showcaseMode || state.difficultyValue === 0));
   const brokenDoor = currentRoom?.doors.find((door) => door.broken);
   const repairCommand = brokenDoor
     ? state.showcaseMode
@@ -439,7 +452,7 @@ const Index = () => {
           completionMessage={state.completionMessage}
           report={state.completionReport}
           busy={advancingLevel}
-          actionLabel="TRAIN NEXT SKILL"
+          actionLabel={state.tutorialId === LANTERN_CATACOMBS_ID ? "ENTER THE NEXT DUNGEON" : "TRAIN NEXT SKILL"}
         />
       )}
       {bookOpen && <BookOfSecrets onClose={() => setBookOpen(false)} />}
@@ -469,8 +482,11 @@ const Index = () => {
 
       {!profileOpen && (
         <WizardDialog
+          externalMessage={wizardMessage}
           playerFamiliarity={linuxFamiliarity}
           context={{
+            tutorialId: state.tutorialId,
+            tutorialProgress: state.tutorialProgress,
             goal: state.goal,
             requiredCommands: state.requiredCommands,
             winCondition: state.winCondition,
